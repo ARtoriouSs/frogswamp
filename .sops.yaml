@@ -1,0 +1,9 @@
+keys:
+  - &admin age1knagtc5prj80vjzsdv2p06596d4pcydcmj9duzsl4mwgl625evaqxye66y
+  - &frogswamp age1ykjuqh3cg0kjxycngzkc20ph0xhfx6y92d8ayjan48wrawljkedqp2s5ue
+creation_rules:
+  - path_regex: ^secrets/[^/]+$
+    key_groups:
+      - age:
+          - *admin
+          - *frogswamp

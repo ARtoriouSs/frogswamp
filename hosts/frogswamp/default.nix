@@ -2,8 +2,10 @@
 {
   imports = [
     inputs.disko.nixosModules.disko
+    inputs.sops-nix.nixosModules.sops
     ../../modules
     ./disko.nix
+    ./secrets.nix
   ];
 
   nixpkgs.hostPlatform = "x86_64-linux";
