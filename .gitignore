@@ -1,0 +1,22 @@
+# Nix / direnv
+result
+result-*
+.direnv/
+.pre-commit-config.yaml
+# VM / images
+*.qcow2
+*.iso
+# Secrets that must never be committed in plaintext
+*.dec
+*.decrypted*
+keys.txt
+*.agekey
+.env
+.env.*
+# Local tooling / editors
+.lavish/
+.superpowers/
+.vscode/
+.idea/
+*.swp
+.DS_Store

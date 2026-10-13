@@ -1,0 +1,5 @@
+password: ENC[AES256_GCM,data:Zm9v,iv:YmFy,tag:YmF6,type:str]
+sops:
+    age:
+        - recipient: age1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq
+    version: 3.9.0
