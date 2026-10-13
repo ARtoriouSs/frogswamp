@@ -48,6 +48,9 @@ let
       && lib.hasInfix ''SYMLINK+="zigbee"'' cfg.services.udev.extraRules;
     "z2m from unstable" =
       cfg.services.zigbee2mqtt.package == inputs.nixpkgs-unstable.legacyPackages.x86_64-linux.zigbee2mqtt;
+    "HA image pinned by digest" =
+      lib.hasInfix "@sha256:" cfg.virtualisation.oci-containers.containers.home-assistant.image;
+    "podman backend" = cfg.virtualisation.oci-containers.backend == "podman";
     "mosquitto localhost only" = lib.all (l: l.address == "127.0.0.1") cfg.services.mosquitto.listeners;
   };
   failed = lib.attrNames (lib.filterAttrs (_: ok: !ok) checks);

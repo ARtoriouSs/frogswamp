@@ -9,6 +9,7 @@ default:
 # Run all checks (flake checks + HA config check once HA exists)
 check:
     nix flake check -L
+    just ha-check
 
 # Edit encrypted secrets
 secrets:
@@ -100,3 +101,33 @@ install target:
     nixos-anywhere --flake .#frogswamp --extra-files "$tmp" root@{{target}}
     ssh-keygen -R {{host}} >/dev/null 2>&1 || true
     echo "Installed. The server reboots to {{host}}. Review hosts/frogswamp/facter.json for serials/MACs before committing it."
+
+# Pin the Home Assistant image (default: current stable) by version + digest
+ha-bump version="stable":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    ref="docker://ghcr.io/home-assistant/home-assistant:{{version}}"
+    info="$(skopeo inspect --override-os linux --override-arch amd64 "$ref")"
+    digest="$(jq -r .Digest <<<"$info")"
+    ver="$(jq -r '.Labels["org.opencontainers.image.version"] // empty' <<<"$info")"
+    [ -n "$ver" ] || ver="{{version}}"
+    printf '{\n  # Updated by `just ha-bump`\n  image = "ghcr.io/home-assistant/home-assistant:%s@%s";\n}\n' "$ver" "$digest" > modules/services/home-assistant/image.nix
+    git add --intent-to-add modules/services/home-assistant/image.nix
+    echo "Pinned Home Assistant $ver ($digest)"
+
+# Validate HA YAML with the pinned image (needs podman or docker locally)
+ha-check:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    runtime="$(command -v podman || command -v docker || true)"
+    if [ -z "$runtime" ]; then echo "ha-check: no podman/docker found, skipping" >&2; exit 0; fi
+    image="$(nix eval --raw --file modules/services/home-assistant/image.nix image)"
+    tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
+    cp -r modules/services/home-assistant/config/. "$tmp/"
+    cp tests/fixtures/ha-secrets.yaml "$tmp/secrets.yaml"
+    echo '[]' > "$tmp/automations.yaml"; echo '{}' > "$tmp/scripts.yaml"; echo '[]' > "$tmp/scenes.yaml"
+    # check_config exits 0 even when an integration's config is invalid, so also inspect its output
+    out="$("$runtime" run --rm -v "$tmp:/config" --entrypoint python3 "$image" -m homeassistant --script check_config --config /config 2>&1)" || { echo "$out"; exit 1; }
+    echo "$out"
+    if grep -qE 'Invalid config|Failed config|Fatal error' <<<"$out"; then echo "ha-check: invalid Home Assistant config" >&2; exit 1; fi
+    echo "ha-check: configuration valid"

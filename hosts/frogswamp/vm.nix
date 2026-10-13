@@ -19,6 +19,7 @@
     lan.address = lib.mkForce null;
     adminPasswordHashFile = lib.mkForce null;
     tailscale.enable = lib.mkForce false;
+    homeAssistant.secretsFile = lib.mkForce "${../../tests/fixtures/ha-secrets.yaml}";
     mqtt = {
       zigbee2mqtt.enable = lib.mkForce false;
       haPasswordFile = lib.mkForce "/etc/vm-dummy-secret";

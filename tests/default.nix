@@ -11,4 +11,5 @@ in
   test-base = call ./base.nix;
   eval = call ./eval.nix;
   test-mqtt = call ./mqtt.nix;
+  test-home-assistant = call ./home-assistant.nix;
 }

@@ -1,0 +1,6 @@
+repo_hello:
+  alias: "Repo: hello"
+  sequence:
+    - action: persistent_notification.create
+      data:
+        message: Hello from a repo-owned script

@@ -1,0 +1,8 @@
+title: Home
+views:
+  - title: Overview
+    cards:
+      - type: entities
+        title: House
+        entities:
+          - input_boolean.guest_mode
