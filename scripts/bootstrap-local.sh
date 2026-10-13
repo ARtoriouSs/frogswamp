@@ -58,12 +58,36 @@ else
   # shellcheck disable=SC2016 # literal $HOME belongs in direnvrc
   echo 'source "$HOME/.nix-profile/share/nix-direnv/direnvrc"' >>"$direnvrc"
 fi
+shell_block() {
+  # Nix's profile script skips itself when __ETC_PROFILE_NIX_SOURCED is inherited from a
+  # parent process even though PATH was rebuilt without Nix, so clear the flag first.
+  # Linux Mint preloads libgtk3-nocsd session-wide; Nix binaries can't load it and warn
+  # on every run, so drop it in terminals (only GTK apps started from a shell are affected).
+  cat <<EOF
+# frogswamp-shell-begin (managed by frogswamp/scripts/bootstrap-local.sh)
+unset LD_PRELOAD
+if [ -e /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]; then
+  unset __ETC_PROFILE_NIX_SOURCED
+  . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
+fi
+command -v direnv >/dev/null 2>&1 && eval "\$(direnv hook $1)"
+# frogswamp-shell-end
+EOF
+}
 for shell in zsh bash; do
   rc="$HOME/.${shell}rc"
   [ -e "$rc" ] || continue
   target="$(readlink -f "$rc")" # edit the real file; sed -i would replace a symlink
+  wanted="$(shell_block "$shell")"
   if grep -qs '# frogswamp-shell-begin' "$target"; then
-    skip "frogswamp shell block present in $rc"
+    current="$(sed -n '/# frogswamp-shell-begin/,/# frogswamp-shell-end/p' "$target")"
+    if [ "$current" = "$wanted" ]; then
+      skip "frogswamp shell block up to date in $rc"
+      continue
+    fi
+    sed -i '/# frogswamp-shell-begin/,/# frogswamp-shell-end/d' "$target"
+    printf '%s\n' "$wanted" >>"$target"
+    skip "updated frogswamp shell block in $target"
     continue
   fi
   # Migrate the single-line hook written by an earlier version of this script.
@@ -77,20 +101,18 @@ for shell in zsh bash; do
   if [ "$target" != "$rc" ]; then
     warn "$rc is a symlink; the frogswamp block is added to $target."
   fi
-  # Nix's profile script skips itself when __ETC_PROFILE_NIX_SOURCED is inherited from a
-  # parent process even though PATH was rebuilt without Nix, so clear the flag first.
-  cat >>"$target" <<EOF
-
-# frogswamp-shell-begin (managed by frogswamp/scripts/bootstrap-local.sh)
-if [ -e /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]; then
-  unset __ETC_PROFILE_NIX_SOURCED
-  . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
-fi
-command -v direnv >/dev/null 2>&1 && eval "\$(direnv hook ${shell})"
-# frogswamp-shell-end
-EOF
+  printf '\n%s\n' "$wanted" >>"$target"
   skip "added frogswamp shell block to $target"
 done
+direnv_toml="$HOME/.config/direnv/direnv.toml"
+if grep -qs 'hide_env_diff' "$direnv_toml"; then
+  skip "direnv hides env diffs"
+elif grep -qs '^\[global\]' "$direnv_toml"; then
+  warn "Add 'hide_env_diff = true' under [global] in $direnv_toml to shorten direnv output."
+else
+  printf '[global]\nhide_env_diff = true\n' >>"$direnv_toml"
+  skip "set hide_env_diff in $direnv_toml"
+fi
 
 say "4/6 Admin age key (decrypts repo secrets)"
 if [ -s "$age_key" ]; then
