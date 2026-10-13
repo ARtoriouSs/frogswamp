@@ -20,6 +20,14 @@ let
     "admin password hash from sops" =
       cfg.users.users.pupsich.hashedPasswordFile == cfg.sops.secrets."admin/password_hash".path;
     "admin hash decrypted before users" = cfg.sops.secrets."admin/password_hash".neededForUsers;
+    "installer accepts admin key" =
+      self.nixosConfigurations.installer.config.users.users.root.openssh.authorizedKeys.keys
+      == cfg.frogswamp.adminSshKeys;
+    "installer ships nixos-facter" = lib.any (
+      p: (p.pname or "") == "nixos-facter"
+    ) self.nixosConfigurations.installer.config.environment.systemPackages;
+    "vm variant uses DHCP" =
+      cfg.virtualisation.vmVariant.systemd.network.networks."10-lan".networkConfig.DHCP == "ipv4";
   };
   failed = lib.attrNames (lib.filterAttrs (_: ok: !ok) checks);
 in

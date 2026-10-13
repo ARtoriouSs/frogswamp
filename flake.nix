@@ -56,6 +56,10 @@
           inherit specialArgs;
           modules = [ ./hosts/frogswamp ];
         };
+        installer = nixpkgs.lib.nixosSystem {
+          inherit specialArgs;
+          modules = [ ./hosts/installer ];
+        };
       };
 
       checks.${system} = {
