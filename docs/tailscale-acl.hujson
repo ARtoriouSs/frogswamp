@@ -1,0 +1,14 @@
+// Tailscale policy for frogswamp. Paste into https://login.tailscale.com/admin/acls
+{
+  "tagOwners": {
+    "tag:homelab": ["autogroup:admin"],
+  },
+  "autoApprovers": {
+    "routes": {
+      "192.168.101.0/24": ["tag:homelab"],
+    },
+  },
+  "acls": [
+    {"action": "accept", "src": ["autogroup:member"], "dst": ["*:*"]},
+  ],
+}

@@ -30,5 +30,6 @@
       gateway = "192.168.101.1";
       subnet = "192.168.101.0/24";
     };
+    tailscale.enable = true;
   };
 }

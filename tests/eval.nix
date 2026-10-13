@@ -28,6 +28,11 @@ let
     ) self.nixosConfigurations.installer.config.environment.systemPackages;
     "vm variant uses DHCP" =
       cfg.virtualisation.vmVariant.systemd.network.networks."10-lan".networkConfig.DHCP == "ipv4";
+    "tailscale advertises LAN" =
+      lib.elem "--advertise-routes=192.168.101.0/24" cfg.services.tailscale.extraUpFlags;
+    "tailscale tagged" = lib.elem "--advertise-tags=tag:homelab" cfg.services.tailscale.extraUpFlags;
+    "tailscale0 trusted" = lib.elem "tailscale0" cfg.networking.firewall.trustedInterfaces;
+    "tailscale off in vm" = !cfg.virtualisation.vmVariant.services.tailscale.enable;
   };
   failed = lib.attrNames (lib.filterAttrs (_: ok: !ok) checks);
 in

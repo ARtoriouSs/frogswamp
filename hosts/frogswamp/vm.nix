@@ -13,8 +13,11 @@
       }
     ];
   };
-  frogswamp.lan.address = lib.mkForce null;
   sops.secrets = lib.mkForce { };
-  frogswamp.adminPasswordHashFile = lib.mkForce null;
-  # Later tasks append service overrides below.
+  frogswamp = {
+    lan.address = lib.mkForce null;
+    adminPasswordHashFile = lib.mkForce null;
+    tailscale.enable = lib.mkForce false;
+    # Later tasks add service overrides here.
+  };
 }
