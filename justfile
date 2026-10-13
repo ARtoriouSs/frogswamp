@@ -86,11 +86,11 @@ install target:
     set -euo pipefail
     disk="$(nix eval --raw .#nixosConfigurations.frogswamp.config.frogswamp.disk)"
     ssh_opts=(-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null)
-    ssh "${ssh_opts[@]}" root@{{target}} "test -b $disk" || { echo "Target has no $disk. Set frogswamp.disk in hosts/frogswamp/default.nix." >&2; exit 1; }
-    ssh "${ssh_opts[@]}" root@{{target}} lsblk -o NAME,SIZE,MODEL "$disk"
+    ssh -n "${ssh_opts[@]}" root@{{target}} "test -b $disk" || { echo "Target has no $disk. Set frogswamp.disk in hosts/frogswamp/default.nix." >&2; exit 1; }
+    ssh -n "${ssh_opts[@]}" root@{{target}} lsblk -o NAME,SIZE,MODEL "$disk"
     read -r -p "This ERASES $disk on {{target}}. Type 'wipe' to continue: " answer
     [ "$answer" = "wipe" ] || { echo "Aborted."; exit 1; }
-    ssh "${ssh_opts[@]}" root@{{target}} nixos-facter > hosts/frogswamp/facter.json
+    ssh -n "${ssh_opts[@]}" root@{{target}} nixos-facter > hosts/frogswamp/facter.json
     git add --intent-to-add hosts/frogswamp/facter.json
     tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
     install -d -m 755 "$tmp/etc/ssh"
