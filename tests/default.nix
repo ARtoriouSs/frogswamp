@@ -8,4 +8,5 @@ let
 in
 {
   test-check-secrets = call ./check-secrets.nix;
+  test-base = call ./base.nix;
 }
