@@ -49,6 +49,9 @@ in
     firewall.enable = true;
   };
   systemd.network.enable = true;
+  # Our 10-lan unit configures the wired NIC. Facter would add DHCP units for every detected NIC,
+  # including the unused Wi-Fi, which never gets online and makes networkd-wait-online fail
+  hardware.facter.detected.dhcp.enable = false;
   systemd.network.networks."10-lan" = {
     inherit (cfg.lan) matchConfig;
   }

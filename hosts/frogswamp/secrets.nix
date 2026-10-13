@@ -10,11 +10,27 @@
       (lib.mkIf config.frogswamp.tailscale.enable {
         "tailscale/oauth_secret" = { };
       })
+      (lib.mkIf config.frogswamp.mqtt.enable {
+        "mosquitto/ha_password" = { };
+        "mosquitto/z2m_password" = { };
+        "zigbee2mqtt/mqtt_password" = {
+          key = "mosquitto/z2m_password";
+          owner = "zigbee2mqtt";
+        };
+      })
       # Later tasks append blocks here, one per module:
       # (lib.mkIf config.frogswamp.<module>.enable { ... })
     ];
   };
 
-  frogswamp.adminPasswordHashFile = lib.mkDefault config.sops.secrets."admin/password_hash".path;
-  frogswamp.tailscale.authKeyFile = lib.mkDefault config.sops.secrets."tailscale/oauth_secret".path;
+  frogswamp = {
+    adminPasswordHashFile = lib.mkDefault config.sops.secrets."admin/password_hash".path;
+    tailscale.authKeyFile = lib.mkDefault config.sops.secrets."tailscale/oauth_secret".path;
+    mqtt = {
+      haPasswordFile = lib.mkDefault config.sops.secrets."mosquitto/ha_password".path;
+      z2mPasswordFile = lib.mkDefault config.sops.secrets."mosquitto/z2m_password".path;
+      zigbee2mqtt.passwordFile = lib.mkDefault config.sops.secrets."zigbee2mqtt/mqtt_password".path;
+    };
+    # Later tasks add their secret file options here.
+  };
 }

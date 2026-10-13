@@ -14,10 +14,16 @@
     ];
   };
   sops.secrets = lib.mkForce { };
+  environment.etc."vm-dummy-secret".text = "vm-dummy";
   frogswamp = {
     lan.address = lib.mkForce null;
     adminPasswordHashFile = lib.mkForce null;
     tailscale.enable = lib.mkForce false;
+    mqtt = {
+      zigbee2mqtt.enable = lib.mkForce false;
+      haPasswordFile = lib.mkForce "/etc/vm-dummy-secret";
+      z2mPasswordFile = lib.mkForce "/etc/vm-dummy-secret";
+    };
     # Later tasks add service overrides here.
   };
 }

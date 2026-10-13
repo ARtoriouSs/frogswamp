@@ -1,4 +1,9 @@
-{ pkgs, self, ... }:
+{
+  pkgs,
+  self,
+  inputs,
+  ...
+}:
 let
   inherit (pkgs) lib;
   cfg = self.nixosConfigurations.frogswamp.config;
@@ -8,6 +13,8 @@ let
     "static IP 192.168.101.10/24" =
       cfg.systemd.network.networks."10-lan".address == [ "192.168.101.10/24" ];
     "gateway 192.168.101.1" = cfg.systemd.network.networks."10-lan".gateway == [ "192.168.101.1" ];
+    "only our LAN config manages NICs (no facter DHCP, e.g. on Wi-Fi)" =
+      !(lib.any (lib.hasPrefix "40-") (lib.attrNames cfg.systemd.network.networks));
     "SSH password auth disabled" = cfg.services.openssh.settings.PasswordAuthentication == false;
     "root fs is btrfs @root" = cfg.fileSystems."/".fsType == "btrfs";
     "media subvolume mounted" = cfg.fileSystems ? "/srv/media";
@@ -33,6 +40,15 @@ let
     "tailscale tagged" = lib.elem "--advertise-tags=tag:homelab" cfg.services.tailscale.extraUpFlags;
     "tailscale0 trusted" = lib.elem "tailscale0" cfg.networking.firewall.trustedInterfaces;
     "tailscale off in vm" = !cfg.virtualisation.vmVariant.services.tailscale.enable;
+    "z2m uses ember adapter" = cfg.services.zigbee2mqtt.settings.serial.adapter == "ember";
+    "z2m uses serial-free /dev/zigbee link" =
+      cfg.services.zigbee2mqtt.settings.serial.port == "/dev/zigbee";
+    "udev creates /dev/zigbee for SLZB-07Mg24" =
+      lib.hasInfix ''ATTRS{product}=="SMLIGHT SLZB-07Mg24"'' cfg.services.udev.extraRules
+      && lib.hasInfix ''SYMLINK+="zigbee"'' cfg.services.udev.extraRules;
+    "z2m from unstable" =
+      cfg.services.zigbee2mqtt.package == inputs.nixpkgs-unstable.legacyPackages.x86_64-linux.zigbee2mqtt;
+    "mosquitto localhost only" = lib.all (l: l.address == "127.0.0.1") cfg.services.mosquitto.listeners;
   };
   failed = lib.attrNames (lib.filterAttrs (_: ok: !ok) checks);
 in
