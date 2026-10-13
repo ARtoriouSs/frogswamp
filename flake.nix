@@ -22,12 +22,15 @@
     {
       self,
       nixpkgs,
+      nixpkgs-unstable,
       git-hooks,
       ...
     }@inputs:
     let
       system = "x86_64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
+      pkgs-unstable = import nixpkgs-unstable { inherit system; };
+      specialArgs = { inherit inputs pkgs-unstable; };
       hooks = git-hooks.lib.${system}.run {
         src = ./.;
         hooks = {
@@ -48,10 +51,16 @@
       };
     in
     {
-      nixosConfigurations = { };
+      nixosConfigurations = {
+        frogswamp = nixpkgs.lib.nixosSystem {
+          inherit specialArgs;
+          modules = [ ./hosts/frogswamp ];
+        };
+      };
 
       checks.${system} = {
         pre-commit = hooks;
+        frogswamp-toplevel = self.nixosConfigurations.frogswamp.config.system.build.toplevel;
       }
       // import ./tests { inherit pkgs self inputs; };
 
