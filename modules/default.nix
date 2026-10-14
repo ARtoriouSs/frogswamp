@@ -7,5 +7,6 @@
     ./services/home-assistant
     ./services/jellyfin.nix
     ./services/samba.nix
+    ./services/homepage.nix
   ];
 }

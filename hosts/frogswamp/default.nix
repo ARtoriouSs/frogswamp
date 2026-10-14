@@ -44,6 +44,7 @@
     homeAssistant.enable = true;
     jellyfin.enable = true;
     samba.enable = true;
+    homepage.enable = true;
     mqtt = {
       enable = true;
       zigbee2mqtt = {

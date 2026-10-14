@@ -24,6 +24,9 @@
       (lib.mkIf config.frogswamp.samba.enable {
         "samba/password".restartUnits = [ "samba-set-password.service" ];
       })
+      (lib.mkIf config.frogswamp.homepage.enable {
+        "homepage/env" = { };
+      })
       # Later tasks append blocks here, one per module:
       # (lib.mkIf config.frogswamp.<module>.enable { ... })
     ];
@@ -39,6 +42,7 @@
     };
     homeAssistant.secretsFile = lib.mkDefault config.sops.secrets."home_assistant/secrets_yaml".path;
     samba.passwordFile = lib.mkDefault config.sops.secrets."samba/password".path;
+    homepage.environmentFile = lib.mkDefault config.sops.secrets."homepage/env".path;
     # Later tasks add their secret file options here.
   };
 }
