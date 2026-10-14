@@ -5,5 +5,6 @@
     ./tailscale.nix
     ./services/mqtt.nix
     ./services/home-assistant
+    ./services/jellyfin.nix
   ];
 }
