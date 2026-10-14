@@ -43,6 +43,7 @@
     tailscale.enable = true;
     homeAssistant.enable = true;
     jellyfin.enable = true;
+    samba.enable = true;
     mqtt = {
       enable = true;
       zigbee2mqtt = {

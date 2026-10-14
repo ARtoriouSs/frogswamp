@@ -13,4 +13,5 @@ in
   test-mqtt = call ./mqtt.nix;
   test-home-assistant = call ./home-assistant.nix;
   test-jellyfin = call ./jellyfin.nix;
+  test-samba = call ./samba.nix;
 }

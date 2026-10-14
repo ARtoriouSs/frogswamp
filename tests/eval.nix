@@ -51,6 +51,8 @@ let
     "HA image pinned by digest" =
       lib.hasInfix "@sha256:" cfg.virtualisation.oci-containers.containers.home-assistant.image;
     "podman backend" = cfg.virtualisation.oci-containers.backend == "podman";
+    "samba password rotation restarts sync" =
+      cfg.sops.secrets."samba/password".restartUnits == [ "samba-set-password.service" ];
     "mosquitto localhost only" = lib.all (l: l.address == "127.0.0.1") cfg.services.mosquitto.listeners;
   };
   failed = lib.attrNames (lib.filterAttrs (_: ok: !ok) checks);
