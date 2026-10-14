@@ -15,6 +15,14 @@ check:
 secrets:
     sops secrets/frogswamp.yaml
 
+# Print one secret, e.g. `just secret mosquitto/ha_password`
+secret path:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    key="$(awk -F/ '{for (i = 1; i <= NF; i++) printf "[\"%s\"]", $i}' <<<'{{path}}')"
+    sops -d --extract "$key" secrets/frogswamp.yaml
+    echo
+
 # One-time: create the server's SSH host key (its sops identity) and .sops.yaml
 gen-host-key:
     #!/usr/bin/env bash

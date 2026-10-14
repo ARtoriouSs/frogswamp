@@ -12,6 +12,7 @@ Everything here is encrypted with [sops](https://github.com/getsops/sops) + age 
 ## Common tasks
 
 - Edit secrets: `just secrets` (opens your `$EDITOR`, re-encrypts on save).
+- Read one secret: `just secret <path>`, e.g. `just secret mosquitto/ha_password` (the MQTT password for Home Assistant). Same as `sops -d --extract '["mosquitto"]["ha_password"]' secrets/frogswamp.yaml`, plus a trailing newline.
 - Add a secret: add the key in `just secrets`, declare it in `hosts/frogswamp/secrets.nix`, deploy.
 - Rotate a password: change the value in `just secrets`, then `just deploy` (services restart where configured).
 - New admin PC: copy the age key from your password manager to `~/.config/sops/age/keys.txt` (mode 600).
