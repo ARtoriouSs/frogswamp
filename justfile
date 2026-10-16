@@ -85,9 +85,9 @@ vm:
     nix build .#nixosConfigurations.frogswamp.config.system.build.vm -L
     NIX_DISK_IMAGE=/tmp/frogswamp-vm.qcow2 ./result/bin/run-frogswamp-vm
 
-# SSH into the server as the admin user
-ssh:
-    ssh pupsich@{{host}}
+# SSH into the server as the admin user (optionally run a command: `just ssh uptime`)
+ssh *args:
+    ssh pupsich@{{host}} {{args}}
 
 # WIPE the target's disk and install frogswamp (target = installer IP or frogswamp-installer.local)
 install target:
