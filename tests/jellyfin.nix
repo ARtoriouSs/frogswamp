@@ -16,6 +16,9 @@ pkgs.testers.runNixOSTest {
     server.wait_for_open_port(8096)
     server.wait_until_succeeds("curl -sf http://127.0.0.1:8096/health | grep -q Healthy", timeout=600)
     server.succeed("test \"$(stat -c '%U:%G %a' /srv/media)\" = 'root:media 2775'")
+    # library folders exist from the start (also after a reinstall), same owner and setgid
+    for d in ["movies", "shows"]:
+        server.succeed(f"test \"$(stat -c '%U:%G %a' /srv/media/{d})\" = 'root:media 2775'")
     server.succeed("id -nG jellyfin | grep -qw media")
     server.succeed("id -nG jellyfin | grep -qw render")
     server.succeed("id -nG pupsich | grep -qw media")
