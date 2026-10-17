@@ -23,7 +23,13 @@ pkgs.testers.runNixOSTest {
     server.wait_for_open_port(8082)
     server.wait_until_succeeds("curl -sf http://localhost:8082/ >/dev/null", timeout=120)
     services = server.succeed("curl -sf http://localhost:8082/api/services")
-    for name in ["Home Assistant", "Jellyfin", "Zigbee2MQTT", "Media share"]:
+    for name in ["Home Assistant", "Jellyfin", "Zigbee2MQTT", "Media share", "Router", "Tailscale", "Backblaze B2", "GitHub repo"]:
         assert name in services, f"{name} missing: {services}"
+    # top-bar widgets get no HOMEPAGE_VAR_* substitution, so no placeholders may reach them
+    widgets = server.succeed("curl -sf http://localhost:8082/api/widgets")
+    assert "{{HOMEPAGE_VAR" not in widgets, widgets
+    bookmarks = server.succeed("curl -sf http://localhost:8082/api/bookmarks")
+    for name in ["Documentation", "Admin", "Zigbee2MQTT devices"]:
+        assert name in bookmarks, f"{name} missing: {bookmarks}"
   '';
 }
