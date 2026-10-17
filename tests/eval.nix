@@ -89,6 +89,11 @@ let
       lib.elem 51413 cfg.networking.firewall.allowedTCPPorts
       && lib.elem 51413 cfg.networking.firewall.allowedUDPPorts;
     "qbittorrent webui 8090 open" = lib.elem 8090 cfg.networking.firewall.allowedTCPPorts;
+    "janitor runs hourly" = cfg.systemd.timers.media-janitor.timerConfig.OnCalendar == "hourly";
+    "janitor still in dry run" = cfg.frogswamp.mediaJanitor.dryRun;
+    "janitor waits 48h and warns after 5 days" =
+      cfg.frogswamp.mediaJanitor.watchedAfterHours == 48
+      && cfg.frogswamp.mediaJanitor.staleAfterDays == 5;
     "backups off in vm" = !(cfg.virtualisation.vmVariant.services.restic.backups ? local);
     "mosquitto localhost only" = lib.all (l: l.address == "127.0.0.1") cfg.services.mosquitto.listeners;
   };

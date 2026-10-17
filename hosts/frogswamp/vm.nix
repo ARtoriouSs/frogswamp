@@ -22,6 +22,7 @@
     tailscale.enable = lib.mkForce false;
     arr.enable = lib.mkForce false;
     mediaProvision.enable = lib.mkForce false;
+    mediaJanitor.enable = lib.mkForce false;
     qbittorrent.webuiPasswordHashFile = lib.mkForce "${../../tests/fixtures/qbittorrent-password-hash}";
     backup.local.enable = lib.mkForce false;
     backup.b2.enable = lib.mkForce false;

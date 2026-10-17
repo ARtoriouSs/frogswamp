@@ -10,6 +10,7 @@
     ./services/qbittorrent.nix
     ./services/arr.nix
     ./services/media-provision
+    ./services/media-janitor
     ./services/samba.nix
     ./services/homepage.nix
   ];
