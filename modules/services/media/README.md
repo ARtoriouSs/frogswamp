@@ -1,0 +1,47 @@
+# Media: download, watch, forget
+
+Pick a movie or show on your phone, watch it on the TV in minutes, and it cleans itself up after you've seen it.
+
+| App | URL | What it does |
+|---|---|---|
+| Radarr | http://192.168.101.10:7878 | Movies: search and add |
+| Sonarr | http://192.168.101.10:8989 | Shows: search and add |
+| Prowlarr | http://192.168.101.10:9696 | Torrent sites (indexers), synced to Radarr and Sonarr |
+| qBittorrent | http://192.168.101.10:8090 | Downloads |
+| Bazarr | http://192.168.101.10:6767 | Subtitles for finished downloads (RU, EN, PL) |
+| Jellyfin | http://192.168.101.10:8096 | Libraries the TV plays from |
+
+The same URLs work away from home with the Tailscale app on. On the home network no login is needed; elsewhere log in as `pupsich` with `just secret arr/ui_password`.
+
+## From the phone
+
+- **Movie:** Radarr → *Add New* → search → **Quality profile `frogswamp`** → *Add + Search*.
+- **Show:** Sonarr → *Add New* → search → **profile `frogswamp`**, **Monitor: Latest season** (or pick one season) → *Add + Search*. Only that season is ever grabbed. New seasons are never monitored automatically.
+- The `frogswamp` profile prefers **4K**, falls back to **1080p**, never upgrades, and prefers **Russian audio** (then English, Polish).
+
+## On the TV (Kodi)
+
+1. Install the **Jellyfin for Kodi** add-on (or **JellyCon**) and connect to `http://192.168.101.10:8096`.
+2. Libraries:
+   - **Downloading movies / Downloading shows**: titles still downloading; open them from here to watch right away.
+   - **Movies / Shows**: finished titles. The same file appears here when the download completes, and playback is not interrupted.
+3. Kodi → *Settings → Player → Language*: preferred audio **Russian**, subtitles **Russian**, show subtitles only when the audio isn't Russian.
+4. While a title is still downloading, Bazarr can't help. Use Kodi's subtitle search (*Subtitles → Download*) if needed.
+
+## Cleanup
+
+- A movie, or a **single episode**, is deleted once it's **watched** (Jellyfin *Played*, ~90%) **and** its download finished **more than 48 h** ago. That covers the file, the torrent, and the entry in Radarr/unmonitoring in Sonarr.
+- **Unwatched downloads are never deleted.** After **5 days** they're counted on the dashboard (*Home Assistant → stale downloads*, HA entity `sensor.stale_downloads`).
+- It runs hourly. It's in **dry run** until switched on. Check what it would do with `just ssh journalctl -u media-janitor -n 20`, then set `mediaJanitor.dryRun = false;` in `hosts/frogswamp/default.nix` and `just deploy`.
+
+## Where settings live
+
+- **Repo (seeded once):** folders, qBittorrent behaviour (sequential download, no `.!qB`, stop seeding at completion), the `frogswamp` profile and language scores, Prowlarr↔Radarr/Sonarr links, Bazarr languages, the Jellyfin Downloading libraries. The setup (`media-provision.service`) only **adds what's missing**. Anything you change in an app's UI stays.
+- **Backups (nightly, A400 + B2):** everything else in the apps: indexers, your lists, history, UI changes.
+- **Not backed up:** the media files themselves.
+
+## Notes
+
+- **Disk:** Radarr and Sonarr stop grabbing below 20 GB free. 4K films are 15–80 GB each.
+- **Router (optional):** forwarding TCP+UDP **51413** to `192.168.101.10` gives more peers and faster downloads.
+- **Legal:** these tools are legal, but torrenting copyrighted films or shows uploads them to others while downloading, which counts as distribution in Poland/the EU. What you download is your responsibility.
