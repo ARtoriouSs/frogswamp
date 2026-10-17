@@ -1,0 +1,6 @@
+- id: snapshot_test
+  alias: "Snapshot test"
+  triggers:
+    - trigger: homeassistant
+      event: start
+  actions: []

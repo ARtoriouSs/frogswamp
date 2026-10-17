@@ -123,6 +123,18 @@ ha-bump version="stable":
     git add --intent-to-add modules/services/home-assistant/image.nix
     echo "Pinned Home Assistant $ver ($digest)"
 
+# Copy UI-made automations/scripts/scenes from the server into git (they stay editable in the UI)
+ha-pull:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    dir=modules/services/home-assistant/ui-snapshot
+    for f in automations scripts scenes; do
+      scp -q root@{{host}}:/var/lib/home-assistant/$f.yaml "$dir/$f.yaml"
+    done
+    just ha-check
+    git --no-pager diff --stat -- "$dir"
+    echo "Review with 'git diff $dir', then commit"
+
 # Validate HA YAML with the pinned image (needs podman or docker locally)
 ha-check:
     #!/usr/bin/env bash
@@ -133,7 +145,7 @@ ha-check:
     tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
     cp -r modules/services/home-assistant/config/. "$tmp/"
     cp tests/fixtures/ha-secrets.yaml "$tmp/secrets.yaml"
-    echo '[]' > "$tmp/automations.yaml"; echo '{}' > "$tmp/scripts.yaml"; echo '[]' > "$tmp/scenes.yaml"
+    cp modules/services/home-assistant/ui-snapshot/{automations,scripts,scenes}.yaml "$tmp/"
     # check_config exits 0 even when an integration's config is invalid, so also inspect its output
     out="$("$runtime" run --rm -v "$tmp:/config" --entrypoint python3 "$image" -m homeassistant --script check_config --config /config 2>&1)" || { echo "$out"; exit 1; }
     echo "$out"

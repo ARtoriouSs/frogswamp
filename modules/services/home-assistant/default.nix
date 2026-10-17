@@ -27,6 +27,11 @@ in
       type = lib.types.bool;
       default = true;
     };
+    uiSnapshotDir = lib.mkOption {
+      type = lib.types.path;
+      default = ./ui-snapshot;
+      description = "Files copied by `just ha-pull`; they seed the UI-owned files on a fresh install";
+    };
     recoverBluetooth = lib.mkOption {
       type = lib.types.bool;
       default = true;
@@ -62,17 +67,18 @@ in
         user = "root";
         group = "root";
       };
-      "${stateDir}/automations.yaml".f = {
-        mode = "0644";
-        argument = "[]";
+      # Copy from the UI snapshot only if missing, then make it writable (store files are read-only)
+      "${stateDir}/automations.yaml" = {
+        C.argument = "${cfg.uiSnapshotDir}/automations.yaml";
+        z.mode = "0644";
       };
-      "${stateDir}/scripts.yaml".f = {
-        mode = "0644";
-        argument = "{}";
+      "${stateDir}/scripts.yaml" = {
+        C.argument = "${cfg.uiSnapshotDir}/scripts.yaml";
+        z.mode = "0644";
       };
-      "${stateDir}/scenes.yaml".f = {
-        mode = "0644";
-        argument = "[]";
+      "${stateDir}/scenes.yaml" = {
+        C.argument = "${cfg.uiSnapshotDir}/scenes.yaml";
+        z.mode = "0644";
       };
     };
 

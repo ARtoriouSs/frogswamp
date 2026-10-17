@@ -9,13 +9,15 @@ pkgs.testers.runNixOSTest {
         enable = true;
         autoStart = false; # no registry access in the test sandbox
         secretsFile = "${./fixtures/ha-secrets.yaml}";
+        uiSnapshotDir = ./fixtures/ha-ui-snapshot;
       };
     };
   };
   testScript = ''
     server.wait_for_unit("multi-user.target")
-    # Review Focus 4: UI-owned files exist on a fresh state dir
-    server.succeed("grep -qx '\\[\\]' /var/lib/home-assistant/automations.yaml")
+    # Review Focus 4: UI-owned files exist on a fresh state dir, seeded from the UI snapshot and writable
+    server.succeed("grep -q 'id: snapshot_test' /var/lib/home-assistant/automations.yaml")
+    server.succeed("test \"$(stat -c '%a' /var/lib/home-assistant/automations.yaml)\" = 644")
     server.succeed("grep -qx '{}' /var/lib/home-assistant/scripts.yaml")
     server.succeed("grep -qx '\\[\\]' /var/lib/home-assistant/scenes.yaml")
     # existing UI content is never overwritten by tmpfiles
