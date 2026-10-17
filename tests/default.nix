@@ -15,6 +15,7 @@ in
   test-ha-no-device-ids = call ./ha-no-device-ids.nix;
   test-jellyfin = call ./jellyfin.nix;
   test-qbittorrent = call ./qbittorrent.nix;
+  test-arr = call ./arr.nix;
   test-samba = call ./samba.nix;
   test-homepage = call ./homepage.nix;
   test-backup = call ./backup.nix;

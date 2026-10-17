@@ -68,6 +68,20 @@ let
     "b2 off-site repository configured" =
       cfg.services.restic.backups.b2.repository
       == "s3:https://s3.eu-central-003.backblazeb2.com/frogswamp-backup";
+    "arr state backed up" =
+      lib.all (p: lib.hasInfix p cfg.services.restic.backups.local.dynamicFilesFrom)
+        [
+          "/var/lib/radarr"
+          "/var/lib/sonarr"
+          "/var/lib/private/prowlarr"
+          "/var/lib/bazarr"
+        ];
+    "arr ports open" = lib.all (p: lib.elem p cfg.networking.firewall.allowedTCPPorts) [
+      7878
+      8989
+      9696
+      6767
+    ];
     "qbittorrent can read its password hash" =
       cfg.sops.secrets."qbittorrent/webui_password_hash".owner == "qbittorrent";
     "qbittorrent torrent port 51413" = cfg.services.qbittorrent.torrentingPort == 51413;

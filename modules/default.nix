@@ -8,6 +8,7 @@
     ./services/home-assistant
     ./services/jellyfin.nix
     ./services/qbittorrent.nix
+    ./services/arr.nix
     ./services/samba.nix
     ./services/homepage.nix
   ];

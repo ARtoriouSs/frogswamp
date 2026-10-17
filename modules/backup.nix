@@ -15,11 +15,19 @@ let
     "/var/lib/tailscale"
     "/var/lib/samba/private"
     "/var/lib/qBittorrent"
+    "/var/lib/radarr"
+    "/var/lib/sonarr"
+    "/var/lib/private/prowlarr"
+    "/var/lib/bazarr"
   ];
   sqliteDbs = [
     "/var/lib/home-assistant/home-assistant_v2.db"
     "/var/lib/jellyfin/data/jellyfin.db"
     "/var/lib/jellyfin/data/library.db"
+    "/var/lib/radarr/.config/Radarr/radarr.db"
+    "/var/lib/sonarr/.config/NzbDrone/sonarr.db"
+    "/var/lib/private/prowlarr/prowlarr.db"
+    "/var/lib/bazarr/db/bazarr.db"
   ];
   # Service users whose state dirs get re-owned after restore (UIDs differ on a fresh install)
   owners = {
@@ -27,6 +35,9 @@ let
     "/var/lib/zigbee2mqtt" = "zigbee2mqtt";
     "/var/lib/mosquitto" = "mosquitto";
     "/var/lib/qBittorrent" = "qbittorrent";
+    "/var/lib/radarr" = "radarr";
+    "/var/lib/sonarr" = "sonarr";
+    "/var/lib/bazarr" = "bazarr";
   };
   units = [
     "podman-home-assistant"
@@ -36,6 +47,10 @@ let
     "samba-smbd"
     "tailscaled"
     "qbittorrent"
+    "radarr"
+    "sonarr"
+    "prowlarr"
+    "bazarr"
   ];
 
   snapshotDbs = ''
@@ -57,6 +72,16 @@ let
       "/var/lib/home-assistant/tts"
       "/var/lib/home-assistant/*.log*"
       "/var/lib/jellyfin/transcodes"
+      # Arr caches and their own backups: re-creatable, often large
+      "/var/lib/radarr/.config/Radarr/MediaCover"
+      "/var/lib/radarr/.config/Radarr/Backups"
+      "/var/lib/radarr/.config/Radarr/logs"
+      "/var/lib/sonarr/.config/NzbDrone/MediaCover"
+      "/var/lib/sonarr/.config/NzbDrone/Backups"
+      "/var/lib/sonarr/.config/NzbDrone/logs"
+      "/var/lib/private/prowlarr/Backups"
+      "/var/lib/private/prowlarr/logs"
+      "/var/lib/bazarr/log"
     ]
     ++ lib.concatMap (db: [
       db

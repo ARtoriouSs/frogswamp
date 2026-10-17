@@ -2,6 +2,13 @@
 {
   sops = {
     defaultSopsFile = ../../secrets/frogswamp.yaml;
+    # The Arr apps take their API key only as an environment variable
+    templates = lib.mkIf config.frogswamp.arr.enable (
+      lib.genAttrs [ "radarr" "sonarr" "prowlarr" ] (app: {
+        content = "${lib.toUpper app}__AUTH__APIKEY=${config.sops.placeholder."arr/${app}_api_key"}\n";
+        restartUnits = [ "${app}.service" ];
+      })
+    );
     age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
     secrets = lib.mkMerge [
       {
@@ -40,6 +47,12 @@
           restartUnits = [ "qbittorrent.service" ];
         };
       })
+      (lib.mkIf config.frogswamp.arr.enable {
+        "arr/radarr_api_key" = { };
+        "arr/sonarr_api_key" = { };
+        "arr/prowlarr_api_key" = { };
+        "arr/bazarr_api_key".owner = "bazarr"; # read by Bazarr's own ExecStartPre
+      })
       # Later tasks append blocks here, one per module:
       # (lib.mkIf config.frogswamp.<module>.enable { ... })
     ];
@@ -64,6 +77,14 @@
     qbittorrent.webuiPasswordHashFile =
       lib.mkDefault
         config.sops.secrets."qbittorrent/webui_password_hash".path;
+    arr = {
+      environmentFiles = lib.genAttrs [ "radarr" "sonarr" "prowlarr" ] (
+        app: lib.mkDefault config.sops.templates.${app}.path
+      );
+      apiKeyFiles = lib.genAttrs [ "radarr" "sonarr" "prowlarr" "bazarr" ] (
+        app: lib.mkDefault config.sops.secrets."arr/${app}_api_key".path
+      );
+    };
     # Later tasks add their secret file options here.
   };
 }

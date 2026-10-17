@@ -46,6 +46,7 @@
     samba.enable = true;
     homepage.enable = true;
     qbittorrent.enable = true;
+    arr.enable = true;
     backup = {
       local.enable = true;
       b2 = {
