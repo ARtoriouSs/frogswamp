@@ -31,5 +31,11 @@ pkgs.testers.runNixOSTest {
     assert "/config/secrets.yaml:ro" in unit, unit
     assert "/run/dbus:/run/dbus:ro" in unit, unit
     server.succeed("iptables -S | grep -q 'dport 8123'")
+    # Bluetooth recovery: udev rule only for adapters (DEVTYPE=host), never for BLE connections
+    rules = server.succeed("cat /etc/udev/rules.d/*.rules")
+    assert 'ENV{DEVTYPE}=="host"' in rules and "home-assistant-bluetooth-recover.service" in rules, rules
+    # With HA not running (e.g. adapter appears during boot) the recovery does nothing and succeeds
+    server.succeed("systemctl start home-assistant-bluetooth-recover.service")
+    server.fail("systemctl is-active podman-home-assistant.service")
   '';
 }

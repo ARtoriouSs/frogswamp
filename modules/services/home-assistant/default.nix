@@ -27,6 +27,11 @@ in
       type = lib.types.bool;
       default = true;
     };
+    recoverBluetooth = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Restart Home Assistant when the Bluetooth adapter re-appears (e.g. after a USB reset renames hci0 to hci1)";
+    };
   };
 
   config = lib.mkIf cfg.enable {
@@ -72,5 +77,31 @@ in
     };
 
     networking.firewall.allowedTCPPorts = [ 8123 ];
+
+    # The Realtek BT chip sometimes hangs; the kernel resets it and it comes back as a new hciN.
+    # HA's scanner stays bound to the old adapter, so restart HA when an adapter (not a BLE link) is added.
+    services.udev.extraRules = lib.mkIf cfg.recoverBluetooth ''
+      ACTION=="add", SUBSYSTEM=="bluetooth", ENV{DEVTYPE}=="host", TAG+="systemd", ENV{SYSTEMD_WANTS}+="home-assistant-bluetooth-recover.service"
+    '';
+    systemd.services.home-assistant-bluetooth-recover = lib.mkIf cfg.recoverBluetooth {
+      description = "Restart Home Assistant after the Bluetooth adapter re-appears";
+      serviceConfig.Type = "oneshot";
+      script = ''
+        # During boot the adapter appears before HA runs: nothing to recover
+        if ! systemctl is-active --quiet podman-home-assistant.service; then
+          echo "Home Assistant not running, nothing to do"
+          exit 0
+        fi
+        started=$(systemctl show podman-home-assistant.service -P ActiveEnterTimestampMonotonic)
+        uptime=$(cut -d. -f1 /proc/uptime)
+        age=$(( uptime - started / 1000000 ))
+        if [ "$age" -lt 120 ]; then
+          echo "Home Assistant started ''${age}s ago, skipping"
+          exit 0
+        fi
+        echo "Bluetooth adapter re-appeared, restarting Home Assistant"
+        systemctl restart podman-home-assistant.service
+      '';
+    };
   };
 }
