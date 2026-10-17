@@ -53,6 +53,10 @@
         "arr/prowlarr_api_key" = { };
         "arr/bazarr_api_key".owner = "bazarr"; # read by Bazarr's own ExecStartPre
       })
+      (lib.mkIf config.frogswamp.mediaProvision.enable {
+        "jellyfin/api_key" = { };
+        "home_assistant/api_token" = { };
+      })
       # Later tasks append blocks here, one per module:
       # (lib.mkIf config.frogswamp.<module>.enable { ... })
     ];
@@ -84,6 +88,10 @@
       apiKeyFiles = lib.genAttrs [ "radarr" "sonarr" "prowlarr" "bazarr" ] (
         app: lib.mkDefault config.sops.secrets."arr/${app}_api_key".path
       );
+    };
+    mediaProvision = {
+      uiPasswordFile = lib.mkDefault config.sops.secrets."arr/ui_password".path;
+      jellyfinApiKeyFile = lib.mkDefault config.sops.secrets."jellyfin/api_key".path;
     };
     # Later tasks add their secret file options here.
   };

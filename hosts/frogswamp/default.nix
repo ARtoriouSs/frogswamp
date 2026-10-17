@@ -47,6 +47,7 @@
     homepage.enable = true;
     qbittorrent.enable = true;
     arr.enable = true;
+    mediaProvision.enable = true;
     backup = {
       local.enable = true;
       b2 = {

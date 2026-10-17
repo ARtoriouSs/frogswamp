@@ -16,6 +16,7 @@ in
   test-jellyfin = call ./jellyfin.nix;
   test-qbittorrent = call ./qbittorrent.nix;
   test-arr = call ./arr.nix;
+  test-media-provision = call ./media-provision.nix;
   test-samba = call ./samba.nix;
   test-homepage = call ./homepage.nix;
   test-backup = call ./backup.nix;

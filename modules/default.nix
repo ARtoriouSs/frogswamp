@@ -9,6 +9,7 @@
     ./services/jellyfin.nix
     ./services/qbittorrent.nix
     ./services/arr.nix
+    ./services/media-provision
     ./services/samba.nix
     ./services/homepage.nix
   ];
