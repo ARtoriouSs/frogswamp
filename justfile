@@ -162,6 +162,17 @@ init-backup-disk device:
 backup-now:
     ssh root@{{host}} 'for u in restic-backups-local restic-backups-b2; do systemctl cat $u.service >/dev/null 2>&1 && systemctl start $u.service; done; restic-local snapshots | tail -3'
 
+# Copy the server's backup repository (A400) to this PC as an extra copy outside the NUC
+backup-pull dest="~/frogswamp-backup":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    dest="{{dest}}"; dest="${dest/#\~/$HOME}"
+    mkdir -p "$dest/restic"
+    rsync -a --delete --info=stats1 root@{{host}}:/mnt/backup/restic/ "$dest/restic/"
+    export RESTIC_PASSWORD_COMMAND="sops -d --extract '[\"restic\"][\"password\"]' secrets/frogswamp.yaml"
+    restic -r "$dest/restic" snapshots --compact | tail -3
+    echo "Backup copy in $dest/restic (readable with: just secret restic/password)"
+
 # Restore state on the server (repo: local or b2). Pass "--force" to overwrite existing state
 restore repo="local" *flags="":
     ssh root@{{host}} frogswamp-restore --repo {{repo}} {{flags}}

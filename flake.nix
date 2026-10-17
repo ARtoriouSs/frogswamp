@@ -81,6 +81,8 @@
           skopeo
           jq
           openssl
+          restic
+          rsync
           shellcheck
           nixfmt
           statix

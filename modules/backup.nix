@@ -177,7 +177,11 @@ in
   config = lib.mkIf (cfg.local.enable || cfg.b2.enable) (
     lib.mkMerge [
       {
-        environment.systemPackages = [ restore ];
+        # rsync lets `just backup-pull` copy the local repository to the management PC
+        environment.systemPackages = [
+          restore
+          pkgs.rsync
+        ];
       }
       (lib.mkIf cfg.local.enable {
         fileSystems.${cfg.local.mountPoint} = {
