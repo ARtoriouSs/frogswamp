@@ -1,11 +1,11 @@
 - id: repo_startup_notice
   alias: "Repo: startup notice"
-  description: Example repo-owned automation (read-only in the UI)
+  description: Restart notification
   triggers:
     - trigger: homeassistant
       event: start
   actions:
     - action: persistent_notification.create
       data:
-        title: Home Assistant started
-        message: Config loaded from the frogswamp repo
+        title: Home Assistant [re]started
+        message: Static config loaded from the frogswamp repo
