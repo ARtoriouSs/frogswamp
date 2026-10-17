@@ -2,13 +2,32 @@
 {
   sops = {
     defaultSopsFile = ../../secrets/frogswamp.yaml;
-    # The Arr apps take their API key only as an environment variable
-    templates = lib.mkIf config.frogswamp.arr.enable (
-      lib.genAttrs [ "radarr" "sonarr" "prowlarr" ] (app: {
-        content = "${lib.toUpper app}__AUTH__APIKEY=${config.sops.placeholder."arr/${app}_api_key"}\n";
-        restartUnits = [ "${app}.service" ];
+    templates = lib.mkMerge [
+      # The Arr apps take their API key only as an environment variable
+      (lib.mkIf config.frogswamp.arr.enable (
+        lib.genAttrs [ "radarr" "sonarr" "prowlarr" ] (app: {
+          content = "${lib.toUpper app}__AUTH__APIKEY=${config.sops.placeholder."arr/${app}_api_key"}\n";
+          restartUnits = [ "${app}.service" ];
+        })
+      ))
+      # Homepage widget credentials, assembled from the single-value secrets
+      (lib.mkIf config.frogswamp.homepage.enable {
+        "homepage.env" = {
+          content = lib.concatStrings (
+            lib.mapAttrsToList (var: secret: "HOMEPAGE_VAR_${var}=${config.sops.placeholder.${secret}}\n") {
+              HA_TOKEN = "home_assistant/api_token";
+              JELLYFIN_KEY = "jellyfin/api_key";
+              RADARR_KEY = "arr/radarr_api_key";
+              SONARR_KEY = "arr/sonarr_api_key";
+              PROWLARR_KEY = "arr/prowlarr_api_key";
+              BAZARR_KEY = "arr/bazarr_api_key";
+              QBIT_PASSWORD = "arr/ui_password";
+            }
+          );
+          restartUnits = [ "homepage-dashboard.service" ];
+        };
       })
-    );
+    ];
     age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
     secrets = lib.mkMerge [
       {
@@ -30,9 +49,6 @@
       })
       (lib.mkIf config.frogswamp.samba.enable {
         "samba/password".restartUnits = [ "samba-set-password.service" ];
-      })
-      (lib.mkIf config.frogswamp.homepage.enable {
-        "homepage/env" = { };
       })
       (lib.mkIf (config.frogswamp.backup.local.enable || config.frogswamp.backup.b2.enable) {
         "restic/password" = { };
@@ -72,7 +88,7 @@
     };
     homeAssistant.secretsFile = lib.mkDefault config.sops.secrets."home_assistant/secrets_yaml".path;
     samba.passwordFile = lib.mkDefault config.sops.secrets."samba/password".path;
-    homepage.environmentFile = lib.mkDefault config.sops.secrets."homepage/env".path;
+    homepage.environmentFile = lib.mkDefault config.sops.templates."homepage.env".path;
     backup = {
       passwordFile = lib.mkDefault config.sops.secrets."restic/password".path;
       # Only evaluated when B2 is enabled (the secret exists only then)

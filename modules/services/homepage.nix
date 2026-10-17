@@ -10,7 +10,7 @@ in
     enable = lib.mkEnableOption "Homepage dashboard";
     environmentFile = lib.mkOption {
       type = lib.types.str;
-      description = "Runtime env file with HOMEPAGE_VAR_HA_TOKEN and HOMEPAGE_VAR_JELLYFIN_KEY";
+      description = "Runtime env file with HOMEPAGE_VAR_{HA_TOKEN,JELLYFIN_KEY,RADARR_KEY,SONARR_KEY,PROWLARR_KEY,BAZARR_KEY,QBIT_PASSWORD}";
     };
   };
 
@@ -49,6 +49,10 @@ in
           Infrastructure = {
             style = "row";
             columns = 4;
+          };
+          Downloads = {
+            style = "row";
+            columns = 5;
           };
         };
         quicklaunch = {
@@ -151,8 +155,8 @@ in
                       label = "automations";
                     }
                     {
-                      state = "sun.sun";
-                      label = "sun";
+                      state = "sensor.stale_downloads";
+                      label = "stale downloads";
                     }
                   ];
                 };
@@ -190,6 +194,76 @@ in
               "Media share" = {
                 icon = "mdi-folder-network"; # no Samba icon in the dashboard-icons set
                 description = "smb://frogswamp.local/media (user pupsich)";
+              };
+            }
+          ];
+        }
+        {
+          Downloads = [
+            {
+              qBittorrent = {
+                href = link 8090;
+                icon = "qbittorrent.png";
+                description = "Downloads (stops seeding when done)";
+                siteMonitor = local 8090;
+                widget = {
+                  type = "qbittorrent";
+                  url = local 8090;
+                  username = config.frogswamp.adminUser;
+                  password = "{{HOMEPAGE_VAR_QBIT_PASSWORD}}";
+                };
+              };
+            }
+            {
+              Radarr = {
+                href = link 7878;
+                icon = "radarr.png";
+                description = "Movies";
+                siteMonitor = local 7878;
+                widget = {
+                  type = "radarr";
+                  url = local 7878;
+                  key = "{{HOMEPAGE_VAR_RADARR_KEY}}";
+                };
+              };
+            }
+            {
+              Sonarr = {
+                href = link 8989;
+                icon = "sonarr.png";
+                description = "Shows (one season at a time)";
+                siteMonitor = local 8989;
+                widget = {
+                  type = "sonarr";
+                  url = local 8989;
+                  key = "{{HOMEPAGE_VAR_SONARR_KEY}}";
+                };
+              };
+            }
+            {
+              Prowlarr = {
+                href = link 9696;
+                icon = "prowlarr.png";
+                description = "Indexers";
+                siteMonitor = local 9696;
+                widget = {
+                  type = "prowlarr";
+                  url = local 9696;
+                  key = "{{HOMEPAGE_VAR_PROWLARR_KEY}}";
+                };
+              };
+            }
+            {
+              Bazarr = {
+                href = link 6767;
+                icon = "bazarr.png";
+                description = "Subtitles (RU, EN, PL)";
+                siteMonitor = local 6767;
+                widget = {
+                  type = "bazarr";
+                  url = local 6767;
+                  key = "{{HOMEPAGE_VAR_BAZARR_KEY}}";
+                };
               };
             }
           ];
@@ -261,6 +335,22 @@ in
                 {
                   abbr = "NX";
                   href = "https://search.nixos.org/options";
+                }
+              ];
+            }
+            {
+              "TRaSH Guides" = [
+                {
+                  abbr = "TG";
+                  href = "https://trash-guides.info/";
+                }
+              ];
+            }
+            {
+              "Servarr wiki" = [
+                {
+                  abbr = "SV";
+                  href = "https://wiki.servarr.com/";
                 }
               ];
             }

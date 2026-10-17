@@ -28,8 +28,13 @@ pkgs.testers.runNixOSTest {
     # top-bar widgets get no HOMEPAGE_VAR_* substitution, so no placeholders may reach them
     widgets = server.succeed("curl -sf http://localhost:8082/api/widgets")
     assert "{{HOMEPAGE_VAR" not in widgets, widgets
+    for name in ["qBittorrent", "Radarr", "Sonarr", "Prowlarr", "Bazarr"]:
+        assert name in services, f"{name} missing: {services}"
+    assert '"Downloads"' in services, services
+    # widget settings are not exposed by the API, so check the generated config
+    server.succeed("grep -q 'sensor.stale_downloads' /etc/homepage-dashboard/services.yaml")
     bookmarks = server.succeed("curl -sf http://localhost:8082/api/bookmarks")
-    for name in ["Documentation", "Admin", "Zigbee2MQTT devices"]:
+    for name in ["Documentation", "Admin", "Zigbee2MQTT devices", "TRaSH Guides", "Servarr wiki"]:
         assert name in bookmarks, f"{name} missing: {bookmarks}"
   '';
 }
