@@ -16,4 +16,5 @@ in
   test-jellyfin = call ./jellyfin.nix;
   test-samba = call ./samba.nix;
   test-homepage = call ./homepage.nix;
+  test-backup = call ./backup.nix;
 }

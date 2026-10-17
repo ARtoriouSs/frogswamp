@@ -41,6 +41,12 @@ let
     "tailscale0 trusted" = lib.elem "tailscale0" cfg.networking.firewall.trustedInterfaces;
     "tailscale off in vm" = !cfg.virtualisation.vmVariant.services.tailscale.enable;
     "z2m uses ember adapter" = cfg.services.zigbee2mqtt.settings.serial.adapter == "ember";
+    "z2m waits for the dongle instead of crash-looping" =
+      lib.elem "dev-zigbee.device" cfg.systemd.services.zigbee2mqtt.bindsTo
+      && lib.elem "dev-zigbee.device" cfg.systemd.services.zigbee2mqtt.wantedBy;
+    "dongle udev link is a systemd device" = lib.any (
+      line: lib.hasInfix ''SYMLINK+="zigbee"'' line && lib.hasInfix ''TAG+="systemd"'' line
+    ) (lib.splitString "\n" cfg.services.udev.extraRules);
     "z2m uses serial-free /dev/zigbee link" =
       cfg.services.zigbee2mqtt.settings.serial.port == "/dev/zigbee";
     "udev creates /dev/zigbee for SLZB-07Mg24" =

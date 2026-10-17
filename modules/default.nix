@@ -3,6 +3,7 @@
     ./options.nix
     ./base
     ./tailscale.nix
+    ./backup.nix
     ./services/mqtt.nix
     ./services/home-assistant
     ./services/jellyfin.nix

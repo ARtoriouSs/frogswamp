@@ -2,11 +2,14 @@
   config,
   lib,
   pkgs,
+  utils,
   ...
 }:
 let
   cfg = config.frogswamp.mqtt;
   z2m = cfg.zigbee2mqtt;
+  # systemd unit of the dongle (needs TAG+="systemd" in its udev rule), e.g. dev-zigbee.device
+  dongleUnit = "${utils.escapeSystemdPath z2m.serialPort}.device";
 in
 {
   options.frogswamp.mqtt = {
@@ -80,8 +83,14 @@ in
           };
         };
         # Z2M reads `!secret.yaml` from its data dir; render it from the password file on every start
+        # Wait for the dongle instead of crash-looping without it: start when it appears, stop when unplugged
         systemd.services.zigbee2mqtt = {
-          after = [ "mosquitto.service" ];
+          bindsTo = [ dongleUnit ];
+          wantedBy = [ dongleUnit ];
+          after = [
+            "mosquitto.service"
+            dongleUnit
+          ];
           serviceConfig.SupplementaryGroups = [ "dialout" ];
           preStart = lib.mkBefore ''
             printf 'mqtt_password: "%s"\n' "$(cat ${z2m.passwordFile})" > ${config.services.zigbee2mqtt.dataDir}/secret.yaml
