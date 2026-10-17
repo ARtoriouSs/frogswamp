@@ -48,8 +48,8 @@
     backup = {
       local.enable = true;
       b2 = {
-        enable = false; # set true once the B2 bucket exists
-        repository = "";
+        enable = true;
+        repository = "s3:https://s3.eu-central-003.backblazeb2.com/frogswamp-backup";
       };
     };
     mqtt = {

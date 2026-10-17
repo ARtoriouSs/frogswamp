@@ -65,6 +65,9 @@ let
     );
     "local backup refuses to run unmounted" =
       cfg.systemd.services.restic-backups-local.unitConfig.AssertPathIsMountPoint == "/mnt/backup";
+    "b2 off-site repository configured" =
+      cfg.services.restic.backups.b2.repository
+      == "s3:https://s3.eu-central-003.backblazeb2.com/frogswamp-backup";
     "backups off in vm" = !(cfg.virtualisation.vmVariant.services.restic.backups ? local);
     "mosquitto localhost only" = lib.all (l: l.address == "127.0.0.1") cfg.services.mosquitto.listeners;
   };
