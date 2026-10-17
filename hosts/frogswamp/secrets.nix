@@ -33,6 +33,13 @@
       (lib.mkIf config.frogswamp.backup.b2.enable {
         "restic/b2_env" = { };
       })
+      (lib.mkIf config.frogswamp.qbittorrent.enable {
+        "arr/ui_password" = { };
+        "qbittorrent/webui_password_hash" = {
+          owner = "qbittorrent"; # read by the service's own ExecStartPre
+          restartUnits = [ "qbittorrent.service" ];
+        };
+      })
       # Later tasks append blocks here, one per module:
       # (lib.mkIf config.frogswamp.<module>.enable { ... })
     ];
@@ -54,6 +61,9 @@
       # Only evaluated when B2 is enabled (the secret exists only then)
       b2.environmentFile = lib.mkDefault config.sops.secrets."restic/b2_env".path;
     };
+    qbittorrent.webuiPasswordHashFile =
+      lib.mkDefault
+        config.sops.secrets."qbittorrent/webui_password_hash".path;
     # Later tasks add their secret file options here.
   };
 }

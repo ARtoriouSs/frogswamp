@@ -45,6 +45,7 @@
     jellyfin.enable = true;
     samba.enable = true;
     homepage.enable = true;
+    qbittorrent.enable = true;
     backup = {
       local.enable = true;
       b2 = {

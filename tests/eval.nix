@@ -68,6 +68,13 @@ let
     "b2 off-site repository configured" =
       cfg.services.restic.backups.b2.repository
       == "s3:https://s3.eu-central-003.backblazeb2.com/frogswamp-backup";
+    "qbittorrent can read its password hash" =
+      cfg.sops.secrets."qbittorrent/webui_password_hash".owner == "qbittorrent";
+    "qbittorrent torrent port 51413" = cfg.services.qbittorrent.torrentingPort == 51413;
+    "qbittorrent port open tcp+udp" =
+      lib.elem 51413 cfg.networking.firewall.allowedTCPPorts
+      && lib.elem 51413 cfg.networking.firewall.allowedUDPPorts;
+    "qbittorrent webui 8090 open" = lib.elem 8090 cfg.networking.firewall.allowedTCPPorts;
     "backups off in vm" = !(cfg.virtualisation.vmVariant.services.restic.backups ? local);
     "mosquitto localhost only" = lib.all (l: l.address == "127.0.0.1") cfg.services.mosquitto.listeners;
   };

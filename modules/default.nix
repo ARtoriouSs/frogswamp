@@ -7,6 +7,7 @@
     ./services/mqtt.nix
     ./services/home-assistant
     ./services/jellyfin.nix
+    ./services/qbittorrent.nix
     ./services/samba.nix
     ./services/homepage.nix
   ];

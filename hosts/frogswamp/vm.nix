@@ -20,6 +20,7 @@
     lan.address = lib.mkForce null;
     adminPasswordHashFile = lib.mkForce null;
     tailscale.enable = lib.mkForce false;
+    qbittorrent.webuiPasswordHashFile = lib.mkForce "${../../tests/fixtures/qbittorrent-password-hash}";
     backup.local.enable = lib.mkForce false;
     backup.b2.enable = lib.mkForce false;
     samba.passwordFile = lib.mkForce "/etc/vm-dummy-secret";

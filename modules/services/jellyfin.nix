@@ -10,6 +10,9 @@ in
       default = [
         "movies"
         "shows"
+        "downloads"
+        "downloads/radarr"
+        "downloads/sonarr"
       ];
       description = "Folders under /srv/media created on every boot, so Jellyfin libraries resolve after a reinstall";
     };

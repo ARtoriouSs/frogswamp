@@ -14,6 +14,7 @@ let
     "/var/lib/mosquitto"
     "/var/lib/tailscale"
     "/var/lib/samba/private"
+    "/var/lib/qBittorrent"
   ];
   sqliteDbs = [
     "/var/lib/home-assistant/home-assistant_v2.db"
@@ -25,6 +26,7 @@ let
     "/var/lib/jellyfin" = "jellyfin";
     "/var/lib/zigbee2mqtt" = "zigbee2mqtt";
     "/var/lib/mosquitto" = "mosquitto";
+    "/var/lib/qBittorrent" = "qbittorrent";
   };
   units = [
     "podman-home-assistant"
@@ -33,6 +35,7 @@ let
     "mosquitto"
     "samba-smbd"
     "tailscaled"
+    "qbittorrent"
   ];
 
   snapshotDbs = ''
