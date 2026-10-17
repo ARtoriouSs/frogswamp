@@ -188,7 +188,7 @@ in
             }
             {
               "Media share" = {
-                icon = "samba.png";
+                icon = "mdi-folder-network"; # no Samba icon in the dashboard-icons set
                 description = "smb://frogswamp.local/media (user pupsich)";
               };
             }
