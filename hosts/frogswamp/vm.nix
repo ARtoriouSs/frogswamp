@@ -20,6 +20,8 @@
     lan.address = lib.mkForce null;
     adminPasswordHashFile = lib.mkForce null;
     tailscale.enable = lib.mkForce false;
+    backup.local.enable = lib.mkForce false;
+    backup.b2.enable = lib.mkForce false;
     samba.passwordFile = lib.mkForce "/etc/vm-dummy-secret";
     homepage.environmentFile = lib.mkForce "/etc/vm-homepage-env";
     homeAssistant.secretsFile = lib.mkForce "${../../tests/fixtures/ha-secrets.yaml}";

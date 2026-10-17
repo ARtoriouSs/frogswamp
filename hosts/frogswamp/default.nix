@@ -45,6 +45,13 @@
     jellyfin.enable = true;
     samba.enable = true;
     homepage.enable = true;
+    backup = {
+      local.enable = true;
+      b2 = {
+        enable = false; # set true once the B2 bucket exists
+        repository = "";
+      };
+    };
     mqtt = {
       enable = true;
       zigbee2mqtt = {

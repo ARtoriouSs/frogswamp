@@ -59,6 +59,13 @@ let
     "podman backend" = cfg.virtualisation.oci-containers.backend == "podman";
     "samba password rotation restarts sync" =
       cfg.sops.secrets."samba/password".restartUnits == [ "samba-set-password.service" ];
+    "backup mount is nofail" = lib.elem "nofail" cfg.fileSystems."/mnt/backup".options;
+    "local backup requires its mount" = lib.elem "/mnt/backup" (
+      lib.toList cfg.systemd.services.restic-backups-local.unitConfig.RequiresMountsFor
+    );
+    "local backup refuses to run unmounted" =
+      cfg.systemd.services.restic-backups-local.unitConfig.AssertPathIsMountPoint == "/mnt/backup";
+    "backups off in vm" = !(cfg.virtualisation.vmVariant.services.restic.backups ? local);
     "mosquitto localhost only" = lib.all (l: l.address == "127.0.0.1") cfg.services.mosquitto.listeners;
   };
   failed = lib.attrNames (lib.filterAttrs (_: ok: !ok) checks);

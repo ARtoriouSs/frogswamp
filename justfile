@@ -151,3 +151,40 @@ ha-check:
     echo "$out"
     if grep -qE 'Invalid config|Failed config|Fatal error' <<<"$out"; then echo "ha-check: invalid Home Assistant config" >&2; exit 1; fi
     echo "ha-check: configuration valid"
+
+# One-time: format the external backup disk on the server (ERASES it)
+init-backup-disk device:
+    ssh -n root@{{host}} lsblk -o NAME,SIZE,MODEL,LABEL {{device}}
+    @read -r -p "ERASE {{device}} on the server and label it 'frogbackup'? Type 'wipe': " a; [ "$a" = "wipe" ]
+    ssh -n root@{{host}} 'wipefs -a {{device}} && mkfs.ext4 -F -L frogbackup {{device}} && udevadm settle && systemctl start mnt-backup.mount && findmnt /mnt/backup'
+
+# Run all enabled backup jobs now
+backup-now:
+    ssh root@{{host}} 'for u in restic-backups-local restic-backups-b2; do systemctl cat $u.service >/dev/null 2>&1 && systemctl start $u.service; done; restic-local snapshots | tail -3'
+
+# Restore state on the server (repo: local or b2). Pass "--force" to overwrite existing state
+restore repo="local" *flags="":
+    ssh root@{{host}} frogswamp-restore --repo {{repo}} {{flags}}
+
+# Reinstall from the installer USB, then restore state (local, falling back to b2)
+rebuild-from-scratch target:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    just install {{target}}
+    echo "Waiting for the server at {{host}}..."
+    for _ in $(seq 1 120); do
+      if ssh -n -o ConnectTimeout=5 -o StrictHostKeyChecking=accept-new root@{{host}} true 2>/dev/null; then break; fi
+      sleep 5
+    done
+    ssh -n root@{{host}} systemctl is-system-running --wait || true
+    set +e
+    ssh -n root@{{host}} frogswamp-restore --repo local
+    rc=$?
+    set -e
+    if [ "$rc" -eq 4 ]; then
+      echo "Local backup unavailable, trying B2..."
+      ssh -n root@{{host}} frogswamp-restore --repo b2
+    elif [ "$rc" -ne 0 ]; then
+      exit "$rc"
+    fi
+    echo "Rebuild complete. Check HA, Z2M, Jellyfin and Homepage in the browser."
