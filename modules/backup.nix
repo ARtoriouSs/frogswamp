@@ -24,6 +24,8 @@ let
     "/var/lib/home-assistant/home-assistant_v2.db"
     "/var/lib/jellyfin/data/jellyfin.db"
     "/var/lib/jellyfin/data/library.db"
+    "/var/lib/jellyfin/data/kodisyncqueue.db"
+    "/var/lib/jellyfin/data/kodisyncqueue-log.db"
     "/var/lib/radarr/.config/Radarr/radarr.db"
     "/var/lib/sonarr/.config/NzbDrone/sonarr.db"
     "/var/lib/private/prowlarr/prowlarr.db"

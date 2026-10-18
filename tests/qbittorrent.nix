@@ -22,6 +22,7 @@ pkgs.testers.runNixOSTest {
     server.fail("curl -s -c /tmp/x -d 'username=pupsich&password=wrong' http://127.0.0.1:8090/api/v2/auth/login; grep -q SID /tmp/x")
     p = json.loads(server.succeed("curl -sf -b /tmp/c http://127.0.0.1:8090/api/v2/app/preferences"))
     assert p["save_path"].rstrip("/") == "/srv/media/downloads", p["save_path"]
+    assert p["auto_tmm_enabled"] is True, "category save paths are ignored without automatic torrent management"
     assert p["incomplete_files_ext"] is False and p["temp_path_enabled"] is False
     assert p["max_ratio_enabled"] and p["max_ratio"] == 0, (p["max_ratio_enabled"], p["max_ratio"])
     assert p["max_seeding_time_enabled"] and p["max_seeding_time"] == 0

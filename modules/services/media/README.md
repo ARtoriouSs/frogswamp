@@ -21,11 +21,11 @@ The same URLs work away from home with the Tailscale app on. On the home network
 
 ## On the TV (Kodi)
 
-1. Install the **Jellyfin for Kodi** add-on (or **JellyCon**) and connect to `http://192.168.101.10:8096`.
+1. Install the **Jellyfin for Kodi** add-on (or **JellyCon**) from the `https://kodi.jellyfin.org` repository and connect to `http://192.168.101.10:8096` (it finds `frogswamp` by itself). Playback mode: **Add-on**. Sync all four libraries. Say yes to the **Kodi Sync Queue** server plugin (Jellyfin → Dashboard → Plugins), so Kodi catches up on changes made while the TV was off.
 2. Libraries:
    - **Downloading movies / Downloading shows**: titles still downloading; open them from here to watch right away.
    - **Movies / Shows**: finished titles. The same file appears here when the download completes, and playback is not interrupted.
-3. Kodi → *Settings → Player → Language*: preferred audio **Russian**, subtitles **Russian**, show subtitles only when the audio isn't Russian.
+3. Kodi → *Settings → Player → Language*: preferred audio **Russian**, subtitles **Russian**. Kodi has no "subtitles only when the audio isn't Russian" option; turn subtitles on or off per film in the player menu.
 4. While a title is still downloading, Bazarr can't help. Use Kodi's subtitle search (*Subtitles → Download*) if needed.
 
 ## Cleanup

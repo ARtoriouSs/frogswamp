@@ -167,6 +167,8 @@ def ensure_quality_profile(app, allowed, scores):
     for fi in profile.get("formatItems", []):
         fi["score"] = by_id.get(fi["format"], 0)
     profile.update({"name": PROFILE, "upgradeAllowed": False, "cutoff": cutoff, "minFormatScore": 0})
+    if "language" in profile:  # Radarr only. The default "Original" rejects Russian releases of English films
+        profile["language"] = next(l for l in app.call("GET", "/language") if l["name"] == "Any")
     app.call("POST", "/qualityprofile", profile)
     log(f"{app.name}: created quality profile {PROFILE}")
 

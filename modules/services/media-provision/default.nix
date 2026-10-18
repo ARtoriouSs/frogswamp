@@ -87,6 +87,16 @@ let
         key_file = cfg.jellyfinApiKeyFile;
         libraries = [
           {
+            name = "Movies";
+            path = "/srv/media/movies";
+            type = "movies";
+          }
+          {
+            name = "Shows";
+            path = "/srv/media/shows";
+            type = "tvshows";
+          }
+          {
             name = "Downloading movies";
             path = "/srv/media/downloads/radarr";
             type = "movies";

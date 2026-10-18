@@ -63,6 +63,8 @@ pkgs.testers.runNixOSTest {
         cfs = {cf["id"]: cf["name"] for cf in api(app, "/customformat")}
         scores = {cfs[f["format"]]: f["score"] for f in qp[0]["formatItems"] if f["format"] in cfs}
         assert scores == {"Russian audio": 100, "English audio": 10, "Polish audio": 10}, scores
+        if "language" in qp[0]:  # Radarr only: "Original" would reject Russian releases of English films
+            assert qp[0]["language"]["name"] == "Any", qp[0]["language"]
         mm = api(app, "/config/mediamanagement")
         assert mm["minimumFreeSpaceWhenImporting"] == 20480 and mm["copyUsingHardlinks"] is True, mm
         assert api(app, "/config/host")["username"] == "pupsich"
@@ -90,6 +92,8 @@ pkgs.testers.runNixOSTest {
     by_name = {l["Name"]: l for l in libs}
     assert by_name["Downloading movies"]["Locations"] == ["/srv/media/downloads/radarr"], libs
     assert by_name["Downloading shows"]["Locations"] == ["/srv/media/downloads/sonarr"], libs
+    assert by_name["Movies"]["Locations"] == ["/srv/media/movies"], libs
+    assert by_name["Shows"]["Locations"] == ["/srv/media/shows"], libs
 
     # Review Focus 5: a UI change survives a re-run, nothing is duplicated
     mm = api("radarr", "/config/mediamanagement"); mm["minimumFreeSpaceWhenImporting"] = 5000

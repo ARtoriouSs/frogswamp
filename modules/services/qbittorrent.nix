@@ -18,6 +18,8 @@ let
         "Session\\DefaultSavePath" = downloads;
         "Session\\TempPathEnabled" = false;
         "Session\\AddExtensionToIncompleteFiles" = false;
+        # Use the category's folder (radarr → downloads/radarr) for new torrents, so Jellyfin sees them
+        "Session\\DisableAutoTMMByDefault" = false;
         "Session\\Port" = 51413;
         # Stop uploading the moment a download completes; never remove (files stay for playback)
         "Session\\GlobalMaxRatio" = 0;
