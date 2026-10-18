@@ -25,6 +25,7 @@ The same URLs work away from home with the Tailscale app on. On the home network
 2. Libraries:
    - **Downloading movies / Downloading shows**: titles still downloading; open them from here to watch right away.
    - **Movies / Shows**: finished titles. The same file appears here when the download completes, and playback is not interrupted.
+   - A new title shows up in Jellyfin about a minute after it appears on disk (`jellyfin-rescan` starts a library scan). If Kodi still doesn't show it, run *Jellyfin add-on → Manage libraries → Update libraries*.
 3. Kodi → *Settings → Player → Language*: preferred audio **Russian**, subtitles **Russian**. Kodi has no "subtitles only when the audio isn't Russian" option; turn subtitles on or off per film in the player menu.
 4. While a title is still downloading, Bazarr can't help. Use Kodi's subtitle search (*Subtitles → Download*) if needed.
 

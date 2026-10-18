@@ -87,6 +87,7 @@
       zigbee2mqtt.passwordFile = lib.mkDefault config.sops.secrets."zigbee2mqtt/mqtt_password".path;
     };
     homeAssistant.secretsFile = lib.mkDefault config.sops.secrets."home_assistant/secrets_yaml".path;
+    jellyfin.apiKeyFile = lib.mkDefault config.sops.secrets."jellyfin/api_key".path;
     samba.passwordFile = lib.mkDefault config.sops.secrets."samba/password".path;
     homepage.environmentFile = lib.mkDefault config.sops.templates."homepage.env".path;
     backup = {

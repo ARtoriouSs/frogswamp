@@ -56,6 +56,9 @@ let
       cfg.services.zigbee2mqtt.package == inputs.nixpkgs-unstable.legacyPackages.x86_64-linux.zigbee2mqtt;
     "HA image pinned by digest" =
       lib.hasInfix "@sha256:" cfg.virtualisation.oci-containers.containers.home-assistant.image;
+    "jellyfin rescans when a download folder changes" =
+      lib.elem "/srv/media/downloads/sonarr" cfg.systemd.paths.jellyfin-rescan.pathConfig.PathChanged
+      && cfg.frogswamp.jellyfin.apiKeyFile == cfg.sops.secrets."jellyfin/api_key".path;
     "podman backend" = cfg.virtualisation.oci-containers.backend == "podman";
     "samba password rotation restarts sync" =
       cfg.sops.secrets."samba/password".restartUnits == [ "samba-set-password.service" ];

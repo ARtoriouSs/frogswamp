@@ -8,8 +8,12 @@ pkgs.testers.runNixOSTest {
     virtualisation.diskSize = 4096;
     frogswamp = {
       adminUser = "pupsich";
-      jellyfin.enable = true;
+      jellyfin = {
+        enable = true;
+        apiKeyFile = "/etc/jellyfin-test-key";
+      };
     };
+    environment.etc.jellyfin-test-key.text = "test";
   };
   testScript = ''
     server.wait_for_unit("jellyfin.service")
@@ -22,5 +26,9 @@ pkgs.testers.runNixOSTest {
     server.succeed("id -nG jellyfin | grep -qw media")
     server.succeed("id -nG jellyfin | grep -qw render")
     server.succeed("id -nG pupsich | grep -qw media")
+    # a new title in an empty library folder starts a library scan
+    server.wait_for_unit("jellyfin-rescan.path")
+    server.succeed("mkdir /srv/media/downloads/sonarr/Some.Show.S01")
+    server.wait_until_succeeds("systemctl show -p ActiveState --value jellyfin-rescan.service | grep -qx activating", timeout=30)
   '';
 }
