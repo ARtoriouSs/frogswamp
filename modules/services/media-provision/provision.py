@@ -236,16 +236,22 @@ def ensure_jellyfin(cfg):
         log("jellyfin: no API key yet, skipping (create one in Jellyfin: Dashboard → API Keys)")
         return
     url, headers = cfg["url"].rstrip("/"), {"X-Emby-Token": key}
-    names = {f["Name"] for f in request("GET", url + "/Library/VirtualFolders", headers)}
+    existing = {f["Name"]: f.get("Locations") or [] for f in request("GET", url + "/Library/VirtualFolders", headers)}
     for lib in cfg["libraries"]:
-        if lib["name"] in names:
-            log(f"jellyfin: library {lib['name']} exists")
+        if lib["name"] not in existing:
+            query = urllib.parse.urlencode({"name": lib["name"], "collectionType": lib["type"],
+                                            "paths": lib["paths"], "refreshLibrary": "true"}, doseq=True)
+            request("POST", f"{url}/Library/VirtualFolders?{query}", headers,
+                    {"LibraryOptions": {"EnableRealtimeMonitor": True, "PathInfos": [{"Path": p} for p in lib["paths"]]}})
+            log(f"jellyfin: created library {lib['name']} → {', '.join(lib['paths'])}")
             continue
-        query = urllib.parse.urlencode({"name": lib["name"], "collectionType": lib["type"],
-                                        "paths": lib["path"], "refreshLibrary": "true"})
-        request("POST", f"{url}/Library/VirtualFolders?{query}", headers,
-                {"LibraryOptions": {"EnableRealtimeMonitor": True, "PathInfos": [{"Path": lib["path"]}]}})
-        log(f"jellyfin: created library {lib['name']} → {lib['path']}")
+        missing = [p for p in lib["paths"] if p not in existing[lib["name"]]]
+        for path in missing:
+            request("POST", url + "/Library/VirtualFolders/Paths?refreshLibrary=true", headers,
+                    {"Name": lib["name"], "PathInfo": {"Path": path}})
+            log(f"jellyfin: added {path} to library {lib['name']}")
+        if not missing:
+            log(f"jellyfin: library {lib['name']} exists")
 
 
 def main():

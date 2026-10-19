@@ -115,7 +115,7 @@ sops set secrets/frogswamp.yaml '["qbittorrent"]["webui_password_hash"]' "\"$has
 1. **Home Assistant** (`:8123`): onboarding (create your user), then add the **MQTT** integration: broker `127.0.0.1`, port `1883`, user `ha`, password from `just secret mosquitto/ha_password`.
    Then *Profile → Security → Long-lived access tokens → Create*, and save it: `just secrets` → `home_assistant/api_token`.
 2. **Zigbee2MQTT** (`:8080`): *Permit join*, then pair the devices. Give them readable names (see the [HA rules](modules/services/home-assistant/README.md#rules-for-automations-kept-in-git)).
-3. **Jellyfin** (`:8096`): setup wizard: create your user. **Skip adding libraries.** The server creates *Movies*, *Shows*, *Downloading movies* and *Downloading shows* by itself once it has an API key. *Dashboard → Playback → Transcoding* → **Intel QuickSync**.
+3. **Jellyfin** (`:8096`): setup wizard: create your user. **Skip adding libraries.** The server creates *Movies* and *Shows* by itself once it has an API key. *Dashboard → Playback → Transcoding* → **Intel QuickSync**.
    Then *Dashboard → API Keys → +* (name `frogswamp`), and save it: `just secrets` → `jellyfin/api_key`.
    *Dashboard → Plugins → Catalog* → install **Kodi Sync Queue**, then restart Jellyfin.
 4. `just deploy`. This passes the two new keys to Homepage, the media setup and the cleanup job. Check that the Homepage widgets show numbers.

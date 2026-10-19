@@ -16,7 +16,7 @@ Each module does one thing and is switched on in `hosts/frogswamp/default.nix` (
 | `services/qbittorrent.nix` | Torrent client: sequential downloads, stops seeding at completion | 8090, 51413 |
 | `services/arr.nix` | Radarr, Sonarr, Prowlarr, Bazarr | 7878, 8989, 9696, 6767 |
 | `services/media-provision/` | Sets up the media apps once (create-if-missing); the UIs own the settings after that | |
-| `services/media-janitor/` | Hourly cleanup of watched downloads; stale-downloads sensor in HA | |
+| `services/media-janitor/` | Removes finished torrents, deletes watched titles (every 5 min); stale-downloads sensor in HA | |
 
 How the media parts work together: [services/media/README.md](services/media/README.md).
 

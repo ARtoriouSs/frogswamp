@@ -58,7 +58,7 @@ in
 
   config = lib.mkIf cfg.enable {
     systemd.services.media-janitor = {
-      description = "Delete watched downloads and report stale ones";
+      description = "Remove finished torrents, delete watched titles, report stale ones";
       after = [
         "qbittorrent.service"
         "jellyfin.service"
@@ -74,7 +74,8 @@ in
     systemd.timers.media-janitor = {
       wantedBy = [ "timers.target" ];
       timerConfig = {
-        OnCalendar = "hourly";
+        # often, so a finished title shows only once in Jellyfin after a few minutes
+        OnCalendar = "*:0/5";
         Persistent = true;
       };
     };

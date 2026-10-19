@@ -92,8 +92,8 @@ let
       lib.elem 51413 cfg.networking.firewall.allowedTCPPorts
       && lib.elem 51413 cfg.networking.firewall.allowedUDPPorts;
     "qbittorrent webui 8090 open" = lib.elem 8090 cfg.networking.firewall.allowedTCPPorts;
-    "janitor runs hourly" = cfg.systemd.timers.media-janitor.timerConfig.OnCalendar == "hourly";
-    "janitor still in dry run" = cfg.frogswamp.mediaJanitor.dryRun;
+    "janitor runs every 5 minutes" = cfg.systemd.timers.media-janitor.timerConfig.OnCalendar == "*:0/5";
+    "janitor deletes for real" = !cfg.frogswamp.mediaJanitor.dryRun;
     "janitor waits 48h and warns after 5 days" =
       cfg.frogswamp.mediaJanitor.watchedAfterHours == 48
       && cfg.frogswamp.mediaJanitor.staleAfterDays == 5;

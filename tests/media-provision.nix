@@ -90,10 +90,16 @@ pkgs.testers.runNixOSTest {
     server.succeed("systemctl restart media-provision.service")
     libs = json.loads(server.succeed(f"curl -sf -H 'X-Emby-Token: {key}' http://127.0.0.1:8096/Library/VirtualFolders"))
     by_name = {l["Name"]: l for l in libs}
-    assert by_name["Downloading movies"]["Locations"] == ["/srv/media/downloads/radarr"], libs
-    assert by_name["Downloading shows"]["Locations"] == ["/srv/media/downloads/sonarr"], libs
-    assert by_name["Movies"]["Locations"] == ["/srv/media/movies"], libs
-    assert by_name["Shows"]["Locations"] == ["/srv/media/shows"], libs
+    assert sorted(by_name) == ["Movies", "Shows"], libs
+    assert sorted(by_name["Movies"]["Locations"]) == ["/srv/media/downloads/radarr", "/srv/media/movies"], libs
+    assert sorted(by_name["Shows"]["Locations"]) == ["/srv/media/downloads/sonarr", "/srv/media/shows"], libs
+
+    # a folder missing from an existing library (older setup) is added back
+    server.succeed(f"curl -sf -X DELETE -H 'X-Emby-Token: {key}' 'http://127.0.0.1:8096/Library/VirtualFolders/Paths?name=Movies&path=/srv/media/downloads/radarr&refreshLibrary=false'")
+    server.succeed("systemctl restart media-provision.service")
+    libs = json.loads(server.succeed(f"curl -sf -H 'X-Emby-Token: {key}' http://127.0.0.1:8096/Library/VirtualFolders"))
+    movies = next(l for l in libs if l["Name"] == "Movies")
+    assert sorted(movies["Locations"]) == ["/srv/media/downloads/radarr", "/srv/media/movies"], libs
 
     # Review Focus 5: a UI change survives a re-run, nothing is duplicated
     mm = api("radarr", "/config/mediamanagement"); mm["minimumFreeSpaceWhenImporting"] = 5000

@@ -1,8 +1,14 @@
-"""Delete watched downloads 48 h after they finished; report unwatched ones.
+"""Remove finished torrents and delete watched titles 48 h after they finished.
+
+1. A torrent that finished and was imported by Radarr/Sonarr is removed with its
+   download copy. The library copy is a hardlink, so the title stays. Watched
+   marks and resume positions move from the download copy to the library copy.
+2. A watched movie or episode is deleted 48 h after it was imported.
+3. Unwatched titles are never deleted. After 5 days they're reported as stale.
 
 Decisions live in plan(), a pure function. Everything else is thin I/O around
 the qBittorrent, Jellyfin, Radarr, Sonarr and Home Assistant APIs. When in
-doubt (missing data, API error) nothing is deleted.
+doubt (missing data, API error, someone is watching) nothing is removed.
 """
 
 import argparse
@@ -13,6 +19,7 @@ import time
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass, field
+from datetime import datetime
 from http.cookiejar import CookieJar
 
 CATEGORIES = ("radarr", "sonarr")
@@ -32,39 +39,99 @@ class Torrent:
     hash: str
     name: str
     category: str
-    completion_on: float  # unix time, <= 0 while still downloading
+    complete: bool
     files: list
 
 
 @dataclass
+class LibFile:
+    app: str  # radarr | sonarr
+    path: str
+    inode: int
+    added: float  # unix time of the import
+    title: str
+    ref: object  # radarr: movie id; sonarr: (series id, episode file id)
+
+
+@dataclass
+class Item:
+    user: str
+    id: str
+    path: str
+    inode: int
+    played: bool
+    position: int  # resume position in ticks
+
+
+@dataclass
+class State:
+    torrents: list
+    library: list
+    items: list  # Jellyfin movies and episodes, one per user
+    playing_ids: set  # Jellyfin item ids someone is watching now
+    queued_hashes: set  # upper-case torrent hashes still in the Radarr/Sonarr queue
+
+
+@dataclass
 class Plan:
-    delete_files: list = field(default_factory=list)  # (category, path)
-    remove_torrents: list = field(default_factory=list)  # torrent hashes
-    stale: list = field(default_factory=list)  # names of unwatched old downloads
+    remove_torrents: list = field(default_factory=list)  # hashes, removed with the download copy
+    user_data: list = field(default_factory=list)  # (user, item id, played, position) for library copies
+    delete: list = field(default_factory=list)  # LibFile
+    stale: list = field(default_factory=list)  # titles of unwatched old downloads
     kept: list = field(default_factory=list)  # (path, reason)
 
 
-def plan(torrents, played_inodes, now, watched_after_h=48, stale_after_d=5):
+def plan(s, now, watched_after_h=48, stale_after_d=5):
     p = Plan()
-    for t in torrents:
-        if t.category not in CATEGORIES or t.completion_on <= 0:
+    lib_inodes = {f.inode for f in s.library}
+    playing = {i.inode for i in s.items if i.id in s.playing_ids}
+    played = {i.inode for i in s.items if i.played}
+    torrent_inodes = set()
+
+    for t in s.torrents:
+        if t.category not in CATEGORIES:
             continue
-        age = now - t.completion_on
-        videos = [f for f in t.files if f.is_video]
-        watched = [f for f in videos if f.inode in played_inodes]
-        unwatched = [f for f in videos if f.inode not in played_inodes]
-        if unwatched and age > stale_after_d * 86400:
-            p.stale.append(t.name)
-        for f in unwatched:
-            p.kept.append((f.path, "not watched"))
-        if not watched:
+        torrent_inodes.update(f.inode for f in t.files)
+        imported = [f for f in t.files if f.is_video and f.inode in lib_inodes]
+        if not t.complete or not imported or t.hash.upper() in s.queued_hashes:
+            continue
+        if any(f.inode in playing for f in t.files):
+            p.kept.append((t.name, "torrent is playing now"))
+            continue
+        moves, ready = [], True
+        for f in imported:
+            lib_items = {i.user: i for i in s.items if i.inode == f.inode and i.path != f.path}
+            if not lib_items:
+                ready = False  # Jellyfin hasn't seen the library copy yet
+                break
+            for d in (i for i in s.items if i.path == f.path and (i.played or i.position)):
+                lib = lib_items.get(d.user)
+                if lib is None:
+                    ready = False
+                elif not lib.played and not lib.position:
+                    moves.append((d.user, lib.id, d.played, d.position))
+        if not ready:
+            p.kept.append((t.name, "library copy not in Jellyfin yet"))
+            continue
+        p.user_data.extend(moves)
+        p.remove_torrents.append(t.hash)
+
+    stale = []
+    for f in s.library:
+        age = now - f.added
+        if f.inode not in played:
+            if age > stale_after_d * 86400 and f.title not in stale:
+                stale.append(f.title)
             continue
         if age < watched_after_h * 3600:
-            p.kept.extend((f.path, f"watched, finished less than {watched_after_h}h ago") for f in watched)
-            continue
-        p.delete_files.extend((t.category, f.path) for f in watched)
-        if not unwatched:
-            p.remove_torrents.append(t.hash)
+            p.kept.append((f.path, f"watched, finished less than {watched_after_h}h ago"))
+        elif f.inode in playing:
+            p.kept.append((f.path, "watched, but playing now"))
+        elif f.inode in torrent_inodes:
+            p.kept.append((f.path, "watched, waiting for its torrent to be removed"))
+        else:
+            p.delete.append(f)
+    p.stale = stale
     return p
 
 
@@ -99,12 +166,26 @@ def inode(path):
         return None
 
 
+def timestamp(iso):
+    return datetime.fromisoformat(iso).timestamp()
+
+
 def qbit_opener(cfg):
     q = cfg["qbittorrent"]
     opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(CookieJar()))
     http("POST", q["url"] + "/api/v2/auth/login",
          form={"username": q["username"], "password": read(q["password_file"])}, opener=opener)
     return opener
+
+
+def arr(cfg, name, method, path, body=None):
+    a = cfg[name]
+    return http(method, a["url"] + path, {"X-Api-Key": read(a["key_file"])}, body)
+
+
+def jellyfin(cfg, method, path, body=None):
+    j = cfg["jellyfin"]
+    return http(method, j["url"] + path, {"X-Emby-Token": read(j["key_file"])}, body)
 
 
 def collect_torrents(cfg):
@@ -117,26 +198,48 @@ def collect_torrents(cfg):
                 ino = inode(path)
                 if ino is not None:
                     files.append(File(path, ino, path.lower().endswith(VIDEO)))
-            out.append(Torrent(t["hash"], t["name"], t["category"], t.get("completion_on") or -1, files))
+            out.append(Torrent(t["hash"], t["name"], t["category"], (t.get("completion_on") or -1) > 0, files))
     return out
 
 
-def collect_played_inodes(cfg):
-    j = cfg["jellyfin"]
-    headers = {"X-Emby-Token": read(j["key_file"])}
-    played = set()
-    for user in http("GET", j["url"] + "/Users", headers):
-        query = "Recursive=true&IsPlayed=true&Fields=Path&IncludeItemTypes=Movie,Episode"
-        for item in http("GET", f"{j['url']}/Users/{user['Id']}/Items?{query}", headers)["Items"]:
-            ino = inode(item.get("Path") or "")
+def collect_library(cfg):
+    out = []
+    for movie in arr(cfg, "radarr", "GET", "/movie") or []:
+        mf = movie.get("movieFile")
+        if mf and (ino := inode(mf["path"])) is not None:
+            out.append(LibFile("radarr", mf["path"], ino, timestamp(mf["dateAdded"]), movie["title"], movie["id"]))
+    for series in arr(cfg, "sonarr", "GET", "/series") or []:
+        for ef in arr(cfg, "sonarr", "GET", f"/episodefile?seriesId={series['id']}") or []:
+            if (ino := inode(ef["path"])) is not None:
+                out.append(LibFile("sonarr", ef["path"], ino, timestamp(ef["dateAdded"]), series["title"],
+                                   (series["id"], ef["id"])))
+    return out
+
+
+def collect_items(cfg):
+    out = []
+    for user in jellyfin(cfg, "GET", "/Users"):
+        query = "Recursive=true&Fields=Path&IncludeItemTypes=Movie,Episode"
+        for it in jellyfin(cfg, "GET", f"/Users/{user['Id']}/Items?{query}")["Items"]:
+            ino = inode(it.get("Path") or "")
             if ino is not None:
-                played.add(ino)
-    return played
+                ud = it.get("UserData") or {}
+                out.append(Item(user["Id"], it["Id"], it["Path"], ino, bool(ud.get("Played")),
+                                int(ud.get("PlaybackPositionTicks") or 0)))
+    return out
 
 
-def arr(cfg, name, method, path, body=None):
-    a = cfg[name]
-    return http(method, a["url"] + path, {"X-Api-Key": read(a["key_file"])}, body)
+def collect(cfg):
+    return State(
+        torrents=collect_torrents(cfg),
+        library=collect_library(cfg),
+        items=collect_items(cfg),
+        playing_ids={s["NowPlayingItem"]["Id"] for s in jellyfin(cfg, "GET", "/Sessions") or []
+                     if s.get("NowPlayingItem")},
+        queued_hashes={r["downloadId"].upper() for name in CATEGORIES
+                       for r in (arr(cfg, name, "GET", "/queue?pageSize=1000") or {}).get("records", [])
+                       if r.get("downloadId")},
+    )
 
 
 def remove_subtitles(video_path, dry_run):
@@ -149,36 +252,32 @@ def remove_subtitles(video_path, dry_run):
 
 
 def apply(cfg, p, dry_run):
-    verb = "would delete" if dry_run else "deleting"
-    targets = {ino for _, path in p.delete_files if (ino := inode(path)) is not None}
-    if any(c == "radarr" for c, _ in p.delete_files):
-        for movie in arr(cfg, "radarr", "GET", "/movie") or []:
-            mf = movie.get("movieFile")
-            if mf and inode(mf["path"]) in targets:
-                log(f"{verb} movie {movie['title']} ({mf['path']})")
-                remove_subtitles(mf["path"], dry_run)
-                if not dry_run:
-                    arr(cfg, "radarr", "DELETE", f"/movie/{movie['id']}?deleteFiles=true&addImportExclusion=false")
-    if any(c == "sonarr" for c, _ in p.delete_files):
-        for series in arr(cfg, "sonarr", "GET", "/series") or []:
-            for ef in arr(cfg, "sonarr", "GET", f"/episodefile?seriesId={series['id']}") or []:
-                if inode(ef["path"]) not in targets:
-                    continue
-                log(f"{verb} episode file {ef['path']}")
-                remove_subtitles(ef["path"], dry_run)
-                if not dry_run:
-                    eps = [e["id"] for e in arr(cfg, "sonarr", "GET", f"/episode?seriesId={series['id']}")
-                           if e.get("episodeFileId") == ef["id"]]
-                    arr(cfg, "sonarr", "PUT", "/episode/monitor", {"episodeIds": eps, "monitored": False})
-                    arr(cfg, "sonarr", "DELETE", f"/episodefile/{ef['id']}")
-    for _, path in p.delete_files:
-        remove_subtitles(path, dry_run)
+    verb = "would" if dry_run else "will"
+    # marks first: if this fails, the torrent stays and the next run tries again
+    for user, item_id, played, position in p.user_data:
+        log(f"{verb} copy watched state to Jellyfin item {item_id} (played={played}, position={position})")
+        if not dry_run:
+            jellyfin(cfg, "POST", f"/UserItems/{item_id}/UserData?userId={user}",
+                     {"Played": played, "PlaybackPositionTicks": position})
     if p.remove_torrents:
-        log(f"{verb} torrents {', '.join(p.remove_torrents)} with their files")
+        log(f"{verb} remove torrents {', '.join(p.remove_torrents)} with their download copies")
         if not dry_run:
             q = cfg["qbittorrent"]
             http("POST", q["url"] + "/api/v2/torrents/delete", opener=qbit_opener(cfg),
                  form={"hashes": "|".join(p.remove_torrents), "deleteFiles": "true"})
+    for f in p.delete:
+        log(f"{verb} delete {f.app} {f.title} ({f.path})")
+        remove_subtitles(f.path, dry_run)
+        if dry_run:
+            continue
+        if f.app == "radarr":
+            arr(cfg, "radarr", "DELETE", f"/movie/{f.ref}?deleteFiles=true&addImportExclusion=false")
+        else:
+            series_id, file_id = f.ref
+            eps = [e["id"] for e in arr(cfg, "sonarr", "GET", f"/episode?seriesId={series_id}")
+                   if e.get("episodeFileId") == file_id]
+            arr(cfg, "sonarr", "PUT", "/episode/monitor", {"episodeIds": eps, "monitored": False})
+            arr(cfg, "sonarr", "DELETE", f"/episodefile/{file_id}")
 
 
 def publish_stale(cfg, p):
@@ -200,14 +299,15 @@ def enforce_one_season(cfg, dry_run):
 
 def run(cfg, now, dry_run):
     try:
-        torrents = collect_torrents(cfg)
-        played = collect_played_inodes(cfg)
+        state = collect(cfg)
     except Exception as e:
         log(f"could not collect state, deleting nothing: {e}")
         return
-    p = plan(torrents, played, now, cfg.get("watched_after_h", 48), cfg.get("stale_after_d", 5))
-    log(f"{'dry run: ' if dry_run else ''}{len(p.delete_files)} files to delete, "
-        f"{len(p.remove_torrents)} torrents to remove, {len(p.stale)} stale, {len(p.kept)} kept")
+    p = plan(state, now, cfg.get("watched_after_h", 48), cfg.get("stale_after_d", 5))
+    log(f"{'dry run: ' if dry_run else ''}{len(p.remove_torrents)} torrents to remove, "
+        f"{len(p.delete)} files to delete, {len(p.stale)} stale, {len(p.kept)} kept")
+    for path, reason in p.kept:
+        log(f"keeping {path}: {reason}")
     for step, fn, args in (("apply", apply, (cfg, p, dry_run)), ("stale sensor", publish_stale, (cfg, p)),
                            ("one season", enforce_one_season, (cfg, dry_run))):
         try:

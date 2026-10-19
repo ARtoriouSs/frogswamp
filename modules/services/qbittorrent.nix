@@ -21,7 +21,7 @@ let
         # Use the category's folder (radarr → downloads/radarr) for new torrents, so Jellyfin sees them
         "Session\\DisableAutoTMMByDefault" = false;
         "Session\\Port" = 51413;
-        # Stop uploading the moment a download completes; never remove (files stay for playback)
+        # Stop uploading the moment a download completes; media-janitor removes the torrent after the import
         "Session\\GlobalMaxRatio" = 0;
         "Session\\GlobalMaxSeedingMinutes" = 0;
         "Session\\ShareLimitAction" = "Stop";

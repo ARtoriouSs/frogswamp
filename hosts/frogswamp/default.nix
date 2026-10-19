@@ -48,7 +48,10 @@
     qbittorrent.enable = true;
     arr.enable = true;
     mediaProvision.enable = true;
-    mediaJanitor.enable = true; # dry run until the user switches it on
+    mediaJanitor = {
+      enable = true;
+      dryRun = false;
+    };
     backup = {
       local.enable = true;
       b2 = {

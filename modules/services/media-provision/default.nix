@@ -85,25 +85,22 @@ let
       jellyfin = {
         url = "http://127.0.0.1:8096";
         key_file = cfg.jellyfinApiKeyFile;
+        # one library per type: a title shows up while downloading and stays after the import
         libraries = [
           {
             name = "Movies";
-            path = "/srv/media/movies";
+            paths = [
+              "/srv/media/movies"
+              "/srv/media/downloads/radarr"
+            ];
             type = "movies";
           }
           {
             name = "Shows";
-            path = "/srv/media/shows";
-            type = "tvshows";
-          }
-          {
-            name = "Downloading movies";
-            path = "/srv/media/downloads/radarr";
-            type = "movies";
-          }
-          {
-            name = "Downloading shows";
-            path = "/srv/media/downloads/sonarr";
+            paths = [
+              "/srv/media/shows"
+              "/srv/media/downloads/sonarr"
+            ];
             type = "tvshows";
           }
         ];
