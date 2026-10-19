@@ -21,8 +21,9 @@ def movie(inode=1, age_h=1, path=LIB, ref=7, title="M"):
     return LibFile(app="radarr", path=path, inode=inode, added=NOW - age_h * H, title=title, ref=ref)
 
 
-def item(path, inode, id=None, played=False, pos=0, user="u1"):
-    return Item(user=user, id=id or path, path=path, inode=inode, played=played, position=pos)
+def item(path, inode, id=None, played=False, pos=0, user="u1", last_h=None):
+    last = NOW - last_h * H if last_h is not None else None
+    return Item(user=user, id=id or path, path=path, inode=inode, played=played, position=pos, last_played=last)
 
 
 def state(torrents=(), library=(), items=(), playing=(), queued=()):
@@ -81,13 +82,13 @@ def test_unimported_sample_does_not_block_release():
 
 
 def test_watched_mark_moved_to_library_copy():
-    s = imported(items=[item(DL, 1, id="dl", played=True), item(LIB, 1, id="lib")])
-    assert janitor.plan(s, NOW).user_data == [("u1", "lib", True, 0)]
+    s = imported(items=[item(DL, 1, id="dl", played=True, last_h=2), item(LIB, 1, id="lib")])
+    assert janitor.plan(s, NOW).user_data == [("u1", "lib", True, 0, NOW - 2 * H)]
 
 
 def test_resume_position_moved_to_library_copy():
     s = imported(items=[item(DL, 1, id="dl", pos=500), item(LIB, 1, id="lib")])
-    assert janitor.plan(s, NOW).user_data == [("u1", "lib", False, 500)]
+    assert janitor.plan(s, NOW).user_data == [("u1", "lib", False, 500, None)]
 
 
 def test_library_mark_not_overwritten():
@@ -98,7 +99,7 @@ def test_library_mark_not_overwritten():
 def test_marks_moved_per_user():
     items = [item(DL, 1, id="dl", played=True, user="a"), item(LIB, 1, id="lib", user="a"),
              item(DL, 1, id="dl", user="b"), item(LIB, 1, id="lib", user="b")]
-    assert janitor.plan(imported(items=items), NOW).user_data == [("a", "lib", True, 0)]
+    assert janitor.plan(imported(items=items), NOW).user_data == [("a", "lib", True, 0, None)]
 
 
 # ---------- deleting watched titles ----------
@@ -108,46 +109,67 @@ def test_unwatched_never_deleted():
     assert janitor.plan(s, NOW).delete == []
 
 
-def test_watched_recent_kept():
-    s = state(library=[movie(1, age_h=47)], items=[item(LIB, 1, played=True)])
+def test_watched_recently_kept():
+    # imported long ago, but watched 47 h ago
+    s = state(library=[movie(1, age_h=500)], items=[item(LIB, 1, played=True, last_h=47)])
     p = janitor.plan(s, NOW)
     assert p.delete == [] and any("48h" in r for _, r in p.kept)
 
 
-def test_watched_old_deleted():
+def test_watched_long_ago_deleted():
     lf = movie(1, age_h=49)
-    s = state(library=[lf], items=[item(LIB, 1, played=True)])
+    s = state(library=[lf], items=[item(LIB, 1, played=True, last_h=49)])
     assert janitor.plan(s, NOW).delete == [lf]
+
+
+def test_watched_without_date_counts_from_import():
+    assert janitor.plan(state(library=[movie(1, age_h=47)], items=[item(LIB, 1, played=True)]), NOW).delete == []
+    lf = movie(1, age_h=49)
+    assert janitor.plan(state(library=[lf], items=[item(LIB, 1, played=True)]), NOW).delete == [lf]
+
+
+def test_latest_play_of_any_user_counts():
+    items = [item(LIB, 1, played=True, last_h=100, user="a"), item(LIB, 1, played=True, last_h=10, user="b")]
+    assert janitor.plan(state(library=[movie(1, age_h=500)], items=items), NOW).delete == []
+
+
+def test_unfinished_replay_ignored():
+    # user b only started it again: not played, so their date doesn't count
+    lf = movie(1, age_h=500)
+    items = [item(LIB, 1, played=True, last_h=100, user="a"), item(LIB, 1, pos=50, last_h=1, user="b")]
+    assert janitor.plan(state(library=[lf], items=items), NOW).delete == [lf]
 
 
 def test_watched_by_any_user_counts():
     lf = movie(1, age_h=49)
-    s = state(library=[lf], items=[item(LIB, 1, user="a"), item(LIB, 1, played=True, user="b")])
+    s = state(library=[lf], items=[item(LIB, 1, user="a"), item(LIB, 1, played=True, user="b", last_h=49)])
     assert janitor.plan(s, NOW).delete == [lf]
 
 
 def test_watched_in_download_copy_counts():
     # watched while downloading, torrent not released yet: the inode is shared
     lf = movie(1, age_h=49)
-    s = state(library=[lf], items=[item(DL, 1, played=True)])
+    s = state(library=[lf], items=[item(DL, 1, played=True, last_h=49)])
     assert janitor.plan(s, NOW).delete == [lf]
 
 
 def test_watched_playing_kept():
-    s = state(library=[movie(1, age_h=49)], items=[item(LIB, 1, id="lib", played=True)], playing={"lib"})
+    s = state(library=[movie(1, age_h=49)], items=[item(LIB, 1, id="lib", played=True, last_h=49)], playing={"lib"})
     assert janitor.plan(s, NOW).delete == []
 
 
 def test_watched_with_torrent_left_kept():
     # the torrent goes first, so its files are never left behind
-    s = imported(items=[item(DL, 1, id="dl", played=True), item(LIB, 1, id="lib")], playing={"dl"})
+    s = imported(items=[item(DL, 1, id="dl", played=True, last_h=49), item(LIB, 1, id="lib")], playing={"dl"})
     s.library[0].added = NOW - 49 * H
     assert janitor.plan(s, NOW).delete == []
 
 
 def test_season_partly_watched():
     eps = [LibFile("sonarr", f"/srv/media/shows/S/e{i}.mkv", i, NOW - 60 * H, "S", (3, i)) for i in (1, 2, 3)]
-    items = [item(e.path, e.inode, played=e.inode != 3) for e in eps]
+    # e1, e2 watched 60 h ago, e3 watched 10 h ago, e4 not watched
+    eps.append(LibFile("sonarr", "/srv/media/shows/S/e4.mkv", 4, NOW - 60 * H, "S", (3, 4)))
+    items = [item(e.path, e.inode, played=e.inode != 4, last_h=10 if e.inode == 3 else 60) for e in eps]
     assert janitor.plan(state(library=eps, items=items), NOW).delete == eps[:2]
 
 
@@ -174,7 +196,7 @@ def test_collect_error_deletes_nothing():
 
 
 def test_dry_run_changes_nothing():
-    p = janitor.Plan(delete=[movie(1)], remove_torrents=["h1"], user_data=[("u1", "lib", True, 0)])
+    p = janitor.Plan(delete=[movie(1)], remove_torrents=["h1"], user_data=[("u1", "lib", True, 0, NOW)])
     cfg = {"radarr": {"url": "http://r", "key_file": "k"}, "qbittorrent": {"url": "http://q"},
            "jellyfin": {"url": "http://j", "key_file": "k"}}
     with mock.patch.object(janitor, "http", return_value=[]) as http, \
@@ -186,10 +208,11 @@ def test_dry_run_changes_nothing():
 
 
 def test_marks_moved_before_torrent_removed():
-    p = janitor.Plan(remove_torrents=["h1"], user_data=[("u1", "lib", True, 0)])
+    p = janitor.Plan(remove_torrents=["h1"], user_data=[("u1", "lib", True, 0, NOW)])
     cfg = {"qbittorrent": {"url": "http://q"}, "jellyfin": {"url": "http://j", "key_file": "k"}}
     with mock.patch.object(janitor, "http", return_value=None) as http, \
          mock.patch.object(janitor, "read", return_value="x"), mock.patch.object(janitor, "qbit_opener"):
         janitor.apply(cfg, p, dry_run=False)
     urls = [c.args[1] for c in http.call_args_list]
     assert "UserData" in urls[0] and urls[1].endswith("/torrents/delete")
+    assert janitor.timestamp(http.call_args_list[0].args[3]["LastPlayedDate"]) == NOW

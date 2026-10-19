@@ -34,7 +34,7 @@ The same URLs work away from home with the Tailscale app on. On the home network
 The cleanup (`media-janitor`) runs every 5 minutes:
 
 - A **finished torrent** is removed from qBittorrent as soon as Radarr/Sonarr has imported it, together with its download copy. The library copy is a hardlink (same data on disk), so the title stays. Your watched mark and resume position move over to the library copy.
-- A movie, or a **single episode**, is deleted once it's **watched** (Jellyfin *Played*, ~90%) **and** it was imported **more than 48 h** ago. That covers the file and the entry in Radarr/unmonitoring in Sonarr.
+- A movie, or a **single episode**, is deleted once it's **watched** (Jellyfin *Played*, ~90%) **and** it was last played **more than 48 h** ago. Each episode counts on its own, so a season goes away episode by episode. That covers the file and the entry in Radarr/unmonitoring in Sonarr.
 - **Unwatched titles are never deleted.** After **5 days** they're counted on the dashboard (*Home Assistant → stale downloads*, HA entity `sensor.stale_downloads`).
 - Nothing is removed while someone is watching it.
 - Check what it did: `just ssh journalctl -u media-janitor -n 20`. For a test mode that only logs, set `mediaJanitor.dryRun = true;` in `hosts/frogswamp/default.nix` and `just deploy`.

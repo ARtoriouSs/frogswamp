@@ -3,7 +3,7 @@
 1. A torrent that finished and was imported by Radarr/Sonarr is removed with its
    download copy. The library copy is a hardlink, so the title stays. Watched
    marks and resume positions move from the download copy to the library copy.
-2. A watched movie or episode is deleted 48 h after it was imported.
+2. A watched movie or episode is deleted 48 h after it was last played.
 3. Unwatched titles are never deleted. After 5 days they're reported as stale.
 
 Decisions live in plan(), a pure function. Everything else is thin I/O around
@@ -19,7 +19,7 @@ import time
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from http.cookiejar import CookieJar
 
 CATEGORIES = ("radarr", "sonarr")
@@ -61,6 +61,7 @@ class Item:
     inode: int
     played: bool
     position: int  # resume position in ticks
+    last_played: float = None  # unix time, None if Jellyfin has no date
 
 
 @dataclass
@@ -75,7 +76,7 @@ class State:
 @dataclass
 class Plan:
     remove_torrents: list = field(default_factory=list)  # hashes, removed with the download copy
-    user_data: list = field(default_factory=list)  # (user, item id, played, position) for library copies
+    user_data: list = field(default_factory=list)  # (user, item id, played, position, last played) for library copies
     delete: list = field(default_factory=list)  # LibFile
     stale: list = field(default_factory=list)  # titles of unwatched old downloads
     kept: list = field(default_factory=list)  # (path, reason)
@@ -85,7 +86,11 @@ def plan(s, now, watched_after_h=48, stale_after_d=5):
     p = Plan()
     lib_inodes = {f.inode for f in s.library}
     playing = {i.inode for i in s.items if i.id in s.playing_ids}
-    played = {i.inode for i in s.items if i.played}
+    last_played = {}  # inode → latest play by anyone who watched it, None when no date
+    for i in s.items:
+        if i.played:
+            prev = last_played.get(i.inode)
+            last_played[i.inode] = i.last_played if prev is None else max(prev, i.last_played or prev)
     torrent_inodes = set()
 
     for t in s.torrents:
@@ -109,7 +114,7 @@ def plan(s, now, watched_after_h=48, stale_after_d=5):
                 if lib is None:
                     ready = False
                 elif not lib.played and not lib.position:
-                    moves.append((d.user, lib.id, d.played, d.position))
+                    moves.append((d.user, lib.id, d.played, d.position, d.last_played))
         if not ready:
             p.kept.append((t.name, "library copy not in Jellyfin yet"))
             continue
@@ -118,13 +123,12 @@ def plan(s, now, watched_after_h=48, stale_after_d=5):
 
     stale = []
     for f in s.library:
-        age = now - f.added
-        if f.inode not in played:
-            if age > stale_after_d * 86400 and f.title not in stale:
+        if f.inode not in last_played:
+            if now - f.added > stale_after_d * 86400 and f.title not in stale:
                 stale.append(f.title)
             continue
-        if age < watched_after_h * 3600:
-            p.kept.append((f.path, f"watched, finished less than {watched_after_h}h ago"))
+        if now - (last_played[f.inode] or f.added) < watched_after_h * 3600:
+            p.kept.append((f.path, f"watched less than {watched_after_h}h ago"))
         elif f.inode in playing:
             p.kept.append((f.path, "watched, but playing now"))
         elif f.inode in torrent_inodes:
@@ -225,7 +229,8 @@ def collect_items(cfg):
             if ino is not None:
                 ud = it.get("UserData") or {}
                 out.append(Item(user["Id"], it["Id"], it["Path"], ino, bool(ud.get("Played")),
-                                int(ud.get("PlaybackPositionTicks") or 0)))
+                                int(ud.get("PlaybackPositionTicks") or 0),
+                                timestamp(ud["LastPlayedDate"]) if ud.get("LastPlayedDate") else None))
     return out
 
 
@@ -254,11 +259,13 @@ def remove_subtitles(video_path, dry_run):
 def apply(cfg, p, dry_run):
     verb = "would" if dry_run else "will"
     # marks first: if this fails, the torrent stays and the next run tries again
-    for user, item_id, played, position in p.user_data:
+    for user, item_id, played, position, last in p.user_data:
         log(f"{verb} copy watched state to Jellyfin item {item_id} (played={played}, position={position})")
         if not dry_run:
-            jellyfin(cfg, "POST", f"/UserItems/{item_id}/UserData?userId={user}",
-                     {"Played": played, "PlaybackPositionTicks": position})
+            body = {"Played": played, "PlaybackPositionTicks": position}
+            if last is not None:
+                body["LastPlayedDate"] = datetime.fromtimestamp(last, timezone.utc).isoformat()
+            jellyfin(cfg, "POST", f"/UserItems/{item_id}/UserData?userId={user}", body)
     if p.remove_torrents:
         log(f"{verb} remove torrents {', '.join(p.remove_torrents)} with their download copies")
         if not dry_run:
