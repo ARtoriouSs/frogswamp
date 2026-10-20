@@ -4,6 +4,11 @@ let
   addr = config.frogswamp.lan.publicAddress;
   link = port: "http://${addr}:${toString port}";
   local = port: "http://127.0.0.1:${toString port}";
+  # newest backup time as "20.10 03:41", with a warning sign when older than 36 h
+  lastBackup = repo: ''
+    {% set t = as_timestamp(states('sensor.backup_last_${repo}'), none) %}
+    {%- if t %}{{ t | timestamp_custom('%d.%m %H:%M') }}{{ ' ⚠' if now().timestamp() - t > 36 * 3600 }}
+    {%- else %}{{ states('sensor.backup_last_${repo}') }}{% endif %}'';
 in
 {
   options.frogswamp.homepage = {
@@ -48,7 +53,7 @@ in
           };
           Infrastructure = {
             style = "row";
-            columns = 4;
+            columns = 5;
           };
           Downloads = {
             style = "row";
@@ -116,13 +121,6 @@ in
           resources = {
             label = "Media";
             disk = "/srv/media";
-            expanded = true;
-          };
-        }
-        {
-          resources = {
-            label = "Backups (A400)";
-            disk = "/mnt/backup";
             expanded = true;
           };
         }
@@ -270,6 +268,32 @@ in
         }
         {
           Infrastructure = [
+            {
+              # the backup-status job publishes these HA sensors (modules/backup.nix)
+              Backups = {
+                icon = "mdi-backup-restore";
+                description = "A400 disk + Backblaze B2, nightly";
+                widget = {
+                  type = "homeassistant";
+                  url = local 8123;
+                  key = "{{HOMEPAGE_VAR_HA_TOKEN}}";
+                  custom = [
+                    {
+                      template = "{% set d = states('sensor.backup_disk') %}{{ d }}{% if d == 'mounted' %} · {{ state_attr('sensor.backup_disk', 'used_percent') }}% used{% endif %}";
+                      label = "A400 disk";
+                    }
+                    {
+                      template = lastBackup "local";
+                      label = "last on A400";
+                    }
+                    {
+                      template = lastBackup "b2";
+                      label = "last on B2";
+                    }
+                  ];
+                };
+              };
+            }
             {
               Router = {
                 href = "http://192.168.101.1";

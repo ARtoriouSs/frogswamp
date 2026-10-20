@@ -33,6 +33,7 @@ pkgs.testers.runNixOSTest {
     assert '"Downloads"' in services, services
     # widget settings are not exposed by the API, so check the generated config
     server.succeed("grep -q 'sensor.stale_downloads' /etc/homepage-dashboard/services.yaml")
+    server.succeed("grep -q 'sensor.backup_disk' /etc/homepage-dashboard/services.yaml")
     bookmarks = server.succeed("curl -sf http://localhost:8082/api/bookmarks")
     for name in ["Documentation", "Admin", "Zigbee2MQTT devices", "TRaSH Guides", "Servarr wiki"]:
         assert name in bookmarks, f"{name} missing: {bookmarks}"

@@ -69,10 +69,20 @@
         "arr/prowlarr_api_key" = { };
         "arr/bazarr_api_key".owner = "bazarr"; # read by Bazarr's own ExecStartPre
       })
-      (lib.mkIf (config.frogswamp.mediaProvision.enable || config.frogswamp.mediaJanitor.enable) {
-        "jellyfin/api_key" = { };
-        "home_assistant/api_token" = { };
-      })
+      (lib.mkIf
+        (
+          config.frogswamp.mediaProvision.enable
+          || config.frogswamp.mediaJanitor.enable
+          || config.frogswamp.backup.local.enable
+          || config.frogswamp.backup.b2.enable
+        )
+        {
+          # a new key lets media-provision create the Jellyfin libraries without a reboot
+          "jellyfin/api_key".restartUnits =
+            lib.optional config.frogswamp.mediaProvision.enable "media-provision.service";
+          "home_assistant/api_token" = { };
+        }
+      )
       # Later tasks append blocks here, one per module:
       # (lib.mkIf config.frogswamp.<module>.enable { ... })
     ];
@@ -92,6 +102,7 @@
     homepage.environmentFile = lib.mkDefault config.sops.templates."homepage.env".path;
     backup = {
       passwordFile = lib.mkDefault config.sops.secrets."restic/password".path;
+      haTokenFile = lib.mkDefault config.sops.secrets."home_assistant/api_token".path;
       # Only evaluated when B2 is enabled (the secret exists only then)
       b2.environmentFile = lib.mkDefault config.sops.secrets."restic/b2_env".path;
     };

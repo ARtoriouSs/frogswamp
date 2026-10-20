@@ -56,16 +56,33 @@ let
     "bazarr"
   ];
 
-  snapshotDbs = ''
+  # Helpers that start apps or change their state; stopped while a restore writes that state
+  helpers = [
+    "media-provision.service"
+    "media-janitor.timer"
+    "media-janitor.service"
+    "jellyfin-rescan.path"
+    "jellyfin-rescan.service"
+    "home-assistant-bluetooth-recover.service"
+    "restic-backups-local.service"
+    "restic-backups-b2.service"
+  ];
+
+  # Each job has its own DB copies, so two jobs running at once can't spoil each other's
+  jobs = [
+    "local"
+    "b2"
+  ];
+  snapshotDbs = job: ''
     for db in ${lib.escapeShellArgs sqliteDbs}; do
-      if [ -f "$db" ]; then ${pkgs.sqlite}/bin/sqlite3 "$db" ".backup '$db.bak'"; fi
+      if [ -f "$db" ]; then ${pkgs.sqlite}/bin/sqlite3 "$db" ".backup '$db.snapshot-${job}'"; fi
     done
   '';
-  cleanupDbs = ''
-    for db in ${lib.escapeShellArgs sqliteDbs}; do rm -f "$db.bak"; done
+  cleanupDbs = job: ''
+    for db in ${lib.escapeShellArgs sqliteDbs}; do rm -f "$db.snapshot-${job}"; done
   '';
 
-  common = {
+  common = job: {
     dynamicFilesFrom = ''
       # `if` instead of `&&`: a missing last path must not make the whole step fail
       for p in ${lib.escapeShellArgs statePaths}; do if [ -e "$p" ]; then echo "$p"; fi; done
@@ -85,12 +102,21 @@ let
       "/var/lib/private/prowlarr/Backups"
       "/var/lib/private/prowlarr/logs"
       "/var/lib/bazarr/log"
+      # log databases: copied live they can be inconsistent, and the apps create new ones
+      "/var/lib/radarr/.config/Radarr/logs.db*"
+      "/var/lib/sonarr/.config/NzbDrone/logs.db*"
+      "/var/lib/private/prowlarr/logs.db*"
     ]
-    ++ lib.concatMap (db: [
-      db
-      "${db}-wal"
-      "${db}-shm"
-    ]) sqliteDbs;
+    ++ lib.concatMap (
+      db:
+      [
+        db
+        "${db}-wal"
+        "${db}-shm"
+        "${db}.bak"
+      ]
+      ++ map (other: "${db}.snapshot-${other}") (lib.remove job jobs)
+    ) sqliteDbs;
     inherit (cfg) passwordFile;
     initialize = true;
     createWrapper = true;
@@ -104,8 +130,8 @@ let
       RandomizedDelaySec = "30m";
       Persistent = true;
     };
-    backupPrepareCommand = snapshotDbs;
-    backupCleanupCommand = cleanupDbs;
+    backupPrepareCommand = snapshotDbs job;
+    backupCleanupCommand = cleanupDbs job;
   };
 
   checkTimer = name: {
@@ -121,6 +147,45 @@ let
         Persistent = true;
       };
     };
+  };
+
+  # Publishes the backup state to Home Assistant, for the dashboard
+  status = pkgs.writeShellApplication {
+    name = "frogswamp-backup-status";
+    runtimeInputs = with pkgs; [
+      coreutils
+      curl
+      jq
+      util-linux
+    ];
+    text = ''
+      token="$(cat ${toString cfg.haTokenFile})"
+      post() {
+        curl -fsS -o /dev/null -X POST -H "Authorization: Bearer $token" -H "Content-Type: application/json" \
+          -d "$2" "${cfg.haUrl}/api/states/$1"
+      }
+
+      used=null
+      if mountpoint -q ${cfg.local.mountPoint}; then
+        disk=mounted
+        used="$(df --output=pcent ${cfg.local.mountPoint} | tail -1 | tr -dc 0-9)"
+      else
+        disk=missing
+      fi
+      post sensor.backup_disk "$(jq -cn --arg s "$disk" --argjson u "$used" \
+        '{state: $s, attributes: {friendly_name: "Backup disk", icon: "mdi:harddisk", used_percent: $u}}')"
+
+      repos=(${lib.escapeShellArgs (lib.filter (j: cfg.${j}.enable) jobs)})
+      for repo in "''${repos[@]}"; do
+        # time of the newest snapshot, or why there is none
+        if ! last="$("/run/current-system/sw/bin/restic-$repo" snapshots --no-lock --json 2>/dev/null \
+          | jq -r 'max_by(.time) | .time // "none"')"; then
+          last=unreachable
+        fi
+        post "sensor.backup_last_$repo" "$(jq -cn --arg s "$last" --arg r "$repo" \
+          '{state: $s, attributes: {friendly_name: "Last backup (\($r))", icon: "mdi:backup-restore", device_class: "timestamp"}}')"
+      done
+    '';
   };
 
   restore = pkgs.writeShellApplication {
@@ -149,15 +214,22 @@ let
         exit 3
       fi
 
+      # helpers first: media-provision would otherwise start the apps again during the restore
+      for u in ${lib.escapeShellArgs helpers}; do systemctl stop "$u" 2>/dev/null || true; done
       for u in ${lib.escapeShellArgs units}; do systemctl stop "$u.service" 2>/dev/null || true; done
 
       "$wrapper" restore "$snapshot" --target /
 
       for db in ${lib.escapeShellArgs sqliteDbs}; do
-        if [ -f "$db.bak" ]; then
-          mv -f "$db.bak" "$db"
-          rm -f "$db-wal" "$db-shm"
-        fi
+        # .bak: snapshots made before each job had its own copies
+        for copy in "$db.snapshot-$repo" "$db.bak"; do
+          if [ -f "$copy" ]; then
+            mv -f "$copy" "$db"
+            rm -f "$db-wal" "$db-shm"
+            break
+          fi
+        done
+        rm -f "$db".snapshot-* "$db.bak"
       done
 
       ${lib.concatStringsSep "\n" (
@@ -166,8 +238,12 @@ let
         '') owners
       )}
 
+      # restart, not start: an app started meanwhile would keep its old, replaced files open
       for u in ${lib.escapeShellArgs units}; do
-        if systemctl cat "$u.service" >/dev/null 2>&1; then systemctl start "$u.service" || true; fi
+        if systemctl cat "$u.service" >/dev/null 2>&1; then systemctl restart "$u.service" || true; fi
+      done
+      for u in media-provision.service media-janitor.timer jellyfin-rescan.path; do
+        if systemctl cat "$u" >/dev/null 2>&1; then systemctl start "$u" || true; fi
       done
       echo "restore from $repo ($snapshot) complete"
     '';
@@ -178,6 +254,15 @@ in
     passwordFile = lib.mkOption {
       type = lib.types.str;
       description = "Runtime path of the restic repository password (shared by all repos)";
+    };
+    haTokenFile = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = "Runtime path of a Home Assistant token; when set, the backup state is published as HA sensors";
+    };
+    haUrl = lib.mkOption {
+      type = lib.types.str;
+      default = "http://127.0.0.1:8123";
     };
     local = {
       enable = lib.mkEnableOption "restic backups to the external USB disk";
@@ -229,7 +314,7 @@ in
         services.udev.extraRules = lib.mkIf (lib.hasPrefix "/dev/disk/by-label/" cfg.local.device) ''
           SUBSYSTEM=="block", ENV{ID_FS_LABEL}=="${lib.removePrefix "/dev/disk/by-label/" cfg.local.device}", TAG+="systemd", ENV{SYSTEMD_WANTS}+="${utils.escapeSystemdPath cfg.local.mountPoint}.mount"
         '';
-        services.restic.backups.local = common // {
+        services.restic.backups.local = common "local" // {
           repository = "${cfg.local.mountPoint}/restic";
         };
         systemd = lib.mkMerge [
@@ -245,10 +330,50 @@ in
         ];
       })
       (lib.mkIf cfg.b2.enable {
-        services.restic.backups.b2 = common // {
+        services.restic.backups.b2 = common "b2" // {
           inherit (cfg.b2) repository environmentFile;
         };
-        systemd = checkTimer "b2";
+        systemd = lib.mkMerge [
+          (checkTimer "b2")
+          # both start at 03:30; one after the other keeps the night's load low
+          { services.restic-backups-b2.after = lib.optional cfg.local.enable "restic-backups-local.service"; }
+        ];
+      })
+      (lib.mkIf (cfg.haTokenFile != null) {
+        systemd = {
+          services = {
+            backup-status = {
+              description = "Publish the backup state to Home Assistant";
+              # when started by the disk's udev event, wait for the mount
+              after = [
+                "${utils.escapeSystemdPath cfg.local.mountPoint}.mount"
+                "network-online.target"
+              ];
+              wants = [ "network-online.target" ];
+              serviceConfig = {
+                Type = "oneshot";
+                # root: it reads the restic password and the HA token
+                ExecStart = lib.getExe status;
+              };
+            };
+          }
+          // lib.genAttrs (map (j: "restic-backups-${j}") (lib.filter (j: cfg.${j}.enable) jobs)) (_: {
+            onSuccess = [ "backup-status.service" ];
+            onFailure = [ "backup-status.service" ];
+          });
+          timers.backup-status = {
+            wantedBy = [ "timers.target" ];
+            timerConfig = {
+              OnBootSec = "3min";
+              OnUnitActiveSec = "1h"; # also notices an unplugged disk
+            };
+          };
+        };
+        services.udev.extraRules =
+          lib.mkIf (cfg.local.enable && lib.hasPrefix "/dev/disk/by-label/" cfg.local.device)
+            ''
+              SUBSYSTEM=="block", ENV{ID_FS_LABEL}=="${lib.removePrefix "/dev/disk/by-label/" cfg.local.device}", ENV{SYSTEMD_WANTS}+="backup-status.service"
+            '';
       })
     ]
   );
