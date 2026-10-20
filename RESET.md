@@ -43,9 +43,11 @@ You need:
   just rebuild-from-scratch frogswamp-installer.local
   ```
 - [ ] It shows the NUC's disk (`nvme0n1`, ~477 GB). Type **`wipe`** and press Enter.
-- [ ] Wait. It partitions the disk, copies the system, then prints **`Installed.`** and the NUC reboots.
-- [ ] **Pull out the USB stick as soon as the NUC reboots.** The BIOS boots USB first. If the installer starts again anyway: pull the stick and press the power button to restart.
-- [ ] Wait. The script waits for `192.168.101.10` (up to 10 minutes), then restores the backup.
+- [ ] Wait (5–15 minutes). It partitions the disk and copies the system. **Keep the stick in during this time**: the installer runs from it.
+- [ ] The PC prints **`Installed.`** and **`>>> PULL OUT THE USB STICK NOW`**, and the NUC reboots. **Pull out the stick at this moment.** The new system is already on the internal disk.
+  - The NUC's screen may show USB errors after you pull the stick. That's normal. **Don't press the power button**; the new system is starting.
+  - Only if the screen shows the installer again (the `nixos@frogswamp-installer` prompt, or a menu titled *NixOS … Installer*): pull the stick, then press the power button.
+- [ ] Wait. The script waits for `192.168.101.10` (up to 10 minutes), then restores the backup. Don't touch the NUC until it ends.
 - [ ] The end should look like this:
   ```
   restore from local (latest) complete
@@ -58,7 +60,7 @@ You need:
 - [ ] No failed services: `ssh root@192.168.101.10 systemctl --failed` lists `0 loaded units`.
 - [ ] **Homepage** (http://192.168.101.10:8082) opens, and the widgets show numbers, not errors.
 - [ ] **Home Assistant:** your automation is there, integrations are connected with no new login, and a light or switch works.
-- [ ] **Zigbee2MQTT:** same number of devices, and one responds.
+- [ ] **Zigbee2MQTT:** same number of devices, and one responds. If its page doesn't open, check the Zigbee dongle is plugged in; Z2M starts by itself once it is.
 - [ ] **Jellyfin:** you can log in, and the watched film is still marked as watched.
 - [ ] **Prowlarr / Radarr / Sonarr:** indexers are there, and the `frogswamp` profile exists.
 - [ ] **qBittorrent:** old torrents show *Missing files*. Remove them: select → right-click → *Remove* (the files are gone anyway).
@@ -66,7 +68,7 @@ You need:
 - [ ] **TV:** Kodi opens *Movies* without asking to log in again.
 - [ ] **Tailscale:** in the admin console (https://login.tailscale.com/admin/machines) there is one `frogswamp`, online. If there is also a `frogswamp-1`, remove it (it's a leftover from the first boot before the restore).
 - [ ] **Phone on mobile data** (Wi-Fi off): Home Assistant opens.
-- [ ] **Hardware report:** `git diff hosts/frogswamp/facter.json`. No change is expected on the same NUC. On new hardware, commit it.
+- [ ] **Hardware report:** the install re-reads it into `hosts/frogswamp/facter.json`. On the same NUC, small changes are normal (another USB stick, the A400, keyboard or monitor plugged in). Keep the old file: `git checkout hosts/frogswamp/facter.json`. On new hardware, commit the new one.
 - [ ] Next morning: the nightly backup ran: `ssh root@192.168.101.10 'restic-local snapshots --latest 1 --compact'` shows today's date.
 
 ## E. If something goes wrong
@@ -75,9 +77,10 @@ You need:
 |---|---|
 | `Target has no /dev/nvme0n1` | Another disk name (new hardware). Set `frogswamp.disk` in `hosts/frogswamp/default.nix`, start again at C |
 | `ssh: Could not resolve hostname frogswamp-installer.local` | Use the IP shown by `ip -4 addr` on the NUC (step B) |
-| The NUC starts the installer again after `Installed.` | Pull the stick, press the power button. The script is still waiting |
-| The script stops before the restore (server took too long) | Wait until `just ssh uptime` works, then `just restore local` (or `just restore b2`) |
-| `existing Home Assistant state found` (exit code 3) | `just restore local --force` |
+| The NUC starts the installer again after `Installed.` (you see the `nixos@frogswamp-installer` prompt) | Pull the stick, press the power button. The script is still waiting |
+| You pressed the power button while the script was restoring (`Connection … closed by remote host`) | Wait until `just ssh uptime` works, then `just restore local --force` |
+| The script stops before the restore (server took too long) | Wait until `just ssh uptime` works, then `just restore local --force` (or `just restore b2 --force`) |
+| `existing Home Assistant state found` (exit code 3, from a manual `just restore`) | `just restore local --force`. A fresh install always has some HA state, so this is expected |
 | `repo local unreachable or missing` | Check the A400 is plugged in: `ssh root@192.168.101.10 lsblk` shows `frogbackup`. Then `just restore local --force`, or use `just restore b2 --force` |
 | `WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED` on ssh | `ssh-keygen -R 192.168.101.10`, then try again. (Normally it doesn't happen: the host key comes from `secrets/`) |
 | One app looks empty or broken after the restore | Look at its log: `ssh root@192.168.101.10 journalctl -u <unit> -e`. Restoring again is safe: `just restore local --force` |

@@ -99,7 +99,8 @@ install target:
     ssh -n "${ssh_opts[@]}" root@{{target}} lsblk -o NAME,SIZE,MODEL "$disk"
     read -r -p "This ERASES $disk on {{target}}. Type 'wipe' to continue: " answer
     [ "$answer" = "wipe" ] || { echo "Aborted."; exit 1; }
-    ssh -n "${ssh_opts[@]}" root@{{target}} nixos-facter > hosts/frogswamp/facter.json
+    # Serial numbers are dropped: the repo is public, and they don't change the hardware config
+    ssh -n "${ssh_opts[@]}" root@{{target}} nixos-facter | jq 'walk(if type == "object" then del(.serial) else . end)' > hosts/frogswamp/facter.json
     git add --intent-to-add hosts/frogswamp/facter.json
     tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
     install -d -m 755 "$tmp/etc/ssh"
@@ -108,7 +109,9 @@ install target:
     cp keys/ssh_host_ed25519_key.pub "$tmp/etc/ssh/ssh_host_ed25519_key.pub"
     nixos-anywhere --flake .#frogswamp --extra-files "$tmp" root@{{target}}
     ssh-keygen -R {{host}} >/dev/null 2>&1 || true
-    echo "Installed. The server reboots to {{host}}. Review hosts/frogswamp/facter.json for serials/MACs before committing it."
+    echo "Installed. The server is rebooting into the new system on {{host}}."
+    echo ">>> PULL OUT THE USB STICK NOW. Don't press the power button: USB errors on the NUC's screen are normal."
+    echo "Then check 'git diff hosts/frogswamp/facter.json'. On the same hardware, keep the old file: git checkout hosts/frogswamp/facter.json"
 
 # Pin the Home Assistant image (default: current stable) by version + digest
 ha-bump version="stable":
@@ -189,12 +192,13 @@ rebuild-from-scratch target:
     done
     ssh -n root@{{host}} systemctl is-system-running --wait || true
     set +e
-    ssh -n root@{{host}} frogswamp-restore --repo local
+    # --force: the system was just installed, so its fresh (empty) app state may be overwritten
+    ssh -n root@{{host}} frogswamp-restore --repo local --force
     rc=$?
     set -e
     if [ "$rc" -eq 4 ]; then
       echo "Local backup unavailable, trying B2..."
-      ssh -n root@{{host}} frogswamp-restore --repo b2
+      ssh -n root@{{host}} frogswamp-restore --repo b2 --force
     elif [ "$rc" -ne 0 ]; then
       exit "$rc"
     fi

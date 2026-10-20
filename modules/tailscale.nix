@@ -26,6 +26,15 @@ in
         "--advertise-tags=tag:homelab"
       ];
     };
+    # On first boot the login ran before DNS worked and never tried again
+    systemd.services.tailscaled-autoconnect = {
+      after = [ "network-online.target" ];
+      wants = [ "network-online.target" ];
+      serviceConfig = {
+        Restart = "on-failure";
+        RestartSec = "15s";
+      };
+    };
     networking.firewall.trustedInterfaces = [ "tailscale0" ];
   };
 }

@@ -38,6 +38,13 @@ let
     "tailscale advertises LAN" =
       lib.elem "--advertise-routes=192.168.101.0/24" cfg.services.tailscale.extraUpFlags;
     "tailscale tagged" = lib.elem "--advertise-tags=tag:homelab" cfg.services.tailscale.extraUpFlags;
+    "tailscale login waits for the network and retries" =
+      let
+        unit = cfg.systemd.services.tailscaled-autoconnect;
+      in
+      lib.elem "network-online.target" unit.after
+      && lib.elem "network-online.target" unit.wants
+      && unit.serviceConfig.Restart == "on-failure";
     "tailscale0 trusted" = lib.elem "tailscale0" cfg.networking.firewall.trustedInterfaces;
     "tailscale off in vm" = !cfg.virtualisation.vmVariant.services.tailscale.enable;
     "z2m uses ember adapter" = cfg.services.zigbee2mqtt.settings.serial.adapter == "ember";
