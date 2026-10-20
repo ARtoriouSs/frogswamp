@@ -77,8 +77,14 @@ in
             sleep 60
             key=$(cat ${cfg.apiKeyFile})
             [ -n "$key" ] || { echo "empty Jellyfin API key" >&2; exit 1; }
-            ${pkgs.curl}/bin/curl -fsS -X POST -H "Authorization: MediaBrowser Token=\"$key\"" \
-              http://127.0.0.1:8096/Library/Refresh
+            code=$(${pkgs.curl}/bin/curl -sS -o /dev/null -w '%{http_code}' -X POST \
+              -H "Authorization: MediaBrowser Token=\"$key\"" http://127.0.0.1:8096/Library/Refresh)
+            case "$code" in
+              2??) echo "library scan started" ;;
+              # fresh install before the restore: Jellyfin doesn't know the key yet, nothing to scan
+              401) echo "API key not accepted by Jellyfin (fresh install?), skipping the scan" ;;
+              *) echo "library scan failed: HTTP $code" >&2; exit 1 ;;
+            esac
           '';
         };
       };

@@ -30,5 +30,9 @@ pkgs.testers.runNixOSTest {
     server.wait_for_unit("jellyfin-rescan.path")
     server.succeed("mkdir /srv/media/downloads/sonarr/Some.Show.S01")
     server.wait_until_succeeds("systemctl show -p ActiveState --value jellyfin-rescan.service | grep -qx activating", timeout=30)
+    # a key Jellyfin doesn't know yet (fresh install, before the restore) is skipped, not a failed unit
+    server.wait_until_succeeds("systemctl show -p ActiveState --value jellyfin-rescan.service | grep -qx inactive", timeout=120)
+    server.succeed("systemctl show -p Result --value jellyfin-rescan.service | grep -qx success")
+    server.succeed("journalctl -u jellyfin-rescan.service | grep -q 'not accepted'")
   '';
 }
