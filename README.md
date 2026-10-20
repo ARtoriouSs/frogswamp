@@ -110,6 +110,8 @@ sops set secrets/frogswamp.yaml '["qbittorrent"]["webui_password_hash"]' "\"$has
 3. `just init-backup-disk /dev/sdX`. **This erases that disk.** Type `wipe`.
 4. `just backup-now`. It ends with a list of snapshots.
 
+The server mounts the disk at `/mnt/backup` by its label `frogbackup`, at boot and also whenever it is plugged in later. Other USB sticks or disks are never mounted. If the disk is missing, nothing breaks: the server boots normally, the nightly local backup fails (and writes nothing), and the B2 backup still runs.
+
 ### 1.7 Apps, in the browser
 
 1. **Home Assistant** (`:8123`): onboarding (create your user), then add the **MQTT** integration: broker `127.0.0.1`, port `1883`, user `ha`, password from `just secret mosquitto/ha_password`.
@@ -174,5 +176,6 @@ It wipes the NUC's disk, installs the system from this repo, waits for the serve
 - HA container: `ssh root@192.168.101.10 podman logs -f home-assistant`
 - Failed units: `ssh root@192.168.101.10 systemctl --failed`
 - `just check` very slow: KVM isn't available to Nix builds, see the optional KVM step in [1.3](#13-management-pc-linux-mint--ubuntu)
+- Local backup failed, or `/mnt/backup` is empty: the A400 wasn't detected. `ssh root@192.168.101.10 lsblk` shows no `frogbackup` disk, and `dmesg` shows `device not accepting address … error -62`. Its USB-SATA case sometimes doesn't answer at a cold start. Unplug its cable, wait 5 seconds, plug it back in; it is mounted by itself. If it happens often, use another port (a USB 2 port is enough) or another cable
 - Zigbee2MQTT UI down or restarting: the dongle was unplugged (`/dev/zigbee` missing). Plug it back into any USB port. Z2M resumes the same network by itself
 - A new download doesn't show up in Kodi: Jellyfin add-on → *Manage libraries → Update libraries*, or start a library scan in Jellyfin (*Dashboard → Libraries → Scan all libraries*)

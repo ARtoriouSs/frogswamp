@@ -81,7 +81,7 @@ You need:
 | You pressed the power button while the script was restoring (`Connection … closed by remote host`) | Wait until `just ssh uptime` works, then `just restore local --force` |
 | The script stops before the restore (server took too long) | Wait until `just ssh uptime` works, then `just restore local --force` (or `just restore b2 --force`) |
 | `existing Home Assistant state found` (exit code 3, from a manual `just restore`) | `just restore local --force`. A fresh install always has some HA state, so this is expected |
-| `repo local unreachable or missing` | Check the A400 is plugged in: `ssh root@192.168.101.10 lsblk` shows `frogbackup`. Then `just restore local --force`, or use `just restore b2 --force` |
+| `repo local unreachable or missing`, or `Local backup unavailable, trying B2...` although the A400 is plugged in | The A400's USB link failed at boot (`dmesg` shows `error -62`). Unplug its cable, wait 5 seconds, plug it back in. It is mounted by itself: `ssh root@192.168.101.10 lsblk` shows `frogbackup` at `/mnt/backup`. If the B2 restore already ran, you're done. Otherwise: `just restore local --force` |
 | `WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED` on ssh | `ssh-keygen -R 192.168.101.10`, then try again. (Normally it doesn't happen: the host key comes from `secrets/`) |
 | One app looks empty or broken after the restore | Look at its log: `ssh root@192.168.101.10 journalctl -u <unit> -e`. Restoring again is safe: `just restore local --force` |
 | The server doesn't come back at all | Look at the NUC's screen. Check the BIOS boots the internal disk (`nvme`) and not the USB stick |

@@ -7,7 +7,7 @@ Each module does one thing and is switched on in `hosts/frogswamp/default.nix` (
 | `options.nix` | Shared host settings (`frogswamp.adminUser`, `lan`, `disk`, …) | |
 | `base/` | Nix settings, boot, static IP, SSH (keys only), users, firewall, mDNS, Bluetooth, Intel GPU | 22 |
 | `tailscale.nix` | Remote access; advertises the LAN to your tailnet | |
-| `backup.nix` | Nightly restic to the USB disk + B2; `frogswamp-restore` | |
+| `backup.nix` | Nightly restic to the USB disk + B2; `frogswamp-restore`. Mounts the disk labelled `frogbackup` whenever it is plugged in | |
 | `services/home-assistant/` | HA container + repo-owned YAML ([README](services/home-assistant/README.md)) | 8123 |
 | `services/mqtt.nix` | Mosquitto (localhost) + Zigbee2MQTT | 8080 |
 | `services/jellyfin.nix` | Jellyfin, QuickSync, `/srv/media` folders | 8096 |
