@@ -81,6 +81,22 @@ def test_unimported_sample_does_not_block_release():
     assert janitor.plan(s, NOW).remove_torrents == ["h1"]
 
 
+def test_unimported_episode_blocks_release():
+    # a pack where Sonarr imported only some episodes: removing it would delete the rest unwatched
+    s = imported()
+    s.torrents[0].files.append(video("/srv/media/downloads/sonarr/Show.S01E02.mkv", 9))
+    p = janitor.plan(s, NOW)
+    assert p.remove_torrents == []
+    assert "Title" in p.stale
+    assert any("not imported" in reason for _, reason in p.kept)
+
+
+def test_sample_folder_does_not_block_release():
+    s = imported()
+    s.torrents[0].files.append(video("/srv/media/downloads/radarr/Sample/m-trailer.mkv", 9))
+    assert janitor.plan(s, NOW).remove_torrents == ["h1"]
+
+
 def test_watched_mark_moved_to_library_copy():
     s = imported(items=[item(DL, 1, id="dl", played=True, last_h=2), item(LIB, 1, id="lib")])
     assert janitor.plan(s, NOW).user_data == [("u1", "lib", True, 0, NOW - 2 * H)]
@@ -216,3 +232,24 @@ def test_marks_moved_before_torrent_removed():
     urls = [c.args[1] for c in http.call_args_list]
     assert "UserData" in urls[0] and urls[1].endswith("/torrents/delete")
     assert janitor.timestamp(http.call_args_list[0].args[3]["LastPlayedDate"]) == NOW
+
+
+def test_inode_includes_device(tmp_path):
+    # inode numbers repeat across filesystems and btrfs subvolumes, so a file is (device, inode)
+    f = tmp_path / "x.mkv"
+    f.write_text("x")
+    st = f.stat()
+    assert janitor.inode(str(f)) == (st.st_dev, st.st_ino)
+
+
+def test_subtitles_kept_when_library_delete_fails():
+    p = janitor.Plan(delete=[movie(1)])
+    cfg = {"radarr": {"url": "http://r", "key_file": "k"}}
+    with mock.patch.object(janitor, "http", side_effect=RuntimeError("radarr down")), \
+         mock.patch.object(janitor, "read", return_value="x"), \
+         mock.patch.object(janitor, "remove_subtitles") as subs:
+        try:
+            janitor.apply(cfg, p, dry_run=False)
+        except RuntimeError:
+            pass
+    subs.assert_not_called()

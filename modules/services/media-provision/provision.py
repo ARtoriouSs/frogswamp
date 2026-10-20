@@ -30,6 +30,12 @@ def read(path):
         return ""
 
 
+class HTTPStatus(RuntimeError):
+    def __init__(self, code, msg):
+        super().__init__(msg)
+        self.code = code
+
+
 def request(method, url, headers=None, body=None, form=None):
     data = None
     headers = dict(headers or {})
@@ -44,7 +50,8 @@ def request(method, url, headers=None, body=None, form=None):
         with urllib.request.urlopen(req, timeout=60) as resp:
             raw = resp.read()
     except urllib.error.HTTPError as e:  # keep the app's validation message in the log
-        raise RuntimeError(f"{method} {url.split('?')[0]}: HTTP {e.code}: {e.read()[:500].decode(errors='replace')}") from None
+        raise HTTPStatus(e.code, f"{method} {url.split('?')[0]}: HTTP {e.code}: "
+                                 f"{e.read()[:500].decode(errors='replace')}") from None
     return json.loads(raw) if raw.strip() else None
 
 
@@ -57,7 +64,8 @@ class Arr:
     def call(self, method, path, body=None):
         return request(method, self.url + path, {"X-Api-Key": self.key}, body)
 
-    def wait(self, timeout=600):
+    # short: this runs during deploys, and Restart= tries again when an app is still starting
+    def wait(self, timeout=120):
         deadline = time.time() + timeout
         while True:
             try:
@@ -223,6 +231,10 @@ def ensure_bazarr(cfg, radarr_key, sonarr_key):
             "settings-general-movie_default_enabled": "true", "settings-general-movie_default_profile": "1",
             "settings-general-serie_default_enabled": "true", "settings-general-serie_default_profile": "1",
         })
+    if not settings.get("auth", {}).get("type"):
+        # Bazarr has no "no login for local addresses" option, so it always asks
+        form.update({"settings-auth-type": "form", "settings-auth-username": cfg["username"],
+                     "settings-auth-password": read(cfg["password_file"])})
     if form:
         request("POST", url + "/system/settings", headers, form=form)
         log(f"bazarr: set {', '.join(sorted(form))}")
@@ -236,7 +248,15 @@ def ensure_jellyfin(cfg):
         log("jellyfin: no API key yet, skipping (create one in Jellyfin: Dashboard → API Keys)")
         return
     url, headers = cfg["url"].rstrip("/"), {"X-Emby-Token": key}
-    existing = {f["Name"]: f.get("Locations") or [] for f in request("GET", url + "/Library/VirtualFolders", headers)}
+    try:
+        folders = request("GET", url + "/Library/VirtualFolders", headers)
+    except HTTPStatus as e:
+        if e.code != 401:
+            raise
+        # fresh install before the restore: this Jellyfin doesn't know the key yet
+        log("jellyfin: Jellyfin key not accepted (fresh install, or the key isn't in Jellyfin yet), skipping")
+        return
+    existing = {f["Name"]: f.get("Locations") or [] for f in folders}
     for lib in cfg["libraries"]:
         if lib["name"] not in existing:
             query = urllib.parse.urlencode({"name": lib["name"], "collectionType": lib["type"],

@@ -54,6 +54,8 @@ let
       bazarr = {
         url = "http://127.0.0.1:${toString arr.ports.bazarr}/api";
         key_file = arr.apiKeyFiles.bazarr;
+        username = config.frogswamp.adminUser;
+        password_file = cfg.uiPasswordFile;
         languages = [
           "ru"
           "en"

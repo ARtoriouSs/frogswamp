@@ -75,6 +75,9 @@ pkgs.testers.runNixOSTest {
     assert b["general"]["use_radarr"] and b["general"]["use_sonarr"], b["general"]
     profiles = json.loads(server.succeed(f"curl -sf -H 'X-API-KEY: {keys['bazarr']}' http://127.0.0.1:6767/api/system/languages/profiles"))
     assert [i["language"] for i in profiles[0]["items"]] == ["ru", "en", "pl"], profiles
+    # Bazarr asks for a login (it has no "skip for local addresses" option)
+    assert b["auth"]["type"] == "form" and b["auth"]["username"] == "pupsich", b["auth"]
+    server.fail("curl -sf http://127.0.0.1:6767/api/system/settings")
 
     # Jellyfin: wizard, create an API key, re-run the provisioner, libraries appear
     server.wait_until_succeeds("curl -sf http://127.0.0.1:8096/health | grep -q Healthy", timeout=600)
@@ -82,6 +85,11 @@ pkgs.testers.runNixOSTest {
     server.succeed("curl -sf http://127.0.0.1:8096/Startup/User >/dev/null")
     server.succeed("curl -sf -X POST -H 'Content-Type: application/json' -d '{\"Name\":\"admin\",\"Password\":\"pw\"}' http://127.0.0.1:8096/Startup/User")
     server.succeed("curl -sf -X POST http://127.0.0.1:8096/Startup/Complete")
+    # a key Jellyfin doesn't know yet (fresh install, before the restore) is skipped, not a failure
+    server.succeed("echo -n notyet > /run/jellyfin-test-key")
+    server.succeed("systemctl restart media-provision.service")
+    server.succeed("systemctl show -p Result --value media-provision.service | grep -qx success")
+    server.succeed("journalctl -u media-provision.service | grep -q 'Jellyfin key not accepted'")
     auth = 'MediaBrowser Client="test", Device="test", DeviceId="test", Version="1"'
     token = json.loads(server.succeed(f"curl -sf -X POST -H 'Authorization: {auth}' -H 'Content-Type: application/json' -d '{{\"Username\":\"admin\",\"Pw\":\"pw\"}}' http://127.0.0.1:8096/Users/AuthenticateByName"))["AccessToken"]
     server.succeed(f"curl -sf -X POST -H 'X-Emby-Token: {token}' 'http://127.0.0.1:8096/Auth/Keys?App=provision'")

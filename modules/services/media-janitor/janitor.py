@@ -1,10 +1,11 @@
-"""Remove finished torrents and delete watched titles 48 h after they finished.
+"""Remove finished torrents and delete watched titles 48 h after they were last played.
 
-1. A torrent that finished and was imported by Radarr/Sonarr is removed with its
-   download copy. The library copy is a hardlink, so the title stays. Watched
+1. A torrent that finished and whose videos were all imported by Radarr/Sonarr
+   is removed with its download copy. The library copy is a hardlink, so the title stays. Watched
    marks and resume positions move from the download copy to the library copy.
 2. A watched movie or episode is deleted 48 h after it was last played.
-3. Unwatched titles are never deleted. After 5 days they're reported as stale.
+3. Unwatched titles are never deleted. After 5 days they're reported as stale, and so are
+   torrents with videos that weren't imported (they're kept).
 
 Decisions live in plan(), a pure function. Everything else is thin I/O around
 the qBittorrent, Jellyfin, Radarr, Sonarr and Home Assistant APIs. When in
@@ -30,7 +31,7 @@ SUBTITLES = (".srt", ".ass", ".ssa", ".sub", ".vtt", ".idx")
 @dataclass
 class File:
     path: str
-    inode: int
+    inode: tuple  # (device, inode): inode numbers repeat across filesystems
     is_video: bool
 
 
@@ -47,7 +48,7 @@ class Torrent:
 class LibFile:
     app: str  # radarr | sonarr
     path: str
-    inode: int
+    inode: tuple
     added: float  # unix time of the import
     title: str
     ref: object  # radarr: movie id; sonarr: (series id, episode file id)
@@ -58,7 +59,7 @@ class Item:
     user: str
     id: str
     path: str
-    inode: int
+    inode: tuple
     played: bool
     position: int  # resume position in ticks
     last_played: float = None  # unix time, None if Jellyfin has no date
@@ -78,8 +79,13 @@ class Plan:
     remove_torrents: list = field(default_factory=list)  # hashes, removed with the download copy
     user_data: list = field(default_factory=list)  # (user, item id, played, position, last played) for library copies
     delete: list = field(default_factory=list)  # LibFile
-    stale: list = field(default_factory=list)  # titles of unwatched old downloads
+    stale: list = field(default_factory=list)  # unwatched old titles, and torrents with videos not imported
     kept: list = field(default_factory=list)  # (path, reason)
+
+
+def is_sample(path):
+    parts = path.lower().split("/")
+    return "sample" in parts[-1] or any(d in ("sample", "samples") for d in parts[:-1])
 
 
 def plan(s, now, watched_after_h=48, stale_after_d=5):
@@ -92,6 +98,7 @@ def plan(s, now, watched_after_h=48, stale_after_d=5):
             prev = last_played.get(i.inode)
             last_played[i.inode] = i.last_played if prev is None else max(prev, i.last_played or prev)
     torrent_inodes = set()
+    stale = []
 
     for t in s.torrents:
         if t.category not in CATEGORIES:
@@ -99,6 +106,13 @@ def plan(s, now, watched_after_h=48, stale_after_d=5):
         torrent_inodes.update(f.inode for f in t.files)
         imported = [f for f in t.files if f.is_video and f.inode in lib_inodes]
         if not t.complete or not imported or t.hash.upper() in s.queued_hashes:
+            continue
+        missing = [f for f in t.files if f.is_video and f.inode not in lib_inodes and not is_sample(f.path)]
+        if missing:
+            # removing the torrent would delete these unwatched, so keep it and ask for a look
+            names = ", ".join(os.path.basename(f.path) for f in missing)
+            p.kept.append((t.name, f"{len(missing)} videos not imported: {names}"))
+            stale.append(t.name)
             continue
         if any(f.inode in playing for f in t.files):
             p.kept.append((t.name, "torrent is playing now"))
@@ -121,7 +135,6 @@ def plan(s, now, watched_after_h=48, stale_after_d=5):
         p.user_data.extend(moves)
         p.remove_torrents.append(t.hash)
 
-    stale = []
     for f in s.library:
         if f.inode not in last_played:
             if now - f.added > stale_after_d * 86400 and f.title not in stale:
@@ -165,7 +178,8 @@ def http(method, url, headers=None, body=None, form=None, opener=None):
 
 def inode(path):
     try:
-        return os.stat(path).st_ino
+        st = os.stat(path)
+        return (st.st_dev, st.st_ino)
     except OSError:
         return None
 
@@ -274,8 +288,8 @@ def apply(cfg, p, dry_run):
                  form={"hashes": "|".join(p.remove_torrents), "deleteFiles": "true"})
     for f in p.delete:
         log(f"{verb} delete {f.app} {f.title} ({f.path})")
-        remove_subtitles(f.path, dry_run)
         if dry_run:
+            remove_subtitles(f.path, dry_run)
             continue
         if f.app == "radarr":
             arr(cfg, "radarr", "DELETE", f"/movie/{f.ref}?deleteFiles=true&addImportExclusion=false")
@@ -285,6 +299,8 @@ def apply(cfg, p, dry_run):
                    if e.get("episodeFileId") == file_id]
             arr(cfg, "sonarr", "PUT", "/episode/monitor", {"episodeIds": eps, "monitored": False})
             arr(cfg, "sonarr", "DELETE", f"/episodefile/{file_id}")
+        # only after the video is gone, so a failed delete doesn't leave it without subtitles
+        remove_subtitles(f.path, dry_run)
 
 
 def publish_stale(cfg, p):
