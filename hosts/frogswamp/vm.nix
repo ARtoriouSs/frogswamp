@@ -27,6 +27,7 @@
     backup.local.enable = lib.mkForce false;
     backup.b2.enable = lib.mkForce false;
     samba.passwordFile = lib.mkForce "/etc/vm-dummy-secret";
+    jellyfin.apiKeyFile = lib.mkForce null; # no library rescan in the VM
     homepage.environmentFile = lib.mkForce "/etc/vm-homepage-env";
     homeAssistant.secretsFile = lib.mkForce "${../../tests/fixtures/ha-secrets.yaml}";
     mqtt = {

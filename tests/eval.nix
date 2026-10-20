@@ -70,6 +70,13 @@ let
     "samba password rotation restarts sync" =
       cfg.sops.secrets."samba/password".restartUnits == [ "samba-set-password.service" ];
     "backup mount is nofail" = lib.elem "nofail" cfg.fileSystems."/mnt/backup".options;
+    # evaluates the whole VM variant: a secret without a VM override breaks `just vm`
+    "just vm builds" = cfg.system.build.vm.drvPath != "";
+    "new Jellyfin key re-runs media setup" =
+      lib.elem "media-provision.service"
+        cfg.sops.secrets."jellyfin/api_key".restartUnits;
+    "backup jobs run one after the other" =
+      lib.elem "restic-backups-local.service" cfg.systemd.services.restic-backups-b2.after;
     "backup disk mounts when plugged in later" =
       lib.hasInfix ''ENV{ID_FS_LABEL}=="frogbackup"'' cfg.services.udev.extraRules
       && lib.hasInfix ''ENV{SYSTEMD_WANTS}+="mnt-backup.mount"'' cfg.services.udev.extraRules;

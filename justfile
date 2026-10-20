@@ -157,8 +157,18 @@ ha-check:
 
 # One-time: format the external backup disk on the server (ERASES it)
 init-backup-disk device:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    system="$(nix eval --raw .#nixosConfigurations.frogswamp.config.frogswamp.disk)"
+    # refuse the system disk and its partitions, also when named by a /dev/disk/by-* link
+    system="$(ssh -n root@{{host}} readlink -f "$system")"
+    real="$(ssh -n root@{{host}} readlink -f {{device}})"
+    parent="/dev/$(ssh -n root@{{host}} lsblk -no PKNAME "$real" 2>/dev/null | head -1)"
+    if [ "$real" = "$system" ] || [ "$parent" = "$system" ]; then
+      echo "{{device}} is the system disk ($system). Refusing." >&2; exit 1
+    fi
     ssh -n root@{{host}} lsblk -o NAME,SIZE,MODEL,LABEL {{device}}
-    @read -r -p "ERASE {{device}} on the server and label it 'frogbackup'? Type 'wipe': " a; [ "$a" = "wipe" ]
+    read -r -p "ERASE {{device}} on the server and label it 'frogbackup'? Type 'wipe': " a; [ "$a" = "wipe" ]
     ssh -n root@{{host}} 'wipefs -a {{device}} && mkfs.ext4 -F -L frogbackup {{device}} && udevadm settle && systemctl start mnt-backup.mount && findmnt /mnt/backup'
 
 # Run all enabled backup jobs now
@@ -186,10 +196,16 @@ rebuild-from-scratch target:
     set -euo pipefail
     just install {{target}}
     echo "Waiting for the server at {{host}}..."
+    up=0
     for _ in $(seq 1 120); do
-      if ssh -n -o ConnectTimeout=5 -o StrictHostKeyChecking=accept-new root@{{host}} true 2>/dev/null; then break; fi
+      if ssh -n -o ConnectTimeout=5 -o StrictHostKeyChecking=accept-new root@{{host}} true 2>/dev/null; then up=1; break; fi
       sleep 5
     done
+    if [ "$up" -ne 1 ]; then
+      echo "The server didn't come back on {{host}} within 10 minutes. Nothing was restored yet." >&2
+      echo "Look at the NUC's screen (USB stick still in?). Once 'just ssh uptime' works, run: just restore local --force" >&2
+      exit 1
+    fi
     ssh -n root@{{host}} systemctl is-system-running --wait || true
     set +e
     # --force: the system was just installed, so its fresh (empty) app state may be overwritten
