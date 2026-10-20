@@ -5,7 +5,11 @@ pkgs.testers.runNixOSTest {
     { pkgs, ... }:
     {
       imports = [ ../modules ];
-      virtualisation.emptyDiskImages = [ 512 ]; # /dev/vdb, unformatted = "disk absent"
+      # /dev/vdb: the backup disk, unformatted = "disk absent"; /dev/vdc: some other USB disk
+      virtualisation.emptyDiskImages = [
+        512
+        64
+      ];
       # Test VMs replace fileSystems with their own, so declare the backup mount the VM way
       virtualisation.fileSystems."/mnt/backup" = {
         device = "/dev/disk/by-label/frogbackup";
@@ -37,9 +41,18 @@ pkgs.testers.runNixOSTest {
     server.fail("systemctl start restic-backups-local.service")
     server.fail("test -e /mnt/backup/restic/config")
 
-    # attach the disk
+    # another disk (a USB stick, a second drive) is plugged in: nothing is mounted
+    server.succeed("mkfs.ext4 -q -L usbstick /dev/vdc && udevadm settle")
+    server.succeed("udevadm trigger --action=add --settle /dev/vdc")
+    server.sleep(3)
+    server.fail("mountpoint -q /mnt/backup")
+    server.fail("findmnt -n -S /dev/vdc")
+
+    # the backup disk is plugged in after boot: it is mounted by itself
     server.succeed("mkfs.ext4 -q -L frogbackup /dev/vdb && udevadm settle")
-    server.succeed("systemctl start mnt-backup.mount")
+    server.succeed("udevadm trigger --action=add --settle /dev/vdb")
+    server.wait_until_succeeds("mountpoint -q /mnt/backup", timeout=30)
+    server.succeed("findmnt -n -S /dev/vdb -T /mnt/backup")
 
     # seed state: HA storage, sqlite DB, jellyfin file owned by a stale uid
     server.succeed("mkdir -p /var/lib/home-assistant/.storage /var/lib/jellyfin/data")

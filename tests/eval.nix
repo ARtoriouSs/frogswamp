@@ -70,6 +70,9 @@ let
     "samba password rotation restarts sync" =
       cfg.sops.secrets."samba/password".restartUnits == [ "samba-set-password.service" ];
     "backup mount is nofail" = lib.elem "nofail" cfg.fileSystems."/mnt/backup".options;
+    "backup disk mounts when plugged in later" =
+      lib.hasInfix ''ENV{ID_FS_LABEL}=="frogbackup"'' cfg.services.udev.extraRules
+      && lib.hasInfix ''ENV{SYSTEMD_WANTS}+="mnt-backup.mount"'' cfg.services.udev.extraRules;
     "local backup requires its mount" = lib.elem "/mnt/backup" (
       lib.toList cfg.systemd.services.restic-backups-local.unitConfig.RequiresMountsFor
     );

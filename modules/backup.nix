@@ -2,6 +2,7 @@
   config,
   lib,
   pkgs,
+  utils,
   ...
 }:
 let
@@ -223,6 +224,11 @@ in
             "x-systemd.device-timeout=5s"
           ];
         };
+        # The mount above only runs at boot. Mount the disk also when it shows up later
+        # (plugged in again, or the USB link failed at boot and came back after a re-plug)
+        services.udev.extraRules = lib.mkIf (lib.hasPrefix "/dev/disk/by-label/" cfg.local.device) ''
+          SUBSYSTEM=="block", ENV{ID_FS_LABEL}=="${lib.removePrefix "/dev/disk/by-label/" cfg.local.device}", TAG+="systemd", ENV{SYSTEMD_WANTS}+="${utils.escapeSystemdPath cfg.local.mountPoint}.mount"
+        '';
         services.restic.backups.local = common // {
           repository = "${cfg.local.mountPoint}/restic";
         };
