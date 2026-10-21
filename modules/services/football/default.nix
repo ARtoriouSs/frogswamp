@@ -43,6 +43,12 @@ in
       example = "remote.living_room_philips_tv";
       description = "Android TV Remote entity that wakes the TV and opens Kodi; null skips waking";
     };
+    tvCastEntity = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      example = "media_player.philips_tv";
+      description = "Google Cast entity of the TV; \"Chromecast to TV\" casts the HLS stream to it";
+    };
     settings = lib.mkOption {
       type = lib.types.attrs;
       readOnly = true;
@@ -65,6 +71,7 @@ in
         url = "http://127.0.0.1:8123";
         token_file = cfg.haTokenFile;
         remote_entity = cfg.tvRemoteEntity;
+        cast_entity = cfg.tvCastEntity;
       };
       state_file = "/var/lib/football/recent.json";
     };

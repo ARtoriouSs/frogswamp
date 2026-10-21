@@ -2,7 +2,8 @@
 
 The page takes an Ace Stream ID (or an acestream:// link, or a URL with id=),
 wakes the TV and opens Kodi through Home Assistant, then tells Kodi to play
-the stream of the Ace Stream engine running on this server. Pure helpers come
+the stream of the Ace Stream engine running on this server. Or it casts the
+stream to the TV's built-in Chromecast through Home Assistant. Pure helpers come
 first; the I/O and the web server are below them.
 """
 
@@ -33,7 +34,9 @@ def stream_urls(content_id, engine_base):
 
 
 def add_recent(recent, content_id, label, now, limit=8):
-    """Newest first, no duplicates, at most `limit` entries"""
+    """Newest first, no duplicates, at most `limit` entries; an empty label keeps the old one"""
+    old = next((r["label"] for r in recent if r["id"] == content_id), "")
+    label = label or old
     rest = [r for r in recent if r["id"] != content_id]
     return [{"id": content_id, "label": label, "at": now}] + rest[: limit - 1]
 
@@ -110,14 +113,28 @@ def play(cfg, content_id, sleep=time.sleep):
     return {"ok": True, "message": note + "Playing on the TV. It may take up to a minute to start.", "urls": urls}
 
 
-def stop(cfg):
+def chromecast(cfg, content_id):
+    """Cast the HLS stream to the TV's built-in Chromecast through Home Assistant; no Kodi needed"""
+    urls = stream_urls(content_id, cfg["public_engine_url"])
+    entity = cfg["ha"].get("cast_entity")
+    if not entity:
+        return {"ok": False, "message": "No Chromecast set up for the TV.", "urls": urls}
     try:
-        for p in kodi(cfg, "Player.GetActivePlayers") or []:
-            kodi(cfg, "Player.Stop", {"playerid": p["playerid"]})
+        http("GET", cfg["engine_url"] + "/webui/api/service?method=get_version")
     except Exception as e:
-        log(f"stop failed: {e}")
-        return {"ok": False, "message": "Kodi didn't answer."}
-    return {"ok": True, "message": "Stopped."}
+        log(f"engine check failed: {e}")
+        return {"ok": False, "message": "Ace Stream engine isn't running on the server.", "urls": urls}
+    ha = cfg["ha"]
+    try:
+        http("POST", ha["url"] + "/api/services/media_player/play_media",
+             {"Authorization": "Bearer " + read(ha["token_file"])},
+             {"entity_id": entity, "media_content_type": "application/vnd.apple.mpegurl",
+              "media_content_id": urls["hls"]}, timeout=15)
+    except Exception as e:
+        log(f"cast failed: {e}")
+        return {"ok": False, "message": "Home Assistant couldn't cast to the TV.", "urls": urls}
+    log(f"casting {content_id} to the TV")
+    return {"ok": True, "message": "Casting to the TV. It may take up to a minute to start.", "urls": urls}
 
 
 def load_recent(path):
@@ -162,8 +179,9 @@ button.main { background: var(--accent); color: #052e16; font-size: 18px; }
 <p>1. Find the match on <a href="https://search-ace.stream/" target="_blank" rel="noopener">search-ace.stream</a> and copy its ID or acestream:// link.</p>
 <textarea id="text" placeholder="Paste the ID or link here"></textarea>
 <input id="label" placeholder="Name (optional), e.g. Barcelona – Real">
-<button class="main" onclick="play()">▶ Play on TV</button>
-<div class="row"><button onclick="stopTv()">■ Stop on TV</button><button onclick="cast()">Open / cast (HLS)</button></div>
+<div class="row"><button class="main" onclick="send('/api/play', 'Waking the TV and starting Kodi…')">▶ Play in Kodi</button>
+<button class="main" onclick="send('/api/cast', 'Casting to the TV…')">📺 Chromecast to TV</button></div>
+<button onclick="openHls()">Open / cast (HLS)</button>
 <div id="msg"></div>
 <div class="recent" id="recent"></div>
 </main><script>
@@ -173,17 +191,15 @@ async function call(path, body) {
   const r = await fetch(path, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body || {})});
   return r.json();
 }
-async function play(text, label) {
-  text = text || document.getElementById("text").value;
-  label = label !== undefined ? label : document.getElementById("label").value;
-  msg("Waking the TV and starting Kodi…");
-  const res = await call("/api/play", {text, label});
+async function send(path, waiting) {
+  const text = document.getElementById("text").value, label = document.getElementById("label").value;
+  msg(waiting);
+  const res = await call(path, {text, label});
   if (res.urls) lastHls = res.urls.hls;
   msg(res.message, !res.ok);
   if (res.recent) show(res.recent);
 }
-async function stopTv() { const res = await call("/api/stop"); msg(res.message, !res.ok); }
-async function cast() {
+async function openHls() {
   const text = document.getElementById("text").value;
   if (text) { const res = await call("/api/urls", {text}); if (!res.ok) return msg(res.message, true); lastHls = res.urls.hls; }
   if (!lastHls) return msg("Paste an ID first.", true);
@@ -197,7 +213,8 @@ function show(recent) {
     const b = document.createElement("button");
     b.textContent = r.label || r.id.slice(0, 12) + "…";
     const s = document.createElement("small"); s.textContent = new Date(r.at * 1000).toLocaleString(); b.append(s);
-    b.onclick = () => play(r.id, r.label);
+    // fill the form; then pick Kodi or Chromecast
+    b.onclick = () => { document.getElementById("text").value = r.id; document.getElementById("label").value = r.label; msg("Now pick Kodi or Chromecast."); };
     box.append(b);
   }
 }
@@ -231,9 +248,7 @@ def make_handler(cfg):
                 self.send(404, {"ok": False, "message": "not found"})
 
         def do_POST(self):
-            if self.path == "/api/stop":
-                return self.send(200, stop(cfg))
-            if self.path not in ("/api/play", "/api/urls"):
+            if self.path not in ("/api/play", "/api/cast", "/api/urls"):
                 return self.send(404, {"ok": False, "message": "not found"})
             req = self.body()
             content_id = parse_id(req.get("text"))
@@ -241,14 +256,14 @@ def make_handler(cfg):
                 return self.send(400, {"ok": False, "message": "That isn't an Ace Stream ID or link."})
             if self.path == "/api/urls":
                 return self.send(200, {"ok": True, "urls": stream_urls(content_id, cfg["public_engine_url"])})
-            result = play(cfg, content_id)
+            result = (play if self.path == "/api/play" else chromecast)(cfg, content_id)
             recent = add_recent(load_recent(cfg["state_file"]), content_id,
                                 str(req.get("label") or "")[:80], time.time())
             save_recent(cfg["state_file"], recent)
             self.send(200, {**result, "recent": recent})
 
         def log_message(self, fmt, *args):
-            pass  # requests aren't interesting; play() logs what matters
+            pass  # requests aren't interesting; play() and chromecast() log what matters
 
     return Handler
 

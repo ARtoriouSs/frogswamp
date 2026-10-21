@@ -92,6 +92,8 @@ let
       && lib.elem 8621 cfg.networking.firewall.allowedUDPPorts;
     "football tells Kodi the LAN engine URL" =
       cfg.frogswamp.football.settings.public_engine_url == "http://192.168.101.10:6878";
+    "football casts to the living room TV" =
+      cfg.frogswamp.football.settings.ha.cast_entity == "media_player.philips_tv";
     "football wakes the living room TV" =
       cfg.frogswamp.football.settings.ha.remote_entity == "remote.living_room_philips_tv";
     "backup disk mounts when plugged in later" =

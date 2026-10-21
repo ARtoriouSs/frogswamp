@@ -47,6 +47,7 @@ pkgs.testers.runNixOSTest {
         };
         haTokenFile = toString (pkgs.writeText "ha-token" "token");
         tvRemoteEntity = "remote.tv";
+        tvCastEntity = "media_player.tv_cast";
       };
     };
   };
@@ -56,13 +57,21 @@ pkgs.testers.runNixOSTest {
     for p in (6878, 8080, 8123):
         server.wait_for_open_port(p)
     server.wait_for_open_port(8093)
-    server.succeed("curl -sf localhost:8093/ | grep -q 'Play on TV'")
+    server.succeed("curl -sf localhost:8093/ | grep -q 'Play in Kodi'")
+    server.succeed("curl -sf localhost:8093/ | grep -q 'Chromecast to TV'")
 
     # a link from the phone: the TV is woken, Kodi gets the engine's stream URL
     out = json.loads(server.succeed("""curl -sf -X POST -d '{"text": "acestream://${id}", "label": "derby"}' localhost:8093/api/play"""))
     assert out["ok"], out
     server.succeed("grep -q 'remote/turn_on.*org.xbmc.kodi' /tmp/calls-8123")
     server.succeed("grep 'Player.Open' /tmp/calls-8080 | grep -q ':6878/ace/getstream?id=${id}'")
+
+    # Chromecast: HA gets the HLS link for the cast entity, Kodi isn't asked
+    kodi_before = server.succeed("wc -l < /tmp/calls-8080").strip()
+    out = json.loads(server.succeed("""curl -sf -X POST -d '{"text": "${id}"}' localhost:8093/api/cast"""))
+    assert out["ok"], out
+    server.succeed("grep 'media_player/play_media' /tmp/calls-8123 | grep 'media_player.tv_cast' | grep -q 'manifest.m3u8?id=${id}'")
+    assert server.succeed("wc -l < /tmp/calls-8080").strip() == kodi_before
 
     # junk is refused and never reaches Kodi
     before = server.succeed("wc -l < /tmp/calls-8080").strip()

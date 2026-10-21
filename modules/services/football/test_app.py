@@ -47,6 +47,12 @@ def test_recent_dedupes_and_limits():
     assert f"{0:040x}" not in [r["id"] for r in recent]  # the oldest dropped
 
 
+def test_recent_keeps_name_when_none_given():
+    recent = app.add_recent([], ID, "derby", NOW)
+    recent = app.add_recent(recent, ID, "", NOW + 60)
+    assert recent == [{"id": ID, "label": "derby", "at": NOW + 60}]
+
+
 # ---------- playing on the TV ----------
 
 CFG = {
@@ -131,10 +137,39 @@ def test_play_without_remote_entity():
     assert not any(":8123" in u for _, u, _ in fake.calls)
 
 
-def test_stop_stops_active_players():
+# ---------- Chromecast through Home Assistant ----------
+
+def run_cast(fake, cfg=CFG):
     from unittest import mock
-    fake = Fake(players=(1,))
     with mock.patch.object(app, "http", fake), mock.patch.object(app, "read", return_value="x"):
-        result = app.stop(CFG)
+        return app.chromecast(cfg, ID)
+
+
+CAST_CFG = {**CFG, "ha": {**CFG["ha"], "cast_entity": "media_player.tv_cast"}}
+
+
+def test_chromecast_happy_path():
+    fake = Fake()
+    result = run_cast(fake, CAST_CFG)
     assert result["ok"] is True
-    assert fake.kodi("Player.Stop")[0]["params"] == {"playerid": 1}
+    calls = [b for _, u, b in fake.calls if u.endswith("/api/services/media_player/play_media")]
+    assert calls == [{"entity_id": "media_player.tv_cast", "media_content_type": "application/vnd.apple.mpegurl",
+                      "media_content_id": f"{BASE}/ace/manifest.m3u8?id={ID}"}]
+    assert not any(u.endswith("/jsonrpc") for _, u, _ in fake.calls)  # no Kodi involved
+
+
+def test_chromecast_engine_down():
+    fake = Fake(engine=False)
+    result = run_cast(fake, CAST_CFG)
+    assert result["ok"] is False and "Ace Stream engine isn't running" in result["message"]
+    assert not any(":8123" in u for _, u, _ in fake.calls)
+
+
+def test_chromecast_ha_fails():
+    result = run_cast(Fake(ha=False), CAST_CFG)
+    assert result["ok"] is False and "Home Assistant" in result["message"]
+
+
+def test_chromecast_without_entity():
+    result = run_cast(Fake(), CFG)
+    assert result["ok"] is False and "No Chromecast" in result["message"]
