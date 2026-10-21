@@ -49,7 +49,7 @@ in
           };
           Media = {
             style = "row";
-            columns = 2;
+            columns = 3;
           };
           Infrastructure = {
             style = "row";
@@ -192,6 +192,14 @@ in
               "Media share" = {
                 icon = "mdi-folder-network"; # no Samba icon in the dashboard-icons set
                 description = "smb://frogswamp.local/media (user pupsich)";
+              };
+            }
+            {
+              Football = {
+                href = link 8093;
+                icon = "mdi-soccer";
+                description = "Ace Stream matches → Kodi on the TV";
+                siteMonitor = local 8093;
               };
             }
           ];

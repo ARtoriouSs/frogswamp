@@ -1,6 +1,6 @@
 # 🐸 frogswamp
 
-Home server as code. A GMKtec NucBox G3 (N100, 16 GB, 512 GB NVMe) runs NixOS 26.05 with Home Assistant, Zigbee2MQTT, Jellyfin, a media download stack (qBittorrent, Radarr, Sonarr, Prowlarr, Bazarr), a Samba media share and a Homepage dashboard. It is reachable from anywhere via Tailscale.
+Home server as code. A GMKtec NucBox G3 (N100, 16 GB, 512 GB NVMe) runs NixOS 26.05 with Home Assistant, Zigbee2MQTT, Jellyfin, a media download stack (qBittorrent, Radarr, Sonarr, Prowlarr, Bazarr), a Samba media share, an Ace Stream engine with a "Football" page that plays matches on the TV, and a Homepage dashboard. It is reachable from anywhere via Tailscale.
 
 Everything about the server is declared in this repo. Its state (HA integrations, Zigbee pairings, Jellyfin users and watched status, Arr settings and indexers) is backed up every night to a USB SSD (Kingston A400) and to Backblaze B2. Media files are **not** backed up.
 
@@ -13,11 +13,12 @@ Everything about the server is declared in this repo. Its state (HA integrations
 | qBittorrent | http://192.168.101.10:8090 |
 | Radarr / Sonarr | http://192.168.101.10:7878 / :8989 |
 | Prowlarr / Bazarr | http://192.168.101.10:9696 / :6767 |
+| Football (Ace Stream → TV) | http://192.168.101.10:8093 |
 | Media share | `smb://frogswamp.local/media` |
 
 The same URLs work away from home when the Tailscale app is on.
 
-More detail: [hosts](hosts/README.md) · [modules](modules/README.md) · [Home Assistant](modules/services/home-assistant/README.md) · [media](modules/services/media/README.md) · [secrets](secrets/README.md) · [scripts](scripts/README.md)
+More detail: [hosts](hosts/README.md) · [modules](modules/README.md) · [Home Assistant](modules/services/home-assistant/README.md) · [media](modules/services/media/README.md) · [football](modules/services/football/README.md) · [secrets](secrets/README.md) · [scripts](scripts/README.md)
 
 **Reinstalling the server?** Follow the checklist in [RESET.md](RESET.md).
 
@@ -86,6 +87,7 @@ Fill in these values (see also [secrets/README.md](secrets/README.md)):
 | `arr/radarr_api_key`, `arr/sonarr_api_key`, `arr/prowlarr_api_key`, `arr/bazarr_api_key` | 32 hex characters each, `openssl rand -hex 16`. Each must contain at least one letter (Bazarr breaks on an all-digit key) |
 | `qbittorrent/webui_password_hash` | hash of `arr/ui_password`, see below |
 | `jellyfin/api_key` | leave empty for now, filled in step 1.7 |
+| `kodi/password` | random, e.g. `openssl rand -hex 5`. Typed into Kodi on the TV (step 1.7) |
 
 The qBittorrent hash, computed from the saved password without showing it:
 
@@ -126,7 +128,7 @@ The dashboard's **Backups** tile shows whether the A400 is mounted (and how full
 5. **Prowlarr** (`:9696`): add indexers (*Indexers → Add*). They are synced to Radarr and Sonarr by themselves. Download clients, the `frogswamp` quality profile, folders and Bazarr were already set up by the server.
 6. **Radarr / Sonarr:** optional, *Settings → Indexers → (each) → Minimum Seeders* = 3.
 7. **Phone:** Tailscale app (always-on VPN), HA Companion app (`http://192.168.101.10:8123`), Jellyfin app.
-8. **TV:** Kodi with the Jellyfin add-on, see the [media README](modules/services/media/README.md#on-the-tv-kodi).
+8. **TV:** Kodi with the Jellyfin add-on, see the [media README](modules/services/media/README.md#on-the-tv-kodi). For the Football page: a DHCP reservation for the TV and Kodi's remote control, see the [football README](modules/services/football/README.md#one-time-setup).
 9. `just backup-now`, so the backup contains all of the above.
 
 ## 2. Making changes
