@@ -198,7 +198,7 @@ in
               Football = {
                 href = link 8093;
                 icon = "mdi-soccer";
-                description = "Ace Stream matches → Kodi on the TV";
+                description = "Ace Stream matches → TV (Chromecast or Kodi)";
                 siteMonitor = local 8093;
               };
             }

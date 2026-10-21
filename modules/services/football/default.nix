@@ -10,7 +10,7 @@ let
 in
 {
   options.frogswamp.football = {
-    enable = lib.mkEnableOption "football page: play Ace Stream matches on the TV's Kodi";
+    enable = lib.mkEnableOption "football page: play Ace Stream matches on the TV (Chromecast or Kodi)";
     port = lib.mkOption {
       type = lib.types.port;
       default = 8093;
@@ -35,13 +35,13 @@ in
     };
     haTokenFile = lib.mkOption {
       type = lib.types.str;
-      description = "Runtime path of a Home Assistant token, used to wake the TV";
+      description = "Runtime path of a Home Assistant token, used to turn the TV on and to cast to it";
     };
     tvRemoteEntity = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
       default = null;
       example = "remote.living_room_philips_tv";
-      description = "Android TV Remote entity that wakes the TV and opens Kodi; null skips waking";
+      description = "Android TV Remote entity that turns the TV on before Kodi plays; null skips it";
     };
     tvCastEntity = lib.mkOption {
       type = lib.types.nullOr lib.types.str;

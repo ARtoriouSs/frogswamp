@@ -17,7 +17,7 @@ Each module does one thing and is switched on in `hosts/frogswamp/default.nix` (
 | `services/arr.nix` | Radarr, Sonarr, Prowlarr, Bazarr | 7878, 8989, 9696, 6767 |
 | `services/media-provision/` | Sets up the media apps once (create-if-missing); the UIs own the settings after that | |
 | `services/acestream/` | Ace Stream engine (`acestream-http-proxy` container), pinned by digest | 6878, 8621 |
-| `services/football/` | Phone page: paste an Ace Stream match, play it on the TV's Kodi ([README](services/football/README.md)) | 8093 |
+| `services/football/` | Phone page: paste an Ace Stream match, play it on the TV through Chromecast or Kodi ([README](services/football/README.md)) | 8093 |
 | `services/media-janitor/` | Removes finished torrents, deletes watched titles (every 5 min); stale-downloads sensor in HA | |
 
 How the media parts work together: [services/media/README.md](services/media/README.md).

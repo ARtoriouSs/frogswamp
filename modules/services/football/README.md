@@ -37,9 +37,11 @@ The same URLs work away from home with the Tailscale app on (playing still happe
 | Message | What to do |
 |---|---|
 | *Ace Stream engine isn't running on the server.* | `ssh root@192.168.101.10 systemctl restart podman-acestream`, then check `journalctl -u podman-acestream -e` |
+| *Kodi rejected the password.* | The password in Kodi (*Settings → Services → Control*) must match `just secret kodi/password` |
+| *Kodi is opening the stream…* | Normal: Kodi answers only once the stream is open. Wait a minute before tapping again |
 | *Kodi didn't answer…* | Kodi must be open on the TV. Then check step 2 of the setup; if it's all on and it still fails, turn *Allow remote control via HTTP* off and on again (Kodi on Android sometimes doesn't restart its web server). Or use **Chromecast to TV** |
 | *Home Assistant couldn't cast to the TV.* | Check the TV's *Google Cast* entity (`media_player.philips_tv`) in HA. The TV must be on, or allow *Switch on with Chromecast* |
-| *The TV couldn't be woken through Home Assistant.* | Kodi still played if it was open. Check the Android TV Remote integration in HA |
+| *The TV couldn't be woken through Home Assistant.* | Kodi still played if it was open. Check the TV's Android TV Remote entity (`remote.living_room_philips_tv`) in HA |
 | Kodi shows an error or stays black | The match may have no peers right now. Try another link for the same match |
 | *That isn't an Ace Stream ID or link.* | Copy the 40-character ID or the full `acestream://…` link |
 

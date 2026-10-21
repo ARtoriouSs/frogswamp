@@ -66,8 +66,9 @@ CFG = {
 class Fake:
     """Stands in for app.http; records calls and answers by URL"""
 
-    def __init__(self, engine=True, ha=True, kodi_up=True, players=()):
-        self.calls, self.engine, self.ha, self.kodi_up, self.players = [], engine, ha, kodi_up, players
+    def __init__(self, engine=True, ha=True, kodi_up=True, kodi_error=None, open_error=None, clock=None):
+        self.calls, self.engine, self.ha, self.kodi_up = [], engine, ha, kodi_up
+        self.kodi_error, self.open_error, self.clock = kodi_error, open_error, clock
 
     def __call__(self, method, url, headers=None, body=None, timeout=5):
         self.calls.append((method, url, body))
@@ -79,10 +80,14 @@ class Fake:
             if not self.ha:
                 raise OSError("connection refused")
             return []
+        if self.kodi_error:
+            raise self.kodi_error
         if not self.kodi_up:
-            raise OSError("connection refused")
-        if body["method"] == "Player.GetActivePlayers":
-            return {"result": [{"playerid": p} for p in self.players]}
+            if self.clock:
+                self.clock[0] += timeout  # an asleep TV doesn't answer: each try costs its timeout
+            raise OSError("no route to host")
+        if body["method"] == "Player.Open" and self.open_error:
+            raise self.open_error
         return {"result": "OK"}
 
     def kodi(self, method):
@@ -91,9 +96,13 @@ class Fake:
 
 def run_play(fake, cfg=CFG):
     from unittest import mock
-    sleeps = []
+    sleeps, clock = [], fake.clock or [0.0]
+
+    def sleep(s):
+        sleeps.append(s)
+        clock[0] += s
     with mock.patch.object(app, "http", fake), mock.patch.object(app, "read", return_value="x"):
-        result = app.play(cfg, ID, sleep=sleeps.append)
+        result = app.play(cfg, ID, sleep=sleep, clock=lambda: clock[0])
     return result, sleeps
 
 
@@ -102,7 +111,7 @@ def test_play_happy_path():
     result, _ = run_play(fake)
     assert result["ok"] is True
     wake = [b for _, u, b in fake.calls if u.endswith("/api/services/remote/turn_on")]
-    assert wake == [{"entity_id": "remote.tv", "activity": "org.xbmc.kodi"}]
+    assert wake == [{"entity_id": "remote.tv"}]  # only power on: the TV rejects "open app" commands
     assert fake.kodi("Player.Open")[0]["params"] == {"item": {"file": f"{BASE}/ace/getstream?id={ID}"}}
     assert result["urls"]["hls"] == f"{BASE}/ace/manifest.m3u8?id={ID}"
 
@@ -115,11 +124,40 @@ def test_play_engine_down():
 
 
 def test_play_kodi_never_answers():
-    fake = Fake(kodi_up=False)
-    result, sleeps = run_play(fake)
+    fake = Fake(kodi_up=False, clock=[0.0])
+    result, _ = run_play(fake)
     assert result["ok"] is False and "Kodi didn't answer" in result["message"]
-    assert sum(sleeps) == 40 and len(sleeps) == 20
+    assert fake.clock[0] <= 42, fake.clock[0]  # 40 s in total, also when every try times out
     assert fake.kodi("Player.Open") == []
+
+
+def test_play_wrong_kodi_password():
+    import urllib.error
+    fake = Fake(kodi_error=urllib.error.HTTPError("http://tv/jsonrpc", 401, "Unauthorized", {}, None), clock=[0.0])
+    result, sleeps = run_play(fake)
+    assert result["ok"] is False and "password" in result["message"]
+    assert sleeps == []  # told right away, no 40 s wait
+
+
+def test_play_slow_open_counts_as_started():
+    # Kodi holds its answer while it opens the stream; the match then starts anyway
+    result, _ = run_play(Fake(open_error=TimeoutError("timed out")))
+    assert result["ok"] is True and "opening the stream" in result["message"]
+
+
+def test_play_open_waits_long_enough():
+    fake = Fake()
+    timeouts = []
+    real = fake.__call__
+
+    def spy(method, url, headers=None, body=None, timeout=5):
+        if body and body.get("method") == "Player.Open":
+            timeouts.append(timeout)
+        return real(method, url, headers, body, timeout)
+    from unittest import mock
+    with mock.patch.object(app, "http", spy), mock.patch.object(app, "read", return_value="x"):
+        app.play(CFG, ID, sleep=lambda s: None, clock=lambda: 0.0)
+    assert timeouts and timeouts[0] >= 60
 
 
 def test_play_wake_fails_kodi_already_open():
@@ -173,3 +211,24 @@ def test_chromecast_ha_fails():
 def test_chromecast_without_entity():
     result = run_cast(Fake(), CFG)
     assert result["ok"] is False and "No Chromecast" in result["message"]
+
+
+def test_remember_is_safe_with_parallel_requests(tmp_path):
+    # two phones, or a double tap: the recent file must stay whole
+    import threading
+    path = str(tmp_path / "recent.json")
+    errors = []
+
+    def worker(i):
+        try:
+            for j in range(20):
+                app.remember(path, f"{i * 100 + j:040x}", "", NOW + j)
+        except Exception as e:
+            errors.append(e)
+    threads = [threading.Thread(target=worker, args=(i,)) for i in range(8)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert errors == []
+    assert len(app.load_recent(path)) == 8

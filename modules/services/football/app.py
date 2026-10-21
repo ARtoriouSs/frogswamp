@@ -1,9 +1,10 @@
 """Football: pick an Ace Stream match on the phone, play it on the TV's Kodi.
 
-The page takes an Ace Stream ID (or an acestream:// link, or a URL with id=),
-wakes the TV and opens Kodi through Home Assistant, then tells Kodi to play
-the stream of the Ace Stream engine running on this server. Or it casts the
-stream to the TV's built-in Chromecast through Home Assistant. Pure helpers come
+The page takes an Ace Stream ID (or an acestream:// link, or a URL with id=).
+"Play in Kodi" turns the TV on through Home Assistant and tells Kodi (which must
+be open: the TV refuses remote "open app" commands) to play the stream of the
+Ace Stream engine running on this server. "Chromecast to TV" casts the stream
+to the TV's built-in Chromecast through Home Assistant instead. Pure helpers come
 first; the I/O and the web server are below them.
 """
 
@@ -12,7 +13,9 @@ import base64
 import json
 import os
 import re
+import threading
 import time
+import urllib.error
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -63,25 +66,30 @@ def http(method, url, headers=None, body=None, timeout=5):
     return json.loads(raw) if raw.strip() else None
 
 
-def kodi(cfg, method, params=None):
+def kodi(cfg, method, params=None, timeout=5):
     k = cfg["kodi"]
     auth = base64.b64encode(f"{k['username']}:{read(k['password_file'])}".encode()).decode()
     body = {"jsonrpc": "2.0", "id": 1, "method": method}
     if params is not None:
         body["params"] = params
-    answer = http("POST", k["url"] + "/jsonrpc", {"Authorization": "Basic " + auth}, body)
+    answer = http("POST", k["url"] + "/jsonrpc", {"Authorization": "Basic " + auth}, body, timeout=timeout)
     if answer and answer.get("error"):
         raise RuntimeError(f"Kodi {method}: {answer['error']}")
     return (answer or {}).get("result")
 
 
 def wake_tv(cfg):
+    # power on only: this TV refuses "open app" (activity) commands
     ha = cfg["ha"]
     http("POST", ha["url"] + "/api/services/remote/turn_on", {"Authorization": "Bearer " + read(ha["token_file"])},
-         {"entity_id": ha["remote_entity"], "activity": "org.xbmc.kodi"})
+         {"entity_id": ha["remote_entity"]})
 
 
-def play(cfg, content_id, sleep=time.sleep):
+def is_timeout(e):
+    return isinstance(e, TimeoutError) or isinstance(getattr(e, "reason", None), TimeoutError)
+
+
+def play(cfg, content_id, sleep=time.sleep, clock=time.monotonic):
     urls = stream_urls(content_id, cfg["public_engine_url"])
     try:
         http("GET", cfg["engine_url"] + "/webui/api/service?method=get_version")
@@ -95,18 +103,31 @@ def play(cfg, content_id, sleep=time.sleep):
         except Exception as e:
             log(f"waking the TV failed: {e}")
             note = "The TV couldn't be woken through Home Assistant. "
-    for _ in range(20):  # 20 × 2 s: Kodi needs a while after the TV wakes up
+    deadline = clock() + 40  # a TV that was just turned on needs a while; never longer than this
+    while True:
         try:
-            kodi(cfg, "JSONRPC.Ping")
+            kodi(cfg, "JSONRPC.Ping", timeout=2)
             break
-        except Exception:
-            sleep(2)
-    else:
-        return {"ok": False, "urls": urls,
-                "message": note + "Kodi didn't answer. Is the TV on and Kodi allowed remote control?"}
+        except urllib.error.HTTPError as e:
+            if e.code == 401:
+                return {"ok": False, "urls": urls, "message": note + "Kodi rejected the password. "
+                        "Check Kodi's Settings → Services → Control (user kodi, the password from the setup)."}
+            failed = e
+        except Exception as e:
+            failed = e
+        if clock() + 2 >= deadline:
+            log(f"Kodi didn't answer: {failed}")
+            return {"ok": False, "urls": urls,
+                    "message": note + "Kodi didn't answer. Is Kodi open on the TV, with remote control on?"}
+        sleep(2)
     try:
-        kodi(cfg, "Player.Open", {"item": {"file": urls["tv"]}})
+        # Kodi often answers only once the stream is open, and the engine buffers first
+        kodi(cfg, "Player.Open", {"item": {"file": urls["tv"]}}, timeout=60)
     except Exception as e:
+        if is_timeout(e):
+            log(f"Player.Open still busy after 60 s for {content_id}")
+            return {"ok": True, "urls": urls,
+                    "message": note + "Kodi is opening the stream. It may take up to a minute."}
         log(f"Player.Open failed: {e}")
         return {"ok": False, "message": note + "Kodi refused to play the stream.", "urls": urls}
     log(f"playing {content_id} on the TV")
@@ -135,6 +156,16 @@ def chromecast(cfg, content_id):
         return {"ok": False, "message": "Home Assistant couldn't cast to the TV.", "urls": urls}
     log(f"casting {content_id} to the TV")
     return {"ok": True, "message": "Casting to the TV. It may take up to a minute to start.", "urls": urls}
+
+
+recent_lock = threading.Lock()  # requests run in threads; the file is read, changed and written
+
+
+def remember(path, content_id, label, now):
+    with recent_lock:
+        recent = add_recent(load_recent(path), content_id, label, now)
+        save_recent(path, recent)
+    return recent
 
 
 def load_recent(path):
@@ -169,6 +200,7 @@ textarea, input { width: 100%; padding: 12px; border: 1px solid #3f3f46; border-
 textarea { min-height: 72px; resize: vertical; }
 button { width: 100%; padding: 14px; border: 0; border-radius: 10px; background: var(--card); color: var(--text); font: inherit; font-weight: 600; }
 button.main { background: var(--accent); color: #052e16; font-size: 18px; }
+button:disabled { opacity: 0.5; }
 .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 #msg { min-height: 1.4em; color: var(--muted); }
 #msg.bad { color: var(--bad); }
@@ -179,7 +211,7 @@ button.main { background: var(--accent); color: #052e16; font-size: 18px; }
 <p>1. Find the match on <a href="https://search-ace.stream/" target="_blank" rel="noopener">search-ace.stream</a> and copy its ID or acestream:// link.</p>
 <textarea id="text" placeholder="Paste the ID or link here"></textarea>
 <input id="label" placeholder="Name (optional), e.g. Barcelona – Real">
-<div class="row"><button class="main" onclick="send('/api/play', 'Waking the TV and starting Kodi…')">▶ Play in Kodi</button>
+<div class="row"><button class="main" onclick="send('/api/play', 'Turning the TV on and asking Kodi…')">▶ Play in Kodi</button>
 <button class="main" onclick="send('/api/cast', 'Casting to the TV…')">📺 Chromecast to TV</button></div>
 <button onclick="openHls()">Open / cast (HLS)</button>
 <div id="msg"></div>
@@ -193,8 +225,13 @@ async function call(path, body) {
 }
 async function send(path, waiting) {
   const text = document.getElementById("text").value, label = document.getElementById("label").value;
+  const buttons = document.querySelectorAll("button.main");
+  buttons.forEach(b => b.disabled = true);  // one request at a time: no double play
   msg(waiting);
-  const res = await call(path, {text, label});
+  let res;
+  try { res = await call(path, {text, label}); }
+  catch (e) { res = {ok: false, message: "The server didn't answer. Try again."}; }
+  finally { buttons.forEach(b => b.disabled = false); }
   if (res.urls) lastHls = res.urls.hls;
   msg(res.message, !res.ok);
   if (res.recent) show(res.recent);
@@ -257,9 +294,7 @@ def make_handler(cfg):
             if self.path == "/api/urls":
                 return self.send(200, {"ok": True, "urls": stream_urls(content_id, cfg["public_engine_url"])})
             result = (play if self.path == "/api/play" else chromecast)(cfg, content_id)
-            recent = add_recent(load_recent(cfg["state_file"]), content_id,
-                                str(req.get("label") or "")[:80], time.time())
-            save_recent(cfg["state_file"], recent)
+            recent = remember(cfg["state_file"], content_id, str(req.get("label") or "")[:80], time.time())
             self.send(200, {**result, "recent": recent})
 
         def log_message(self, fmt, *args):

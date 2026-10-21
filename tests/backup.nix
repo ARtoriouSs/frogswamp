@@ -90,8 +90,8 @@ pkgs.testers.runNixOSTest {
     server.succeed("systemctl start restic-backups-local.service")
     server.succeed("restic-local snapshots --json | grep -q '\"paths\"'")
     # the job saved its own DB copy, then removed it
-    server.succeed("restic-local ls latest | grep -q 'home-assistant_v2.db.snapshot-local$'")
-    server.fail("restic-local ls latest | grep -q 'home-assistant_v2.db$'")
+    server.succeed("restic-local ls latest | grep 'home-assistant_v2.db.snapshot-local$' >/dev/null")
+    server.fail("restic-local ls latest | grep 'home-assistant_v2.db$' >/dev/null")
     server.fail("test -e /var/lib/home-assistant/home-assistant_v2.db.snapshot-local")
 
     # wipe state and restore (fresh-install situation)

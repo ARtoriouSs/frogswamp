@@ -130,7 +130,7 @@ The dashboard's **Backups** tile shows whether the A400 is mounted (and how full
 5. **Prowlarr** (`:9696`): add indexers (*Indexers → Add*). They are synced to Radarr and Sonarr by themselves. Download clients, the `frogswamp` quality profile, folders and Bazarr were already set up by the server.
 6. **Radarr / Sonarr:** optional, *Settings → Indexers → (each) → Minimum Seeders* = 3.
 7. **Phone:** Tailscale app (always-on VPN), HA Companion app (`http://192.168.101.10:8123`), Jellyfin app.
-8. **TV:** Kodi with the Jellyfin add-on, see the [media README](modules/services/media/README.md#on-the-tv-kodi). For the Football page: a DHCP reservation for the TV and Kodi's remote control, see the [football README](modules/services/football/README.md#one-time-setup).
+8. **TV:** Kodi with the Jellyfin add-on, see the [media README](modules/services/media/README.md#on-the-tv-kodi). For the Football page: the TV's static IP (set on the TV) and Kodi's remote control, see the [football README](modules/services/football/README.md#one-time-setup).
 9. `just backup-now`, so the backup contains all of the above.
 
 ## 2. Making changes

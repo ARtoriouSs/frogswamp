@@ -63,7 +63,8 @@ pkgs.testers.runNixOSTest {
     # a link from the phone: the TV is woken, Kodi gets the engine's stream URL
     out = json.loads(server.succeed("""curl -sf -X POST -d '{"text": "acestream://${id}", "label": "derby"}' localhost:8093/api/play"""))
     assert out["ok"], out
-    server.succeed("grep -q 'remote/turn_on.*org.xbmc.kodi' /tmp/calls-8123")
+    server.succeed("grep -q 'remote/turn_on' /tmp/calls-8123")
+    server.fail("grep -q 'org.xbmc.kodi' /tmp/calls-8123")  # the TV refuses "open app"; only power on
     server.succeed("grep 'Player.Open' /tmp/calls-8080 | grep -q ':6878/ace/getstream?id=${id}'")
 
     # Chromecast: HA gets the HLS link for the cast entity, Kodi isn't asked
