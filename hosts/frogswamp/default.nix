@@ -45,7 +45,16 @@
     jellyfin.enable = true;
     samba.enable = true;
     homepage.enable = true;
-    qbittorrent.enable = true;
+    qbittorrent = {
+      enable = true;
+      # line: ~260 Mbit/s down, ~120 Mbit/s up (measured 2026-10-21); leave room for everything else
+      speedLimits = {
+        download = 28000; # ~230 Mbit/s
+        upload = 10000; # ~80 Mbit/s
+        altDownload = 6000; # ~50 Mbit/s, turtle: during a match
+        altUpload = 1500; # ~12 Mbit/s
+      };
+    };
     arr.enable = true;
     mediaProvision.enable = true;
     mediaJanitor = {

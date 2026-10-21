@@ -21,6 +21,12 @@ let
         # Use the category's folder (radarr → downloads/radarr) for new torrents, so Jellyfin sees them
         "Session\\DisableAutoTMMByDefault" = false;
         "Session\\Port" = 51413;
+        # Below the line's speed, so torrents don't crowd out everything else (0 = no limit)
+        "Session\\GlobalDLSpeedLimit" = cfg.speedLimits.download;
+        "Session\\GlobalUPSpeedLimit" = cfg.speedLimits.upload;
+        # The turtle button in the web UI switches to these, e.g. during a match
+        "Session\\AlternativeGlobalDLSpeedLimit" = cfg.speedLimits.altDownload;
+        "Session\\AlternativeGlobalUPSpeedLimit" = cfg.speedLimits.altUpload;
         # Stop uploading the moment a download completes; media-janitor removes the torrent after the import
         "Session\\GlobalMaxRatio" = 0;
         "Session\\GlobalMaxSeedingMinutes" = 0;
@@ -42,6 +48,22 @@ in
 {
   options.frogswamp.qbittorrent = {
     enable = lib.mkEnableOption "qBittorrent with watch-while-downloading defaults";
+    speedLimits =
+      lib.genAttrs
+        [
+          "download"
+          "upload"
+          "altDownload"
+          "altUpload"
+        ]
+        (
+          name:
+          lib.mkOption {
+            type = lib.types.ints.unsigned;
+            default = 0;
+            description = "${name} limit in KiB/s, 0 = no limit (alt* = the turtle button)";
+          }
+        );
     webuiPasswordHashFile = lib.mkOption {
       type = lib.types.str;
       description = "Runtime path of the WebUI password as qBittorrent PBKDF2 (@ByteArray(salt:hash))";

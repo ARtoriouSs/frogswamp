@@ -42,12 +42,13 @@ The cleanup (`media-janitor`) runs every 5 minutes:
 
 ## Where settings live
 
-- **Repo (seeded once):** folders, qBittorrent behaviour (sequential download, no `.!qB`, stop seeding at completion), the `frogswamp` profile and language scores, Prowlarr↔Radarr/Sonarr links, Bazarr languages, the Jellyfin Movies/Shows libraries and their folders. The setup (`media-provision.service`) only **adds what's missing**. Anything you change in an app's UI stays, with one exception: **qBittorrent's settings come from the repo** and are written again at every restart, so change them in `modules/services/qbittorrent.nix`. Torrents themselves are kept.
+- **Repo (seeded once):** folders, qBittorrent behaviour (sequential download, no `.!qB`, stop seeding at completion), the `frogswamp` profile and language scores, Prowlarr↔Radarr/Sonarr links, Bazarr languages, the Jellyfin Movies/Shows libraries and their folders. The setup (`media-provision.service`) only **adds what's missing**. Anything you change in an app's UI stays, with one exception: **qBittorrent's settings come from the repo** and are written again at every restart, so change them in `modules/services/qbittorrent.nix` (speed limits: `qbittorrent.speedLimits` in `hosts/frogswamp/default.nix`). Torrents themselves are kept.
 - **Backups (nightly, A400 + B2):** everything else in the apps: indexers, your lists, history, UI changes.
 - **Not backed up:** the media files themselves.
 
 ## Notes
 
+- **Speed limits:** downloads are capped at ~230 Mbit/s down and ~80 Mbit/s up, so the rest of the home network (and a football stream) still works while a torrent runs. Without limits, the torrent filled the line and other traffic lost 30–50% of its packets. The **turtle** button in qBittorrent's web UI switches to ~50 / ~12 Mbit/s, e.g. during a match.
 - **Disk:** Radarr and Sonarr don't import a download when less than 20 GB would be left free (they still grab it). 4K films are 15–80 GB each.
 - **Router:** the provider puts the connection behind its own NAT (CGNAT), so forwarding TCP+UDP **51413** in the router doesn't help: no peer can reach the server from outside. Downloads still work, because qBittorrent connects out to peers. With a public IPv4 address from the provider (paid "static IP"), forwarding 51413 to `192.168.101.10` would give more peers.
 - **Legal:** these tools are legal, but torrenting copyrighted films or shows uploads them to others while downloading, which counts as distribution in Poland/the EU. What you download is your responsibility.

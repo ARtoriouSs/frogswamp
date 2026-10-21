@@ -10,6 +10,12 @@ pkgs.testers.runNixOSTest {
       qbittorrent = {
         enable = true;
         webuiPasswordHashFile = "${./fixtures/qbittorrent-password-hash}"; # password: testpw
+        speedLimits = {
+          download = 28000;
+          upload = 10000;
+          altDownload = 6000;
+          altUpload = 1500;
+        };
       };
     };
   };
@@ -22,6 +28,9 @@ pkgs.testers.runNixOSTest {
     server.fail("curl -s -c /tmp/x -d 'username=pupsich&password=wrong' http://127.0.0.1:8090/api/v2/auth/login; grep -q SID /tmp/x")
     p = json.loads(server.succeed("curl -sf -b /tmp/c http://127.0.0.1:8090/api/v2/app/preferences"))
     assert p["save_path"].rstrip("/") == "/srv/media/downloads", p["save_path"]
+    # KiB/s in the repo, bytes/s in the API
+    assert (p["dl_limit"], p["up_limit"]) == (28000 * 1024, 10000 * 1024), (p["dl_limit"], p["up_limit"])
+    assert (p["alt_dl_limit"], p["alt_up_limit"]) == (6000 * 1024, 1500 * 1024), (p["alt_dl_limit"], p["alt_up_limit"])
     assert p["auto_tmm_enabled"] is True, "category save paths are ignored without automatic torrent management"
     assert p["incomplete_files_ext"] is False and p["temp_path_enabled"] is False
     assert p["max_ratio_enabled"] and p["max_ratio"] == 0, (p["max_ratio_enabled"], p["max_ratio"])
