@@ -77,6 +77,9 @@ let
         cfg.sops.secrets."jellyfin/api_key".restartUnits;
     "backup jobs run one after the other" =
       lib.elem "restic-backups-local.service" cfg.systemd.services.restic-backups-b2.after;
+    # ghcr.io loses packets on this provider's route; Docker Hub has the same image (same digest)
+    "acestream image from Docker Hub" =
+      lib.hasPrefix "docker.io/" cfg.virtualisation.oci-containers.containers.acestream.image;
     "acestream image pinned by digest" =
       lib.hasInfix "@sha256:" cfg.virtualisation.oci-containers.containers.acestream.image;
     "acestream allows LAN access" =

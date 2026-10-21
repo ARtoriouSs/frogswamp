@@ -39,7 +39,7 @@ If you replace the router or reset it to factory settings, do this again. A pool
 
 Port forwarding (51413 for torrents, 8621 for Ace Stream) only helps with a public IPv4 address. The current provider uses CGNAT (the router's WAN address isn't public and changes), so it's not set up; downloads and streams still work, with fewer peers.
 
-DHCP reservations in the router: the TV (MAC `9c:95:61:90:4c:9a`) → `192.168.101.119` (the router only accepts reservations inside its pool).
+Fixed addresses below `.100`: the server (`.10`) and the TV (`.20`, static IP set on the TV, see the [football README](modules/services/football/README.md#one-time-setup)).
 
 ### 1.2 Accounts
 
