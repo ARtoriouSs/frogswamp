@@ -22,7 +22,7 @@ The same URLs work away from home with the Tailscale app on (playing still happe
 
 ## One-time setup
 
-1. **Router:** give the TV (MAC `9c:95:61:90:4c:9b`) a fixed address with a DHCP reservation for `192.168.101.119`. If it ever changes, update `football.kodi.host` in `hosts/frogswamp/default.nix` and `just deploy`.
+1. **Router:** give the TV a fixed address with a DHCP reservation: MAC `9c:95:61:90:4c:9a` (its network card; HA shows a different ID ending in `:9b`, that's not it) → `192.168.101.119`. The router only accepts reservations inside its pool (`.100–.254`); a reservation still means no other device gets that address. If it ever changes, update `football.kodi.host` in `hosts/frogswamp/default.nix` and `just deploy`.
 2. **Kodi on the TV:** *Settings → Services → Control*:
    - *Allow remote control via HTTP*: on, port `8080`
    - Username: `kodi`
@@ -43,6 +43,7 @@ Logs: `just ssh journalctl -u football -n 20`.
 
 ## Notes
 
-- **Ports:** 8093 (page), 6878 (engine), 8621 TCP+UDP (P2P; forwarding it in the router can give more peers).
+- **Ports:** 8093 (page), 6878 (engine), 8621 TCP+UDP (P2P).
+- **Fewer peers than possible:** the provider puts the home connection behind its own NAT (CGNAT: the router's WAN address isn't public and changes). So no peer can connect to the server, and port forwarding or UPnP in the router can't change that. The engine still connects out to other peers, which is enough for most matches. Only a public IPv4 address from the provider (a paid "static IP" option) would change it.
 - **Engine version:** pinned in `modules/services/acestream/image.nix`. To update, change the tag and digest there (`skopeo inspect docker://ghcr.io/martinbjeldbak/acestream-http-proxy:<tag>`), then `just deploy`.
 - **Legal:** Ace Stream is legal, but many football streams on it are unlicensed broadcasts. While you watch, the engine also uploads to other viewers, which counts as distribution in the EU. What you watch is your responsibility.

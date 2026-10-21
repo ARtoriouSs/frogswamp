@@ -49,5 +49,5 @@ The cleanup (`media-janitor`) runs every 5 minutes:
 ## Notes
 
 - **Disk:** Radarr and Sonarr don't import a download when less than 20 GB would be left free (they still grab it). 4K films are 15–80 GB each.
-- **Router (optional):** forwarding TCP+UDP **51413** to `192.168.101.10` gives more peers and faster downloads.
+- **Router:** the provider puts the connection behind its own NAT (CGNAT), so forwarding TCP+UDP **51413** in the router doesn't help: no peer can reach the server from outside. Downloads still work, because qBittorrent connects out to peers. With a public IPv4 address from the provider (paid "static IP"), forwarding 51413 to `192.168.101.10` would give more peers.
 - **Legal:** these tools are legal, but torrenting copyrighted films or shows uploads them to others while downloading, which counts as distribution in Poland/the EU. What you download is your responsibility.

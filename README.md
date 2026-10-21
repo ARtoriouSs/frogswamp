@@ -37,7 +37,9 @@ The server gives itself the fixed address `192.168.101.10`. The router must neve
 
 If you replace the router or reset it to factory settings, do this again. A pool that covers the whole subnet would let another device take `.10`, and the server would lose its network.
 
-Optional: forward TCP+UDP **51413** to `192.168.101.10` for faster torrent downloads.
+Port forwarding (51413 for torrents, 8621 for Ace Stream) only helps with a public IPv4 address. The current provider uses CGNAT (the router's WAN address isn't public and changes), so it's not set up; downloads and streams still work, with fewer peers.
+
+DHCP reservations in the router: the TV (MAC `9c:95:61:90:4c:9a`) → `192.168.101.119` (the router only accepts reservations inside its pool).
 
 ### 1.2 Accounts
 
