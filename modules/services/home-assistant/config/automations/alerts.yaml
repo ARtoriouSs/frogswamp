@@ -1,0 +1,154 @@
+# Server and house alerts to the phone. Each one fires once per problem, not on every sensor update
+- id: repo_alert_backup_old
+  alias: "Alert: backup is old"
+  description: Newest snapshot older than 48 h, or the repo has none or can't be reached
+  triggers:
+    - trigger: template
+      id: local
+      value_template: >-
+        {% set s = states('sensor.backup_last_local') %}
+        {% set t = as_timestamp(s, none) %}
+        {{ s in ['none', 'unreachable'] or (t is not none and now().timestamp() - t > 48 * 3600) }}
+    - trigger: template
+      id: b2
+      value_template: >-
+        {% set s = states('sensor.backup_last_b2') %}
+        {% set t = as_timestamp(s, none) %}
+        {{ s in ['none', 'unreachable'] or (t is not none and now().timestamp() - t > 48 * 3600) }}
+  actions:
+    - variables:
+        last: "{{ states('sensor.backup_last_' ~ trigger.id) }}"
+        when: >-
+          {% set t = as_timestamp(last, none) %}
+          {{ t | timestamp_custom('%d.%m %H:%M') if t is not none else last }}
+    - action: notify.mobile_app_pixel_7
+      data:
+        title: "Backup ({{ trigger.id }}) is old"
+        message: "Last snapshot: {{ when }}. Check: just ssh systemctl status restic-backups-{{ trigger.id }}"
+        data:
+          tag: "backup-old-{{ trigger.id }}"
+
+- id: repo_alert_backup_disk
+  alias: "Alert: backup disk missing"
+  description: The A400 isn't mounted for 30 minutes
+  triggers:
+    - trigger: state
+      entity_id: sensor.backup_disk
+      to: missing
+      for: "00:30:00"
+  actions:
+    - action: notify.mobile_app_pixel_7
+      data:
+        title: Backup disk missing
+        message: The A400 isn't mounted. Re-plug its cable; it mounts by itself
+        data:
+          tag: backup-disk
+
+- id: repo_alert_stale_downloads
+  alias: "Alert: stale downloads"
+  description: Downloads nobody watched for 5 days
+  triggers:
+    - trigger: numeric_state
+      entity_id: sensor.stale_downloads
+      above: 0
+  actions:
+    - action: notify.mobile_app_pixel_7
+      data:
+        title: "Stale downloads: {{ trigger.to_state.state }}"
+        message: "{{ (state_attr('sensor.stale_downloads', 'titles') or []) | join(', ') }}"
+        data:
+          tag: stale-downloads
+
+# The state trigger fires once when the 1 h is reached, not again while the device stays offline.
+# Add new devices here (one entity per device is enough)
+- id: repo_alert_device_offline
+  alias: "Alert: device offline"
+  description: A device is unavailable for 1 hour
+  mode: parallel
+  triggers:
+    - trigger: state
+      entity_id:
+        - cover.living_room_blinds_left_door
+        - cover.living_room_blinds_middle
+        - cover.living_room_blinds_right
+        - cover.bedroom_curtains
+        - climate.guest_bathroom_thermostat_guest
+        - climate.master_bathroom_thermostat_master
+        - climate.guest_bathroom_towel_heat_guest
+        - switch.desk_child_lock
+      to: unavailable
+      for: "01:00:00"
+  actions:
+    - action: notify.mobile_app_pixel_7
+      data:
+        title: "Offline: {{ trigger.to_state.name }}"
+        message: "{{ trigger.entity_id }} is unavailable since {{ as_local(trigger.to_state.last_changed).strftime('%d.%m %H:%M') }}"
+        data:
+          tag: "offline-{{ trigger.entity_id }}"
+
+- id: repo_alert_zigbee_bridge
+  alias: "Alert: Zigbee bridge down"
+  description: Zigbee2MQTT is disconnected for 10 minutes
+  triggers:
+    - trigger: state
+      entity_id: binary_sensor.zigbee2mqtt_bridge_connection_state
+      to:
+        - "off"
+        - unavailable
+      for: "00:10:00"
+  actions:
+    - action: notify.mobile_app_pixel_7
+      data:
+        title: Zigbee bridge down
+        message: "Zigbee devices don't respond. Check the dongle, then: just ssh systemctl restart zigbee2mqtt"
+        data:
+          tag: zigbee-bridge
+
+# Fires when the internet is back, so the message can get out. Drops under 1 minute are ignored
+- id: repo_alert_internet_down
+  alias: "Alert: internet was down"
+  description: Router WAN was down; tells when and for how long
+  triggers:
+    - trigger: state
+      entity_id: binary_sensor.huawei_igd_wan_status
+      from: "off"
+      to: "on"
+  conditions:
+    - "{{ (trigger.to_state.last_changed - trigger.from_state.last_changed).total_seconds() >= 60 }}"
+  actions:
+    - variables:
+        since: "{{ as_local(trigger.from_state.last_changed).strftime('%d.%m %H:%M') }}"
+        until: "{{ as_local(trigger.to_state.last_changed).strftime('%H:%M') }}"
+        minutes: "{{ ((trigger.to_state.last_changed - trigger.from_state.last_changed).total_seconds() / 60) | round(0) | int }}"
+    - action: logbook.log
+      data:
+        name: Internet
+        message: "was down {{ since }}–{{ until }} ({{ minutes }} min)"
+        entity_id: binary_sensor.huawei_igd_wan_status
+    - action: notify.mobile_app_pixel_7
+      data:
+        title: Internet was down
+        message: "{{ since }}–{{ until }} ({{ minutes }} min)"
+
+# Only a real drop below 15% counts: going offline and back, or an HA restart, doesn't fire it again
+- id: repo_alert_printer_ink
+  alias: "Alert: printer ink low"
+  description: A cartridge drops below 15%
+  mode: parallel
+  triggers:
+    - trigger: state
+      entity_id:
+        - sensor.office_hp_tango_black_cartridge
+        - sensor.office_printer_tri_color_cartridge
+      not_from:
+        - unavailable
+        - unknown
+  conditions:
+    - "{{ trigger.from_state is not none and trigger.from_state.state | float(0) >= 15 and trigger.to_state.state | float(100) < 15 }}"
+  actions:
+    - action: notify.mobile_app_pixel_7
+      data:
+        title: Printer ink low
+        message: "{{ trigger.to_state.name }}: {{ trigger.to_state.state }}%"
+        data:
+          tag: "ink-{{ trigger.entity_id }}"

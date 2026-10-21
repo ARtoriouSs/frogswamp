@@ -37,6 +37,20 @@ Scripts → `config/scripts/<name>.yaml` (mapping). Helpers/template sensors →
 3. **Missing entities aren't fatal.** HA loads the automation and logs "entity not found" when it runs. `just check` can't see the live entity list, so check the HA log after deploying.
 4. **When promoting a UI automation**, convert device triggers/actions to entity form first.
 
+## Phone alerts
+
+`config/automations/alerts.yaml` sends these to the Pixel 7 (`notify.mobile_app_pixel_7`). Each one fires once per problem.
+
+| Alert | When |
+|---|---|
+| Backup is old | Newest local or B2 snapshot older than 48 h, or the repo is unreachable |
+| Backup disk missing | `sensor.backup_disk` is `missing` for 30 min. The sensor is refreshed hourly, so it can take up to 1.5 h |
+| Stale downloads | `sensor.stale_downloads` goes above 0 |
+| Device offline | A listed device is `unavailable` for 1 h. **Add new devices to its list** |
+| Zigbee bridge down | Z2M disconnected for 10 min |
+| Internet was down | Router WAN back on after at least 1 min down. Also written to the logbook |
+| Printer ink low | A cartridge drops below 15% |
+
 ## Bluetooth recovery
 
 If the Bluetooth chip hangs, the kernel resets it and it comes back under a new name (`hci0` → `hci1`). HA would keep scanning on the old one. A udev rule restarts HA automatically when an adapter re-appears and HA has been running for over 2 minutes (`home-assistant-bluetooth-recover.service`). Check it with `just ssh journalctl -u home-assistant-bluetooth-recover`.
