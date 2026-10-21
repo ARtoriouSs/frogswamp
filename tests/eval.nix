@@ -81,6 +81,9 @@ let
       lib.hasInfix "@sha256:" cfg.virtualisation.oci-containers.containers.acestream.image;
     "acestream allows LAN access" =
       cfg.virtualisation.oci-containers.containers.acestream.environment.ALLOW_REMOTE_ACCESS == "yes";
+    # the podman bridge had no DNS/internet on the server; host network also gives peers a direct path
+    "acestream on the host network" =
+      lib.elem "--network=host" cfg.virtualisation.oci-containers.containers.acestream.extraOptions;
     "acestream P2P port open" =
       lib.elem 8621 cfg.networking.firewall.allowedTCPPorts
       && lib.elem 8621 cfg.networking.firewall.allowedUDPPorts;
