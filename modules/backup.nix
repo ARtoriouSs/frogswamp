@@ -225,6 +225,8 @@ let
         for copy in "$db.snapshot-$repo" "$db.bak"; do
           if [ -f "$copy" ]; then
             mv -f "$copy" "$db"
+            # the copy was made by root; give it the folder's owner (Prowlarr has no fixed user to chown to)
+            chown --reference="$(dirname "$db")" "$db"
             rm -f "$db-wal" "$db-shm"
             break
           fi
