@@ -52,6 +52,12 @@
       enable = true;
       dryRun = false;
     };
+    acestream.enable = true;
+    football = {
+      enable = true;
+      kodi.host = "192.168.101.119"; # the TV; keep it fixed with a DHCP reservation in the router
+      tvRemoteEntity = "remote.living_room_philips_tv";
+    };
     backup = {
       local.enable = true;
       b2 = {

@@ -73,6 +73,7 @@
         (
           config.frogswamp.mediaProvision.enable
           || config.frogswamp.mediaJanitor.enable
+          || config.frogswamp.football.enable
           || config.frogswamp.backup.local.enable
           || config.frogswamp.backup.b2.enable
         )
@@ -83,6 +84,9 @@
           "home_assistant/api_token" = { };
         }
       )
+      (lib.mkIf config.frogswamp.football.enable {
+        "kodi/password" = { };
+      })
       # Later tasks append blocks here, one per module:
       # (lib.mkIf config.frogswamp.<module>.enable { ... })
     ];
@@ -116,6 +120,10 @@
       apiKeyFiles = lib.genAttrs [ "radarr" "sonarr" "prowlarr" "bazarr" ] (
         app: lib.mkDefault config.sops.secrets."arr/${app}_api_key".path
       );
+    };
+    football = {
+      kodi.passwordFile = lib.mkDefault config.sops.secrets."kodi/password".path;
+      haTokenFile = lib.mkDefault config.sops.secrets."home_assistant/api_token".path;
     };
     mediaProvision = {
       uiPasswordFile = lib.mkDefault config.sops.secrets."arr/ui_password".path;

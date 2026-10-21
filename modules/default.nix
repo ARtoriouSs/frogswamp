@@ -13,5 +13,7 @@
     ./services/media-janitor
     ./services/samba.nix
     ./services/homepage.nix
+    ./services/acestream
+    ./services/football
   ];
 }

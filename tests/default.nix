@@ -19,6 +19,7 @@ in
   test-media-provision = call ./media-provision.nix;
   test-media-janitor = call ./media-janitor.nix;
   test-football-unit = call ./football-unit.nix;
+  test-football = call ./football.nix;
   test-samba = call ./samba.nix;
   test-homepage = call ./homepage.nix;
   test-backup = call ./backup.nix;

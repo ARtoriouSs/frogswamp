@@ -77,6 +77,17 @@ let
         cfg.sops.secrets."jellyfin/api_key".restartUnits;
     "backup jobs run one after the other" =
       lib.elem "restic-backups-local.service" cfg.systemd.services.restic-backups-b2.after;
+    "acestream image pinned by digest" =
+      lib.hasInfix "@sha256:" cfg.virtualisation.oci-containers.containers.acestream.image;
+    "acestream allows LAN access" =
+      cfg.virtualisation.oci-containers.containers.acestream.environment.ALLOW_REMOTE_ACCESS == "yes";
+    "acestream P2P port open" =
+      lib.elem 8621 cfg.networking.firewall.allowedTCPPorts
+      && lib.elem 8621 cfg.networking.firewall.allowedUDPPorts;
+    "football tells Kodi the LAN engine URL" =
+      cfg.frogswamp.football.settings.public_engine_url == "http://192.168.101.10:6878";
+    "football wakes the living room TV" =
+      cfg.frogswamp.football.settings.ha.remote_entity == "remote.living_room_philips_tv";
     "backup disk mounts when plugged in later" =
       lib.hasInfix ''ENV{ID_FS_LABEL}=="frogbackup"'' cfg.services.udev.extraRules
       && lib.hasInfix ''ENV{SYSTEMD_WANTS}+="mnt-backup.mount"'' cfg.services.udev.extraRules;

@@ -23,6 +23,11 @@
     arr.enable = lib.mkForce false;
     mediaProvision.enable = lib.mkForce false;
     mediaJanitor.enable = lib.mkForce false;
+    acestream.enable = lib.mkForce false; # needs the internet for its image
+    football = {
+      kodi.passwordFile = lib.mkForce "/etc/vm-dummy-secret";
+      haTokenFile = lib.mkForce "/etc/vm-dummy-secret";
+    };
     qbittorrent.webuiPasswordHashFile = lib.mkForce "${../../tests/fixtures/qbittorrent-password-hash}";
     backup.local.enable = lib.mkForce false;
     backup.b2.enable = lib.mkForce false;
