@@ -24,6 +24,7 @@
     mediaProvision.enable = lib.mkForce false;
     mediaJanitor.enable = lib.mkForce false;
     acestream.enable = lib.mkForce false; # needs the internet for its image
+    matterServer.enable = lib.mkForce false; # same
     football = {
       kodi.passwordFile = lib.mkForce "/etc/vm-dummy-secret";
       haTokenFile = lib.mkForce "/etc/vm-dummy-secret";

@@ -20,6 +20,7 @@ let
     "/var/lib/sonarr"
     "/var/lib/private/prowlarr"
     "/var/lib/bazarr"
+    "/var/lib/matter-server"
   ];
   sqliteDbs = [
     "/var/lib/home-assistant/home-assistant_v2.db"
@@ -41,6 +42,7 @@ let
     "/var/lib/radarr" = "radarr";
     "/var/lib/sonarr" = "sonarr";
     "/var/lib/bazarr" = "bazarr";
+    "/var/lib/matter-server" = "matter-server";
   };
   units = [
     "podman-home-assistant"
@@ -54,6 +56,7 @@ let
     "sonarr"
     "prowlarr"
     "bazarr"
+    "podman-matter-server"
   ];
 
   # Helpers that start apps or change their state; stopped while a restore writes that state

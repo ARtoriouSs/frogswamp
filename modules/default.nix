@@ -16,5 +16,6 @@
     ./services/acestream
     ./services/football
     ./services/mode-switch
+    ./services/matter-server
   ];
 }

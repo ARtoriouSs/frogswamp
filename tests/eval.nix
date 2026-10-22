@@ -103,6 +103,17 @@ let
     "homepage mode tiles stay in the same tab" = lib.all (
       tile: (lib.head (lib.attrValues tile)).target == "_self"
     ) (lib.head (lib.filter (g: g ? Modes) cfg.services.homepage-dashboard.services)).Modes;
+    "matter server image pinned by digest" =
+      lib.hasInfix "@sha256:" cfg.virtualisation.oci-containers.containers.matter-server.image;
+    # HA reaches it on localhost; Matter needs the host network for mDNS and device traffic
+    "matter server on the host network" =
+      lib.elem "--network=host" cfg.virtualisation.oci-containers.containers.matter-server.extraOptions;
+    "matter server WebSocket only on localhost" =
+      cfg.virtualisation.oci-containers.containers.matter-server.environment.LISTEN_ADDRESS == "127.0.0.1"
+      && !(lib.elem 5580 cfg.networking.firewall.allowedTCPPorts);
+    # the fabric holds the keys of every paired device; losing it means pairing everything again
+    "matter fabric is backed up" =
+      lib.hasInfix "/var/lib/matter-server" cfg.services.restic.backups.local.dynamicFilesFrom;
     "backup disk mounts when plugged in later" =
       lib.hasInfix ''ENV{ID_FS_LABEL}=="frogbackup"'' cfg.services.udev.extraRules
       && lib.hasInfix ''ENV{SYSTEMD_WANTS}+="mnt-backup.mount"'' cfg.services.udev.extraRules;

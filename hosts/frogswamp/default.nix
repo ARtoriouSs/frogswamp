@@ -45,6 +45,8 @@
       enable = true;
       hacs = true;
     };
+    # Matter devices in HA (Matter integration → ws://localhost:5580/ws)
+    matterServer.enable = true;
     jellyfin.enable = true;
     samba.enable = true;
     homepage.enable = true;

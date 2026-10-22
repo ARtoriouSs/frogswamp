@@ -19,6 +19,7 @@ Each module does one thing and is switched on in `hosts/frogswamp/default.nix` (
 | `services/acestream/` | Ace Stream engine (`acestream-http-proxy` container), pinned by digest | 6878, 8621 |
 | `services/football/` | Phone page: paste an Ace Stream match, play it on the TV through Chromecast or Kodi ([README](services/football/README.md)) | 8093 |
 | `services/mode-switch/` | Homepage *Modes* tiles (Vacation, Day off, Guests): a click flips the HA mode through the API and returns to Homepage. Port 8094 |
+| `services/matter-server/` | Matter Server (`matterjs-server` container) for HA's Matter integration, pinned by digest; WebSocket on localhost only | 5580 (localhost) |
 | `services/media-janitor/` | Removes finished torrents, deletes watched titles (every 5 min); stale-downloads sensor in HA | |
 
 How the media parts work together: [services/media/README.md](services/media/README.md).
