@@ -35,15 +35,15 @@ pkgs.testers.runNixOSTest {
     assert "{{HOMEPAGE_VAR" not in widgets, widgets
     for name in ["qBittorrent", "Radarr", "Sonarr", "Prowlarr", "Bazarr"]:
         assert name in services, f"{name} missing: {services}"
-    # downloads and watching share the Media group; no Downloads group any more
-    assert '"Media"' in services and '"Downloads"' not in services, services
-    # Modes is a subgroup of Home: Homepage serves it inside Home's group, before Media
+    # Home and Media are made of untitled rows (subgroups); the old Downloads group is now a Media row
     import json
     groups = json.loads(services)
-    home = next(g for g in groups if g["name"] == "Home")
-    modes = next(g for g in home["groups"] if g["name"] == "Modes")
-    assert [t["name"] for t in modes["services"]] == ["Vacation"], modes
     assert [g["name"] for g in groups] == ["Home", "Media", "Infrastructure"], [g["name"] for g in groups]
+    rows = lambda name: {r["name"]: [t["name"] for t in r["services"]] for r in next(g for g in groups if g["name"] == name)["groups"]}
+    assert rows("Home")["Modes"] == ["Vacation"], rows("Home")
+    assert rows("Media")["Watch"] == ["Jellyfin", "Ace Stream"], rows("Media")
+    # the rows have no titles
+    server.succeed("grep -A3 'Modes:' /etc/homepage-dashboard/settings.yaml | grep -q 'header: false'")
     # widget settings are not exposed by the API, so check the generated config
     server.succeed("grep -q 'sensor.stale_downloads' /etc/homepage-dashboard/services.yaml")
     server.succeed("grep -q 'sensor.backup_disk' /etc/homepage-dashboard/services.yaml")

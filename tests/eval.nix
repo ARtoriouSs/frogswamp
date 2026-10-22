@@ -100,29 +100,51 @@ let
       cfg.frogswamp.modeSwitch.settings.back_url == "http://192.168.101.10:8082/";
     "mode switch flips the General actions modes" =
       cfg.frogswamp.modeSwitch.modes.guests == "input_boolean.guests_in_living_room";
-    "homepage mode tiles stay in the same tab, inside Home" =
+    "homepage rows: Home (apps, modes), Media (downloads, Arr, watching)" =
+      let
+        names = l: map (x: lib.head (lib.attrNames x)) l;
+        group = n: (lib.head (lib.filter (g: g ? ${n}) cfg.services.homepage-dashboard.services)).${n};
+        rows = n: map (r: names (lib.head (lib.attrValues r))) (group n);
+      in
+      rows "Home" == [
+        [
+          "Home Assistant"
+          "Zigbee2MQTT"
+        ]
+        [
+          "Day off"
+          "Guests"
+          "Vacation"
+        ]
+      ]
+      &&
+        rows "Media" == [
+          [
+            "qBittorrent"
+            "Media share"
+          ]
+          [
+            "Radarr"
+            "Sonarr"
+            "Prowlarr"
+            "Bazarr"
+          ]
+          [
+            "Jellyfin"
+            "Ace Stream"
+          ]
+        ];
+    "homepage mode tiles stay in the same tab" =
       let
         home = (lib.head (lib.filter (g: g ? Home) cfg.services.homepage-dashboard.services)).Home;
-        modes = (lib.head (lib.filter (t: t ? Modes) home)).Modes;
+        modes = (lib.head (lib.filter (r: r ? Modes) home)).Modes;
       in
-      modes != [ ] && lib.all (tile: (lib.head (lib.attrValues tile)).target == "_self") modes;
+      lib.all (tile: (lib.head (lib.attrValues tile)).target == "_self") modes;
     "homepage groups in order: Home, Media, Infrastructure" =
       map (g: lib.head (lib.attrNames g)) cfg.services.homepage-dashboard.settings.layout == [
         "Home"
         "Media"
         "Infrastructure"
-      ];
-    "homepage Media: downloads first, then Jellyfin, Football, Media share" =
-      map (t: lib.head (lib.attrNames t))
-        (lib.head (lib.filter (g: g ? Media) cfg.services.homepage-dashboard.services)).Media == [
-        "qBittorrent"
-        "Radarr"
-        "Sonarr"
-        "Prowlarr"
-        "Bazarr"
-        "Jellyfin"
-        "Football"
-        "Media share"
       ];
     "matter server image pinned by digest" =
       lib.hasInfix "@sha256:" cfg.virtualisation.oci-containers.containers.matter-server.image;

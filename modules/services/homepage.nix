@@ -74,21 +74,44 @@ in
         useEqualHeights = true;
         target = "_blank";
         # a list keeps this order (an attribute set would come out sorted by name)
+        # a list keeps this order (an attribute set would come out sorted by name).
+        # 1 column stacks the untitled subgroups as full-width rows
         layout = [
           {
             Home = {
               style = "row";
-              columns = 2;
+              columns = 1;
+              Apps = {
+                style = "row";
+                columns = 2;
+                header = false;
+              };
               Modes = {
                 style = "row";
                 columns = 3;
+                header = false;
               };
             };
           }
           {
             Media = {
               style = "row";
-              columns = 5;
+              columns = 1;
+              Downloads = {
+                style = "row";
+                columns = 2;
+                header = false;
+              };
+              Library = {
+                style = "row";
+                columns = 4;
+                header = false;
+              };
+              Watch = {
+                style = "row";
+                columns = 2;
+                header = false;
+              };
             };
           }
           {
@@ -166,147 +189,164 @@ in
 
       services = [
         {
+          # rows without titles: the apps, then the modes
           Home = [
             {
-              "Home Assistant" = {
-                href = link 8123;
-                icon = "home-assistant.png";
-                description = "Automations, devices, energy";
-                siteMonitor = local 8123;
-                widget = {
-                  type = "homeassistant";
-                  url = local 8123;
-                  key = "{{HOMEPAGE_VAR_HA_TOKEN}}";
-                  custom = [
-                    {
-                      template = "{{ states.light | selectattr('state', 'equalto', 'on') | list | length }}";
-                      label = "lights on";
-                    }
-                    {
-                      template = "{{ states.switch | selectattr('state', 'equalto', 'on') | list | length }}";
-                      label = "switches on";
-                    }
-                    {
-                      template = "{{ states.automation | selectattr('state', 'equalto', 'on') | list | length }}";
-                      label = "automations";
-                    }
-                    {
-                      state = "sensor.stale_downloads";
-                      label = "stale downloads";
-                    }
-                  ];
-                };
-              };
-            }
-            {
-              Zigbee2MQTT = {
-                href = link 8080;
-                icon = "zigbee2mqtt.png";
-                description = "Zigbee devices and pairing";
-                siteMonitor = local 8080;
-              };
+              Apps = [
+                {
+                  "Home Assistant" = {
+                    href = link 8123;
+                    icon = "home-assistant.png";
+                    description = "Automations, devices, energy";
+                    siteMonitor = local 8123;
+                    widget = {
+                      type = "homeassistant";
+                      url = local 8123;
+                      key = "{{HOMEPAGE_VAR_HA_TOKEN}}";
+                      custom = [
+                        {
+                          template = "{{ states.light | selectattr('state', 'equalto', 'on') | list | length }}";
+                          label = "lights on";
+                        }
+                        {
+                          template = "{{ states.switch | selectattr('state', 'equalto', 'on') | list | length }}";
+                          label = "switches on";
+                        }
+                        {
+                          template = "{{ states.automation | selectattr('state', 'equalto', 'on') | list | length }}";
+                          label = "automations";
+                        }
+                        {
+                          state = "sensor.stale_downloads";
+                          label = "stale downloads";
+                        }
+                      ];
+                    };
+                  };
+                }
+                {
+                  Zigbee2MQTT = {
+                    href = link 8080;
+                    icon = "zigbee2mqtt.png";
+                    description = "Zigbee devices and pairing";
+                    siteMonitor = local 8080;
+                  };
+                }
+              ];
             }
           ]
           ++ lib.optional modes.enable { Modes = modeTiles; };
         }
         {
-          # first row: downloads (5 columns), second row: watching
+          # rows without titles: downloads + share, the Arr apps, watching
           Media = [
             {
-              qBittorrent = {
-                href = link 8090;
-                icon = "qbittorrent.png";
-                description = "Downloads (stops seeding when done)";
-                siteMonitor = local 8090;
-                widget = {
-                  type = "qbittorrent";
-                  url = local 8090;
-                  username = config.frogswamp.adminUser;
-                  password = "{{HOMEPAGE_VAR_QBIT_PASSWORD}}";
-                };
-              };
+              Downloads = [
+                {
+                  qBittorrent = {
+                    href = link 8090;
+                    icon = "qbittorrent.png";
+                    description = "Downloads (stops seeding when done)";
+                    siteMonitor = local 8090;
+                    widget = {
+                      type = "qbittorrent";
+                      url = local 8090;
+                      username = config.frogswamp.adminUser;
+                      password = "{{HOMEPAGE_VAR_QBIT_PASSWORD}}";
+                    };
+                  };
+                }
+                {
+                  "Media share" = {
+                    icon = "mdi-folder-network"; # no Samba icon in the dashboard-icons set
+                    description = "smb://frogswamp.local/media (user pupsich)";
+                  };
+                }
+              ];
             }
             {
-              Radarr = {
-                href = link 7878;
-                icon = "radarr.png";
-                description = "Movies";
-                siteMonitor = local 7878;
-                widget = {
-                  type = "radarr";
-                  url = local 7878;
-                  key = "{{HOMEPAGE_VAR_RADARR_KEY}}";
-                };
-              };
+              Library = [
+                {
+                  Radarr = {
+                    href = link 7878;
+                    icon = "radarr.png";
+                    description = "Movies";
+                    siteMonitor = local 7878;
+                    widget = {
+                      type = "radarr";
+                      url = local 7878;
+                      key = "{{HOMEPAGE_VAR_RADARR_KEY}}";
+                    };
+                  };
+                }
+                {
+                  Sonarr = {
+                    href = link 8989;
+                    icon = "sonarr.png";
+                    description = "Shows (one season at a time)";
+                    siteMonitor = local 8989;
+                    widget = {
+                      type = "sonarr";
+                      url = local 8989;
+                      key = "{{HOMEPAGE_VAR_SONARR_KEY}}";
+                    };
+                  };
+                }
+                {
+                  Prowlarr = {
+                    href = link 9696;
+                    icon = "prowlarr.png";
+                    description = "Indexers";
+                    siteMonitor = local 9696;
+                    widget = {
+                      type = "prowlarr";
+                      url = local 9696;
+                      key = "{{HOMEPAGE_VAR_PROWLARR_KEY}}";
+                    };
+                  };
+                }
+                {
+                  Bazarr = {
+                    href = link 6767;
+                    icon = "bazarr.png";
+                    description = "Subtitles (RU, EN, PL)";
+                    siteMonitor = local 6767;
+                    widget = {
+                      type = "bazarr";
+                      url = local 6767;
+                      key = "{{HOMEPAGE_VAR_BAZARR_KEY}}";
+                    };
+                  };
+                }
+              ];
             }
             {
-              Sonarr = {
-                href = link 8989;
-                icon = "sonarr.png";
-                description = "Shows (one season at a time)";
-                siteMonitor = local 8989;
-                widget = {
-                  type = "sonarr";
-                  url = local 8989;
-                  key = "{{HOMEPAGE_VAR_SONARR_KEY}}";
-                };
-              };
-            }
-            {
-              Prowlarr = {
-                href = link 9696;
-                icon = "prowlarr.png";
-                description = "Indexers";
-                siteMonitor = local 9696;
-                widget = {
-                  type = "prowlarr";
-                  url = local 9696;
-                  key = "{{HOMEPAGE_VAR_PROWLARR_KEY}}";
-                };
-              };
-            }
-            {
-              Bazarr = {
-                href = link 6767;
-                icon = "bazarr.png";
-                description = "Subtitles (RU, EN, PL)";
-                siteMonitor = local 6767;
-                widget = {
-                  type = "bazarr";
-                  url = local 6767;
-                  key = "{{HOMEPAGE_VAR_BAZARR_KEY}}";
-                };
-              };
-            }
-            {
-              Jellyfin = {
-                href = link 8096;
-                icon = "jellyfin.png";
-                description = "Movies and shows";
-                siteMonitor = local 8096;
-                widget = {
-                  type = "jellyfin";
-                  url = local 8096;
-                  key = "{{HOMEPAGE_VAR_JELLYFIN_KEY}}";
-                  enableBlocks = true;
-                  enableNowPlaying = true;
-                  showEpisodeNumber = true;
-                };
-              };
-            }
-            {
-              Football = {
-                href = link 8093;
-                icon = "mdi-soccer";
-                description = "Ace Stream matches → TV (Chromecast or Kodi)";
-                siteMonitor = local 8093;
-              };
-            }
-            {
-              "Media share" = {
-                icon = "mdi-folder-network"; # no Samba icon in the dashboard-icons set
-                description = "smb://frogswamp.local/media (user pupsich)";
-              };
+              Watch = [
+                {
+                  Jellyfin = {
+                    href = link 8096;
+                    icon = "jellyfin.png";
+                    description = "Movies and shows";
+                    siteMonitor = local 8096;
+                    widget = {
+                      type = "jellyfin";
+                      url = local 8096;
+                      key = "{{HOMEPAGE_VAR_JELLYFIN_KEY}}";
+                      enableBlocks = true;
+                      enableNowPlaying = true;
+                      showEpisodeNumber = true;
+                    };
+                  };
+                }
+                {
+                  "Ace Stream" = {
+                    href = link 8093;
+                    icon = "mdi-soccer";
+                    description = "Ace Stream matches → TV (Chromecast or Kodi)";
+                    siteMonitor = local 8093;
+                  };
+                }
+              ];
             }
           ];
         }
