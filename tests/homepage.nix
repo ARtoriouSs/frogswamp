@@ -48,7 +48,9 @@ pkgs.testers.runNixOSTest {
     # mode tiles: on/off highlight rules, and the stylesheet that colours them
     server.succeed("grep -q 'level: mode-off' /etc/homepage-dashboard/services.yaml")
     css = server.succeed("curl -sf http://localhost:8082/api/config/custom.css")
-    assert 'data-highlight-level="mode-on"' in css and 'data-highlight-level="mode-off"' in css, css
+    assert 'data-highlight-level="mode-on"' in css and 'data-highlight-level="mode-off"' in css, css[:2000]
+    # the frog wallpaper is embedded in the stylesheet, on the box that covers the page
+    assert 'html body #__next { background:' in css and 'url("data:image/png;base64,iVBOR' in css, css[:2000]
     # widget settings are not exposed by the API, so check the generated config
     server.succeed("grep -q 'sensor.stale_downloads' /etc/homepage-dashboard/services.yaml")
     server.succeed("grep -q 'sensor.backup_disk' /etc/homepage-dashboard/services.yaml")

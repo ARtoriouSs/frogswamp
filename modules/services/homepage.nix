@@ -1,10 +1,18 @@
-{ config, lib, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
   cfg = config.frogswamp.homepage;
   addr = config.frogswamp.lan.publicAddress;
   link = port: "http://${addr}:${toString port}";
   local = port: "http://127.0.0.1:${toString port}";
   modes = config.frogswamp.modeSwitch;
+  # Homepage only serves custom.css/custom.js from its config folder, so the wallpaper goes
+  # into the stylesheet as a data URL, behind a dark veil that keeps the tiles readable
+  wallpaper = ./homepage_frog.png;
   modeTitles = {
     vacation = "Vacation";
     day_off = "Day off";
@@ -70,6 +78,18 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    environment.etc."homepage-dashboard/custom.css".source = lib.mkForce (
+      pkgs.runCommand "homepage-custom.css" { } ''
+        {
+          cat ${pkgs.writeText "custom.css" config.services.homepage-dashboard.customCSS}
+          # on #__next: Homepage paints its theme colour on html, body and #__next, which covers the page
+          printf 'html body #__next { background: linear-gradient(rgb(0 0 0 / 0.45), rgb(0 0 0 / 0.6)), url("data:image/png;base64,'
+          base64 -w0 ${wallpaper}
+          printf '") center / cover fixed no-repeat; }\n'
+        } > $out
+      ''
+    );
+
     services.homepage-dashboard = {
       enable = true;
       listenPort = 8082;
@@ -85,8 +105,11 @@ in
       # Modes tiles: green when on, light red when off. The value box carries the level of the
       # tiles' highlight rules in data-highlight-level
       customCSS = ''
-        .service:has([data-highlight-level="mode-on"]) .service-card { background-color: rgb(34 197 94 / 0.22); }
-        .service:has([data-highlight-level="mode-off"]) .service-card { background-color: rgb(248 113 113 / 0.22); }
+        /* tiles twice as opaque as Homepage's dark default (white 5%, 10% on hover), to stand out on the wallpaper */
+        .service-card { background-color: rgb(255 255 255 / 0.10); }
+        .service-card:hover { background-color: rgb(255 255 255 / 0.20); }
+        .service:has([data-highlight-level="mode-on"]) .service-card { background-color: rgb(34 197 94 / 0.44); }
+        .service:has([data-highlight-level="mode-off"]) .service-card { background-color: rgb(248 113 113 / 0.44); }
         [data-highlight-level="mode-on"] { background-color: rgb(34 197 94 / 0.35); }
         [data-highlight-level="mode-off"] { background-color: rgb(248 113 113 / 0.35); }
       '';
