@@ -6,3 +6,39 @@ views:
         title: House
         entities:
           - input_boolean.guest_mode
+      - type: entities
+        title: Blinds
+        entities:
+          - cover.living_room_blinds_left_door
+          - cover.living_room_blinds_middle
+          - cover.living_room_blinds_right
+          - cover.bedroom_curtains
+          - type: buttons
+            entities:
+              - entity: scene.living_room_blinds_full_close
+                name: Full close
+                icon: mdi:roller-shade-closed
+              - entity: scene.living_room_blinds_open
+                name: Open
+                icon: mdi:roller-shade
+              - entity: scene.living_room_blinds_full_open_door
+                name: Open door
+                icon: mdi:door-open
+          - type: buttons
+            entities:
+              - entity: scene.bedroom_curtains_close
+                name: Curtains close
+                icon: mdi:curtains-closed
+              - entity: scene.bedroom_curtains_open
+                name: Curtains open
+                icon: mdi:curtains
+          - type: section
+            label: Schedule
+          - entity: automation.curtains_close_at_sunset
+            name: Curtains close at sunset
+          - entity: automation.blinds_full_close_2_h_after_sunset
+            name: Blinds close, sunset + 2 h
+          - entity: automation.blinds_full_close_at_01_00
+            name: Blinds close at 01:00
+          - entity: automation.blinds_open_2_h_after_sunrise
+            name: Blinds open, sunrise + 2 h

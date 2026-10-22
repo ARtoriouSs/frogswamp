@@ -1,0 +1,43 @@
+# Curtains and blinds on a schedule. The scenes are Tuya "tap-to-run" scenes, run in the Tuya cloud
+- id: repo_curtains_close_sunset
+  alias: "Curtains: close at sunset"
+  triggers:
+    - trigger: sun
+      event: sunset
+  actions:
+    - action: scene.turn_on
+      target:
+        entity_id: scene.bedroom_curtains_close
+
+- id: repo_blinds_close_evening
+  alias: "Blinds: full close 2 h after sunset"
+  triggers:
+    - trigger: sun
+      event: sunset
+      offset: "02:00:00"
+  actions:
+    - action: scene.turn_on
+      target:
+        entity_id: scene.living_room_blinds_full_close
+
+# Again at night, in case they were opened in the evening
+- id: repo_blinds_close_night
+  alias: "Blinds: full close at 01:00"
+  triggers:
+    - trigger: time
+      at: "01:00:00"
+  actions:
+    - action: scene.turn_on
+      target:
+        entity_id: scene.living_room_blinds_full_close
+
+- id: repo_blinds_open_morning
+  alias: "Blinds: open 2 h after sunrise"
+  triggers:
+    - trigger: sun
+      event: sunrise
+      offset: "02:00:00"
+  actions:
+    - action: scene.turn_on
+      target:
+        entity_id: scene.living_room_blinds_open
