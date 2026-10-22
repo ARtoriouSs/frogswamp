@@ -73,22 +73,19 @@ in
         hideVersion = true;
         useEqualHeights = true;
         target = "_blank";
-        # a list keeps this order (an attribute set would come out sorted by name)
         # a list keeps this order (an attribute set would come out sorted by name).
-        # 1 column stacks the untitled subgroups as full-width rows
+        # The parent's columns put its untitled subgroups side by side; each lists its tiles top to bottom
         layout = [
           {
             Home = {
               style = "row";
-              columns = 1;
+              columns = 2;
               Apps = {
-                style = "row";
-                columns = 2;
+                style = "column";
                 header = false;
               };
               Modes = {
-                style = "row";
-                columns = 3;
+                style = "column";
                 header = false;
               };
             };
@@ -96,20 +93,17 @@ in
           {
             Media = {
               style = "row";
-              columns = 1;
+              columns = 3;
               Downloads = {
-                style = "row";
-                columns = 2;
+                style = "column";
                 header = false;
               };
               Arr = {
-                style = "row";
-                columns = 4;
+                style = "column";
                 header = false;
               };
               Stream = {
-                style = "row";
-                columns = 2;
+                style = "column";
                 header = false;
               };
             };
@@ -189,7 +183,7 @@ in
 
       services = [
         {
-          # rows without titles: the apps, then the modes
+          # untitled columns: the apps, the modes
           Home = [
             {
               Apps = [
@@ -238,7 +232,7 @@ in
           ++ lib.optional modes.enable { Modes = modeTiles; };
         }
         {
-          # rows without titles: downloads + share, the Arr apps, watching
+          # untitled columns: downloads + share, the Arr apps, streaming
           Media = [
             {
               Downloads = [
