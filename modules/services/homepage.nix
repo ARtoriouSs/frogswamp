@@ -15,6 +15,26 @@ let
     day_off = "mdi-beach";
     guests = "mdi-account-multiple";
   };
+  # one tile per mode: it shows the state; a click flips it and comes back here
+  modeTiles = lib.mapAttrsToList (name: entity: {
+    ${modeTitles.${name} or name} = {
+      href = "${link modes.port}/toggle/${name}";
+      target = "_self";
+      icon = modeIcons.${name} or "mdi-toggle-switch";
+      description = "Click to switch";
+      widget = {
+        type = "homeassistant";
+        url = local 8123;
+        key = "{{HOMEPAGE_VAR_HA_TOKEN}}";
+        custom = [
+          {
+            state = entity;
+            label = "now";
+          }
+        ];
+      };
+    };
+  }) modes.modes;
   # newest backup time as "20.10 03:41", with a warning sign when older than 36 h
   lastBackup = repo: ''
     {% set t = as_timestamp(states('sensor.backup_last_${repo}'), none) %}
@@ -53,28 +73,31 @@ in
         hideVersion = true;
         useEqualHeights = true;
         target = "_blank";
-        layout = {
-          Home = {
-            style = "row";
-            columns = 2;
-          };
-          Modes = {
-            style = "row";
-            columns = 3;
-          };
-          Media = {
-            style = "row";
-            columns = 3;
-          };
-          Infrastructure = {
-            style = "row";
-            columns = 5;
-          };
-          Downloads = {
-            style = "row";
-            columns = 5;
-          };
-        };
+        # a list keeps this order (an attribute set would come out sorted by name)
+        layout = [
+          {
+            Home = {
+              style = "row";
+              columns = 2;
+              Modes = {
+                style = "row";
+                columns = 3;
+              };
+            };
+          }
+          {
+            Media = {
+              style = "row";
+              columns = 5;
+            };
+          }
+          {
+            Infrastructure = {
+              style = "row";
+              columns = 5;
+            };
+          }
+        ];
         quicklaunch = {
           searchDescriptions = true;
           provider = "duckduckgo";
@@ -183,44 +206,12 @@ in
                 siteMonitor = local 8080;
               };
             }
-          ];
+          ]
+          ++ lib.optional modes.enable { Modes = modeTiles; };
         }
         {
+          # first row: downloads (5 columns), second row: watching
           Media = [
-            {
-              Jellyfin = {
-                href = link 8096;
-                icon = "jellyfin.png";
-                description = "Movies and shows";
-                siteMonitor = local 8096;
-                widget = {
-                  type = "jellyfin";
-                  url = local 8096;
-                  key = "{{HOMEPAGE_VAR_JELLYFIN_KEY}}";
-                  enableBlocks = true;
-                  enableNowPlaying = true;
-                  showEpisodeNumber = true;
-                };
-              };
-            }
-            {
-              "Media share" = {
-                icon = "mdi-folder-network"; # no Samba icon in the dashboard-icons set
-                description = "smb://frogswamp.local/media (user pupsich)";
-              };
-            }
-            {
-              Football = {
-                href = link 8093;
-                icon = "mdi-soccer";
-                description = "Ace Stream matches → TV (Chromecast or Kodi)";
-                siteMonitor = local 8093;
-              };
-            }
-          ];
-        }
-        {
-          Downloads = [
             {
               qBittorrent = {
                 href = link 8090;
@@ -287,6 +278,36 @@ in
                 };
               };
             }
+            {
+              Jellyfin = {
+                href = link 8096;
+                icon = "jellyfin.png";
+                description = "Movies and shows";
+                siteMonitor = local 8096;
+                widget = {
+                  type = "jellyfin";
+                  url = local 8096;
+                  key = "{{HOMEPAGE_VAR_JELLYFIN_KEY}}";
+                  enableBlocks = true;
+                  enableNowPlaying = true;
+                  showEpisodeNumber = true;
+                };
+              };
+            }
+            {
+              Football = {
+                href = link 8093;
+                icon = "mdi-soccer";
+                description = "Ace Stream matches → TV (Chromecast or Kodi)";
+                siteMonitor = local 8093;
+              };
+            }
+            {
+              "Media share" = {
+                icon = "mdi-folder-network"; # no Samba icon in the dashboard-icons set
+                description = "smb://frogswamp.local/media (user pupsich)";
+              };
+            }
           ];
         }
         {
@@ -348,29 +369,7 @@ in
             }
           ];
         }
-      ]
-      # one tile per mode: it shows the state; a click flips it and comes back here
-      ++ lib.optional modes.enable {
-        Modes = lib.mapAttrsToList (name: entity: {
-          ${modeTitles.${name} or name} = {
-            href = "${link modes.port}/toggle/${name}";
-            target = "_self";
-            icon = modeIcons.${name} or "mdi-toggle-switch";
-            description = "Click to switch";
-            widget = {
-              type = "homeassistant";
-              url = local 8123;
-              key = "{{HOMEPAGE_VAR_HA_TOKEN}}";
-              custom = [
-                {
-                  state = entity;
-                  label = "now";
-                }
-              ];
-            };
-          };
-        }) modes.modes;
-      };
+      ];
 
       bookmarks = [
         {

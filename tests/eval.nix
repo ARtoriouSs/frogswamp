@@ -100,9 +100,30 @@ let
       cfg.frogswamp.modeSwitch.settings.back_url == "http://192.168.101.10:8082/";
     "mode switch flips the General actions modes" =
       cfg.frogswamp.modeSwitch.modes.guests == "input_boolean.guests_in_living_room";
-    "homepage mode tiles stay in the same tab" = lib.all (
-      tile: (lib.head (lib.attrValues tile)).target == "_self"
-    ) (lib.head (lib.filter (g: g ? Modes) cfg.services.homepage-dashboard.services)).Modes;
+    "homepage mode tiles stay in the same tab, inside Home" =
+      let
+        home = (lib.head (lib.filter (g: g ? Home) cfg.services.homepage-dashboard.services)).Home;
+        modes = (lib.head (lib.filter (t: t ? Modes) home)).Modes;
+      in
+      modes != [ ] && lib.all (tile: (lib.head (lib.attrValues tile)).target == "_self") modes;
+    "homepage groups in order: Home, Media, Infrastructure" =
+      map (g: lib.head (lib.attrNames g)) cfg.services.homepage-dashboard.settings.layout == [
+        "Home"
+        "Media"
+        "Infrastructure"
+      ];
+    "homepage Media: downloads first, then Jellyfin, Football, Media share" =
+      map (t: lib.head (lib.attrNames t))
+        (lib.head (lib.filter (g: g ? Media) cfg.services.homepage-dashboard.services)).Media == [
+        "qBittorrent"
+        "Radarr"
+        "Sonarr"
+        "Prowlarr"
+        "Bazarr"
+        "Jellyfin"
+        "Football"
+        "Media share"
+      ];
     "matter server image pinned by digest" =
       lib.hasInfix "@sha256:" cfg.virtualisation.oci-containers.containers.matter-server.image;
     # HA reaches it on localhost; Matter needs the host network for mDNS and device traffic

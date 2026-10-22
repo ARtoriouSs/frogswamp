@@ -16,6 +16,11 @@ pkgs.testers.runNixOSTest {
             ''
           );
         };
+        modeSwitch = {
+          enable = true;
+          haTokenFile = toString (pkgs.writeText "ha-token" "dummy");
+          modes.vacation = "input_boolean.vacation";
+        };
       };
     };
   testScript = ''
@@ -30,7 +35,15 @@ pkgs.testers.runNixOSTest {
     assert "{{HOMEPAGE_VAR" not in widgets, widgets
     for name in ["qBittorrent", "Radarr", "Sonarr", "Prowlarr", "Bazarr"]:
         assert name in services, f"{name} missing: {services}"
-    assert '"Downloads"' in services, services
+    # downloads and watching share the Media group; no Downloads group any more
+    assert '"Media"' in services and '"Downloads"' not in services, services
+    # Modes is a subgroup of Home: Homepage serves it inside Home's group, before Media
+    import json
+    groups = json.loads(services)
+    home = next(g for g in groups if g["name"] == "Home")
+    modes = next(g for g in home["groups"] if g["name"] == "Modes")
+    assert [t["name"] for t in modes["services"]] == ["Vacation"], modes
+    assert [g["name"] for g in groups] == ["Home", "Media", "Infrastructure"], [g["name"] for g in groups]
     # widget settings are not exposed by the API, so check the generated config
     server.succeed("grep -q 'sensor.stale_downloads' /etc/homepage-dashboard/services.yaml")
     server.succeed("grep -q 'sensor.backup_disk' /etc/homepage-dashboard/services.yaml")
