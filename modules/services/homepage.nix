@@ -32,6 +32,25 @@ let
             label = "now";
           }
         ];
+        # marks the value box as mode-on / mode-off; customCSS colours the whole tile from it
+        highlight = {
+          levels = {
+            mode-on = "mode-on";
+            mode-off = "mode-off";
+          };
+          now.string = [
+            {
+              when = "equals";
+              value = "on";
+              level = "mode-on";
+            }
+            {
+              when = "equals";
+              value = "off";
+              level = "mode-off";
+            }
+          ];
+        };
       };
     };
   }) modes.modes;
@@ -62,6 +81,15 @@ in
         "frogswamp.local:8082"
         "localhost:8082"
       ];
+
+      # Modes tiles: green when on, light red when off. The value box carries the level of the
+      # tiles' highlight rules in data-highlight-level
+      customCSS = ''
+        .service:has([data-highlight-level="mode-on"]) .service-card { background-color: rgb(34 197 94 / 0.22); }
+        .service:has([data-highlight-level="mode-off"]) .service-card { background-color: rgb(248 113 113 / 0.22); }
+        [data-highlight-level="mode-on"] { background-color: rgb(34 197 94 / 0.35); }
+        [data-highlight-level="mode-off"] { background-color: rgb(248 113 113 / 0.35); }
+      '';
 
       settings = {
         title = "frogswamp";
