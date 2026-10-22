@@ -1,6 +1,56 @@
 { pkgs, ... }:
+let
+  # Answers the two config-entry calls the Bluetooth recovery makes, and logs every request
+  fakeHa = pkgs.writeText "fake-ha.py" ''
+    import http.server, json
+
+    class H(http.server.BaseHTTPRequestHandler):
+        def log(self):
+            with open("/tmp/ha-requests", "a") as f:
+                f.write(f"{self.command} {self.path} {self.headers.get('Authorization')}\n")
+
+        def do_GET(self):
+            self.log()
+            body = json.dumps([
+                {"entry_id": "adapter1", "disabled_by": None},
+                {"entry_id": "adapter2", "disabled_by": "user"},
+            ]).encode()
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(body)
+
+        def do_POST(self):
+            self.log()
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"{}")
+
+    http.server.HTTPServer(("127.0.0.1", 8123), H).serve_forever()
+  '';
+in
 pkgs.testers.runNixOSTest {
   name = "home-assistant";
+  # HA itself replaced by a fake API, to test the Bluetooth recovery's reload path
+  nodes.recover =
+    { lib, ... }:
+    {
+      imports = [ ../modules ];
+      frogswamp = {
+        adminUser = "pupsich";
+        homeAssistant = {
+          enable = true;
+          secretsFile = "${./fixtures/ha-secrets.yaml}";
+          uiSnapshotDir = ./fixtures/ha-ui-snapshot;
+          haTokenFile = "${pkgs.writeText "ha-token" "test-token"}";
+        };
+      };
+      virtualisation.oci-containers.containers = lib.mkForce { };
+      systemd.services.podman-home-assistant = {
+        wantedBy = [ "multi-user.target" ];
+        serviceConfig.ExecStart = "${pkgs.python3}/bin/python3 ${fakeHa}";
+      };
+      systemd.services.home-assistant-bluetooth-recover.environment.MIN_AGE = "0";
+    };
   nodes.server = {
     imports = [ ../modules ];
     frogswamp = {
@@ -39,5 +89,16 @@ pkgs.testers.runNixOSTest {
     # With HA not running (e.g. adapter appears during boot) the recovery does nothing and succeeds
     server.succeed("systemctl start home-assistant-bluetooth-recover.service")
     server.fail("systemctl is-active podman-home-assistant.service")
+
+    # With a token, only the enabled Bluetooth entry is reloaded, and HA isn't restarted
+    recover.wait_for_unit("podman-home-assistant.service")
+    recover.wait_for_open_port(8123)
+    pid = recover.succeed("systemctl show podman-home-assistant.service -P MainPID")
+    recover.succeed("systemctl start home-assistant-bluetooth-recover.service")
+    requests = recover.succeed("cat /tmp/ha-requests")
+    assert "GET /api/config/config_entries/entry?domain=bluetooth Bearer test-token" in requests, requests
+    assert "POST /api/config/config_entries/entry/adapter1/reload Bearer test-token" in requests, requests
+    assert "adapter2" not in requests, requests
+    assert recover.succeed("systemctl show podman-home-assistant.service -P MainPID") == pid
   '';
 }

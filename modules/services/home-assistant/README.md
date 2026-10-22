@@ -53,7 +53,7 @@ Scripts → `config/scripts/<name>.yaml` (mapping). Helpers/template sensors →
 
 ## Bluetooth recovery
 
-If the Bluetooth chip hangs, the kernel resets it and it comes back under a new name (`hci0` → `hci1`). HA would keep scanning on the old one. A udev rule restarts HA automatically when an adapter re-appears and HA has been running for over 2 minutes (`home-assistant-bluetooth-recover.service`). Check it with `just ssh journalctl -u home-assistant-bluetooth-recover`.
+If the Bluetooth chip hangs, the kernel resets it and it comes back under a new name (`hci0` → `hci1`). HA would keep scanning on the old one. A udev rule then reloads **only HA's Bluetooth integration** through the HA API (`home-assistant-bluetooth-recover.service`), so the rest of HA keeps running. HA finds the adapter again by its MAC address. It does nothing during boot or in HA's first 2 minutes. Check it with `just ssh journalctl -u home-assistant-bluetooth-recover`.
 
 ## Update Home Assistant
 

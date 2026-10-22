@@ -71,7 +71,8 @@
       })
       (lib.mkIf
         (
-          config.frogswamp.mediaProvision.enable
+          config.frogswamp.homeAssistant.enable
+          || config.frogswamp.mediaProvision.enable
           || config.frogswamp.mediaJanitor.enable
           || config.frogswamp.football.enable
           || config.frogswamp.backup.local.enable
@@ -100,7 +101,10 @@
       z2mPasswordFile = lib.mkDefault config.sops.secrets."mosquitto/z2m_password".path;
       zigbee2mqtt.passwordFile = lib.mkDefault config.sops.secrets."zigbee2mqtt/mqtt_password".path;
     };
-    homeAssistant.secretsFile = lib.mkDefault config.sops.secrets."home_assistant/secrets_yaml".path;
+    homeAssistant = {
+      secretsFile = lib.mkDefault config.sops.secrets."home_assistant/secrets_yaml".path;
+      haTokenFile = lib.mkDefault config.sops.secrets."home_assistant/api_token".path;
+    };
     jellyfin.apiKeyFile = lib.mkDefault config.sops.secrets."jellyfin/api_key".path;
     samba.passwordFile = lib.mkDefault config.sops.secrets."samba/password".path;
     homepage.environmentFile = lib.mkDefault config.sops.templates."homepage.env".path;

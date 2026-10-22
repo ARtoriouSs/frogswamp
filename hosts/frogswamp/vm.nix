@@ -34,7 +34,10 @@
     samba.passwordFile = lib.mkForce "/etc/vm-dummy-secret";
     jellyfin.apiKeyFile = lib.mkForce null; # no library rescan in the VM
     homepage.environmentFile = lib.mkForce "/etc/vm-homepage-env";
-    homeAssistant.secretsFile = lib.mkForce "${../../tests/fixtures/ha-secrets.yaml}";
+    homeAssistant = {
+      secretsFile = lib.mkForce "${../../tests/fixtures/ha-secrets.yaml}";
+      haTokenFile = lib.mkForce "/etc/vm-dummy-secret";
+    };
     mqtt = {
       zigbee2mqtt.enable = lib.mkForce false;
       haPasswordFile = lib.mkForce "/etc/vm-dummy-secret";
