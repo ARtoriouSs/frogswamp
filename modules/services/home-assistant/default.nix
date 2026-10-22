@@ -8,6 +8,12 @@ let
   cfg = config.frogswamp.homeAssistant;
   stateDir = "/var/lib/home-assistant";
   configDir = ./config;
+  hacsPin = import ./hacs.nix;
+  hacs = pkgs.fetchzip {
+    url = "https://github.com/hacs/integration/releases/download/${hacsPin.version}/hacs.zip";
+    inherit (hacsPin) hash;
+    stripRoot = false;
+  };
   repoOwned = [
     "configuration.yaml"
     "packages"
@@ -37,6 +43,11 @@ in
       default = ./ui-snapshot;
       description = "Files copied by `just ha-pull`; they seed the UI-owned files on a fresh install";
     };
+    hacs = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "HACS (community store), pinned in hacs.nix and mounted read-only. What it installs goes to the writable custom_components/";
+    };
     recoverBluetooth = lib.mkOption {
       type = lib.types.bool;
       default = true;
@@ -61,7 +72,8 @@ in
           "/run/dbus:/run/dbus:ro"
           "${cfg.secretsFile}:/config/secrets.yaml:ro"
         ]
-        ++ map (name: "${configDir}/${name}:/config/${name}:ro") repoOwned;
+        ++ map (name: "${configDir}/${name}:/config/${name}:ro") repoOwned
+        ++ lib.optional cfg.hacs "${hacs}:/config/custom_components/hacs:ro";
         extraOptions = [
           "--network=host"
           "--cap-add=NET_ADMIN"
@@ -73,6 +85,12 @@ in
     # UI-owned files: created once so the !include lines resolve, never overwritten
     systemd.tmpfiles.settings."10-home-assistant" = {
       ${stateDir}.d = {
+        mode = "0755";
+        user = "root";
+        group = "root";
+      };
+      # integrations installed by HACS land here (HACS itself is mounted in it)
+      "${stateDir}/custom_components".d = {
         mode = "0755";
         user = "root";
         group = "root";

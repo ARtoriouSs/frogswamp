@@ -60,6 +60,7 @@ pkgs.testers.runNixOSTest {
         autoStart = false; # no registry access in the test sandbox
         secretsFile = "${./fixtures/ha-secrets.yaml}";
         uiSnapshotDir = ./fixtures/ha-ui-snapshot;
+        hacs = true;
       };
     };
   };
@@ -82,6 +83,8 @@ pkgs.testers.runNixOSTest {
     assert "/config/automations:ro" in unit, unit
     assert "/config/secrets.yaml:ro" in unit, unit
     assert "/run/dbus:/run/dbus:ro" in unit, unit
+    assert "/config/custom_components/hacs:ro" in unit, unit
+    server.succeed("test -d /var/lib/home-assistant/custom_components")
     server.succeed("iptables -S | grep -q 'dport 8123'")
     # Bluetooth recovery: udev rule only for adapters (DEVTYPE=host), never for BLE connections
     rules = server.succeed("cat /etc/udev/rules.d/*.rules")

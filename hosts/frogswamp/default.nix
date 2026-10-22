@@ -41,7 +41,10 @@
       subnet = "192.168.101.0/24";
     };
     tailscale.enable = true;
-    homeAssistant.enable = true;
+    homeAssistant = {
+      enable = true;
+      hacs = true;
+    };
     jellyfin.enable = true;
     samba.enable = true;
     homepage.enable = true;
