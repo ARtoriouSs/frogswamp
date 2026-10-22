@@ -1,11 +1,13 @@
 # Both bathroom floors, through the Tuya scenes. Weekdays on 08:00–11:00 and 22:00–00:00,
 # weekends on 09:00–12:00 and 23:00–01:00. A night ends on the next day, so its "off" is
 # checked against the day the night started (Friday night ends at 00:00, Sunday night at 01:00).
-# Vacation and Tuya rule mode stop it
-- id: repo_floor_warming_schedule
-  alias: "Floor warming: schedule"
+# Vacation and Tuya rule mode stop it. One automation per bathroom (each has its own area),
+# the second one reuses the first one's schedule
+- id: repo_floor_warming_guest
+  alias: "Floor warming: guest"
+  description: Guest bathroom floor
   mode: queued
-  triggers:
+  triggers: &floor_warming_triggers
     - trigger: time
       id: on_weekday
       at:
@@ -28,7 +30,7 @@
     - trigger: time
       id: off_weekend_night
       at: "01:00:00"
-  conditions:
+  conditions: &floor_warming_conditions
     - condition: state
       entity_id:
         - input_boolean.vacation
@@ -69,9 +71,15 @@
   actions:
     - action: scene.turn_on
       target:
-        entity_id: >-
-          {% if trigger.id.startswith('on') %}
-            {{ ['scene.master_bathroom_floor_warming_master_on', 'scene.guest_bathroom_floor_warming_guest_on'] }}
-          {% else %}
-            {{ ['scene.master_bathroom_floor_warming_master_off', 'scene.guest_bathroom_floor_warming_guest_off'] }}
-          {% endif %}
+        entity_id: "scene.guest_bathroom_floor_warming_guest_{{ 'on' if trigger.id.startswith('on') else 'off' }}"
+
+- id: repo_floor_warming_master
+  alias: "Floor warming: master"
+  description: Master bathroom floor
+  mode: queued
+  triggers: *floor_warming_triggers
+  conditions: *floor_warming_conditions
+  actions:
+    - action: scene.turn_on
+      target:
+        entity_id: "scene.master_bathroom_floor_warming_master_{{ 'on' if trigger.id.startswith('on') else 'off' }}"
