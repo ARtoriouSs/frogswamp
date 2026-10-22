@@ -46,7 +46,8 @@ Scripts → `config/scripts/<name>.yaml` (mapping). Helpers/template sensors →
 | Backup is old | Newest local or B2 snapshot older than 48 h, or the repo is unreachable |
 | Backup disk missing | `sensor.backup_disk` is `missing` for 30 min. The sensor is refreshed hourly, so it can take up to 1.5 h |
 | Stale downloads | `sensor.stale_downloads` goes above 0 |
-| Device offline | A listed device is `unavailable` for 1 h. **Add new devices to its list** |
+| Device offline | A listed device is `unavailable` for 1 h. **Add new devices to its list**. Skipped while its whole integration is down |
+| Integration down | An integration with entities failed (`sensor.failed_integrations`) for 10 min. It's reloaded once by itself; the message says whether that helped |
 | Zigbee bridge down | Z2M disconnected for 10 min |
 | Internet was down | Router WAN back on after at least 1 min down. Also written to the logbook |
 | Printer ink low | A cartridge drops below 15% |

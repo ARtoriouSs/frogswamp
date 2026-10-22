@@ -78,6 +78,9 @@
         - switch.desk_child_lock
       to: unavailable
       for: "01:00:00"
+  conditions:
+    # when the whole integration is down, "integration down" says it once instead of one message per device
+    - "{{ config_entry_attr(config_entry_id(trigger.entity_id), 'state') | string == 'loaded' }}"
   actions:
     - action: notify.mobile_app_pixel_7
       data:
@@ -85,6 +88,48 @@
         message: "{{ trigger.entity_id }} is unavailable since {{ as_local(trigger.to_state.last_changed).strftime('%d.%m %H:%M') }}"
         data:
           tag: "offline-{{ trigger.entity_id }}"
+
+# A failed integration (e.g. Tuya when its cloud timed out at startup) isn't retried by HA,
+# so reload it once by itself, then tell whether that helped
+- id: repo_alert_integration_down
+  alias: "Alert: integration down"
+  description: An integration failed for 10 minutes; reloaded once, then reported
+  triggers:
+    - trigger: state
+      entity_id: sensor.failed_integrations
+      for: "00:10:00"
+  conditions:
+    - "{{ trigger.to_state.state | int(0) > trigger.from_state.state | int(0) if trigger.from_state else trigger.to_state.state | int(0) > 0 }}"
+  actions:
+    - variables:
+        failed: "{{ state_attr('sensor.failed_integrations', 'entries') or [] }}"
+    - repeat:
+        for_each: "{{ failed | map(attribute='id') | list }}"
+        sequence:
+          - action: homeassistant.reload_config_entry
+            continue_on_error: true
+            data:
+              entry_id: "{{ repeat.item }}"
+    - delay: "00:03:00"
+    - variables:
+        still: "{{ (state_attr('sensor.failed_integrations', 'entries') or []) | map(attribute='domain') | list }}"
+        fixed: "{{ failed | map(attribute='domain') | reject('in', still) | list }}"
+    - if: "{{ still | count > 0 }}"
+      then:
+        - action: notify.mobile_app_pixel_7
+          data:
+            title: "Integration down: {{ still | join(', ') }}"
+            message: "Reloading didn't help. Settings → Devices & services → {{ still | join(', ') }} → ⋮ → Reload"
+            data:
+              tag: integration-down
+    - if: "{{ fixed | count > 0 }}"
+      then:
+        - action: notify.mobile_app_pixel_7
+          data:
+            title: "Integration recovered: {{ fixed | join(', ') }}"
+            message: "It failed for 10 min and was reloaded automatically"
+            data:
+              tag: integration-down
 
 - id: repo_alert_zigbee_bridge
   alias: "Alert: Zigbee bridge down"

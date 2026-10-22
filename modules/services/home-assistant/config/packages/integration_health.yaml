@@ -1,0 +1,25 @@
+# Integrations that failed to start or keep failing (e.g. Tuya when its cloud didn't answer at startup).
+# Only integrations with entities are seen: the list is built from the entities' config entries
+template:
+  - sensor:
+      - name: Failed integrations
+        unique_id: repo_failed_integrations
+        icon: mdi:alert-circle-outline
+        state: >-
+          {% set ns = namespace(count=0) %}
+          {% for id in states | map(attribute='entity_id') | map('config_entry_id') | reject('none') | unique %}
+            {% if config_entry_attr(id, 'state') | string in ['setup_error', 'setup_retry', 'migration_error', 'failed_unload'] %}
+              {% set ns.count = ns.count + 1 %}
+            {% endif %}
+          {% endfor %}
+          {{ ns.count }}
+        attributes:
+          entries: >-
+            {% set ns = namespace(entries=[]) %}
+            {% for id in states | map(attribute='entity_id') | map('config_entry_id') | reject('none') | unique %}
+              {% set state = config_entry_attr(id, 'state') | string %}
+              {% if state in ['setup_error', 'setup_retry', 'migration_error', 'failed_unload'] %}
+                {% set ns.entries = ns.entries + [{'id': id, 'domain': config_entry_attr(id, 'domain'), 'state': state}] %}
+              {% endif %}
+            {% endfor %}
+            {{ ns.entries | sort(attribute='domain') }}
