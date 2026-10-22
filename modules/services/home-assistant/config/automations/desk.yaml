@@ -1,0 +1,28 @@
+# Standing breaks: desk up for 30 minutes three times a day on weekdays. "Day off: on" turns this automation off
+- id: repo_desk_schedule
+  alias: "Desk: schedule"
+  description: Weekdays, up at 13:00, 15:00 and 17:00, down 30 minutes later
+  mode: queued
+  triggers:
+    - trigger: time
+      id: up
+      at:
+        - "13:00:00"
+        - "15:00:00"
+        - "17:00:00"
+    - trigger: time
+      id: down
+      at:
+        - "13:30:00"
+        - "15:30:00"
+        - "17:30:00"
+  conditions:
+    - condition: time
+      weekday:
+        - mon
+        - tue
+        - wed
+        - thu
+        - fri
+  actions:
+    - action: "script.desk_{{ trigger.id }}"

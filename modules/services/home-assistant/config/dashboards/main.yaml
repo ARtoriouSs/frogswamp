@@ -7,6 +7,15 @@ views:
         entities:
           - input_boolean.guest_mode
       - type: entities
+        title: Desk
+        entities:
+          - entity: automation.desk_schedule
+            name: Schedule (off on a day off)
+          - script.desk_up
+          - script.desk_down
+          - script.day_off_on
+          - script.day_off_off
+      - type: entities
         title: Blinds
         entities:
           - cover.living_room_blinds_left_door
