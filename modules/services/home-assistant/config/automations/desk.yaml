@@ -1,4 +1,4 @@
-# Standing breaks: desk up for 30 minutes three times a day on weekdays. "Day off: on" turns this automation off
+# Standing breaks: desk up for 30 minutes three times a day on weekdays. Day off, Vacation and Tuya rule mode stop it
 - id: repo_desk_schedule
   alias: "Desk: schedule"
   description: Weekdays, up at 13:00, 15:00 and 17:00, down 30 minutes later
@@ -17,6 +17,12 @@
         - "15:30:00"
         - "17:30:00"
   conditions:
+    - condition: state
+      entity_id:
+        - input_boolean.day_off
+        - input_boolean.vacation
+        - input_boolean.tuya_mode
+      state: "off"
     - condition: time
       weekday:
         - mon

@@ -1,0 +1,16 @@
+# Manual modes for the General actions card. Automations check them in their conditions,
+# so modes can overlap (e.g. Vacation off doesn't restart the desk while Day off is on)
+input_boolean:
+  day_off:
+    name: Day off
+    icon: mdi:beach
+  vacation:
+    name: Vacation
+    icon: mdi:airplane
+  guests_in_living_room:
+    name: Guests in the living room
+    icon: mdi:account-multiple
+  # Control everything from the Tuya app: HA automations that move Tuya devices stop
+  tuya_mode:
+    name: Tuya rule mode
+    icon: mdi:cellphone-cog

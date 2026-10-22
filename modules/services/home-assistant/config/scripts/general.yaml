@@ -1,0 +1,17 @@
+# TV on, then YouTube. A link opens the app; the TV rejects launching apps by package name
+tv_mode:
+  alias: "TV mode"
+  icon: mdi:youtube-tv
+  mode: single
+  sequence:
+    - action: remote.turn_on
+      target:
+        entity_id: remote.living_room_philips_tv
+    - wait_template: "{{ is_state('remote.living_room_philips_tv', 'on') }}"
+      timeout: "00:00:30"
+    - delay: "00:00:05"
+    - action: remote.turn_on
+      target:
+        entity_id: remote.living_room_philips_tv
+      data:
+        activity: https://www.youtube.com

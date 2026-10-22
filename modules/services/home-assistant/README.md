@@ -52,6 +52,19 @@ Scripts → `config/scripts/<name>.yaml` (mapping). Helpers/template sensors →
 | Internet was down | Router WAN back on after at least 1 min down. Also written to the logbook |
 | Printer ink low | A cartridge drops below 15% |
 
+## Modes (General actions card)
+
+Switches in `config/packages/modes.yaml`. Automations check them in their conditions, so modes can be on together.
+
+| Mode | Stops | When turned on, also runs the Tuya scene |
+|---|---|---|
+| Day off | desk schedule | `Days off - on` |
+| Vacation | desk, floor warming, blinds, curtains | `Vacation - on` |
+| Guests in the living room | blinds opening in the morning | `Guests in the living room - on` |
+| Tuya rule mode | every HA automation that moves Tuya devices (alerts keep running) | none |
+
+Turning a mode off runs no Tuya scene, so the Tuya app's own automations stay off. **TV mode** (`script.tv_mode`) turns the TV on and opens YouTube by its link.
+
 ## Bluetooth recovery
 
 If the Bluetooth chip hangs, the kernel resets it and it comes back under a new name (`hci0` → `hci1`). HA would keep scanning on the old one. A udev rule then reloads **only HA's Bluetooth integration** through the HA API (`home-assistant-bluetooth-recover.service`), so the rest of HA keeps running. HA finds the adapter again by its MAC address. It does nothing during boot or in HA's first 2 minutes. Check it with `just ssh journalctl -u home-assistant-bluetooth-recover`.

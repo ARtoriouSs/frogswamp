@@ -3,18 +3,24 @@ views:
   - title: Overview
     cards:
       - type: entities
-        title: House
+        title: General actions
         entities:
-          - input_boolean.guest_mode
+          - input_boolean.day_off
+          - input_boolean.vacation
+          - input_boolean.guests_in_living_room
+          - input_boolean.tuya_mode
+          - type: buttons
+            entities:
+              - entity: script.tv_mode
+                name: TV mode
+                icon: mdi:youtube-tv
       - type: entities
         title: Desk
         entities:
           - entity: automation.desk_schedule
-            name: Schedule (off on a day off)
+            name: Schedule (paused by Day off)
           - script.desk_up
           - script.desk_down
-          - script.day_off_on
-          - script.day_off_off
       - type: entities
         title: Blinds
         entities:

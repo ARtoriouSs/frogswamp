@@ -1,9 +1,16 @@
-# Curtains and blinds on a schedule. The scenes are Tuya "tap-to-run" scenes, run in the Tuya cloud
+# Curtains and blinds on a schedule. The scenes are Tuya "tap-to-run" scenes, run in the Tuya cloud.
+# Vacation and Tuya rule mode stop all of them; Guests in the living room stops the morning opening
 - id: repo_curtains_close_sunset
   alias: "Curtains: close at sunset"
   triggers:
     - trigger: sun
       event: sunset
+  conditions:
+    - condition: state
+      entity_id:
+        - input_boolean.vacation
+        - input_boolean.tuya_mode
+      state: "off"
   actions:
     - action: scene.turn_on
       target:
@@ -15,6 +22,12 @@
     - trigger: sun
       event: sunset
       offset: "02:00:00"
+  conditions:
+    - condition: state
+      entity_id:
+        - input_boolean.vacation
+        - input_boolean.tuya_mode
+      state: "off"
   actions:
     - action: scene.turn_on
       target:
@@ -26,6 +39,12 @@
   triggers:
     - trigger: time
       at: "01:00:00"
+  conditions:
+    - condition: state
+      entity_id:
+        - input_boolean.vacation
+        - input_boolean.tuya_mode
+      state: "off"
   actions:
     - action: scene.turn_on
       target:
@@ -37,6 +56,13 @@
     - trigger: sun
       event: sunrise
       offset: "02:00:00"
+  conditions:
+    - condition: state
+      entity_id:
+        - input_boolean.vacation
+        - input_boolean.guests_in_living_room
+        - input_boolean.tuya_mode
+      state: "off"
   actions:
     - action: scene.turn_on
       target:

@@ -1,6 +1,7 @@
 # Both bathroom floors, through the Tuya scenes. Weekdays on 08:00–11:00 and 22:00–00:00,
 # weekends on 09:00–12:00 and 23:00–01:00. A night ends on the next day, so its "off" is
-# checked against the day the night started (Friday night ends at 00:00, Sunday night at 01:00)
+# checked against the day the night started (Friday night ends at 00:00, Sunday night at 01:00).
+# Vacation and Tuya rule mode stop it
 - id: repo_floor_warming_schedule
   alias: "Floor warming: schedule"
   mode: queued
@@ -28,6 +29,11 @@
       id: off_weekend_night
       at: "01:00:00"
   conditions:
+    - condition: state
+      entity_id:
+        - input_boolean.vacation
+        - input_boolean.tuya_mode
+      state: "off"
     - condition: or
       conditions:
         - condition: and

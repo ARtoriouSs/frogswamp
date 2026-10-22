@@ -1,7 +1,5 @@
 # The desk panel locks itself after about a minute of idle time and ignores commands while locked.
-# The lock is the child lock switch, so turn it off first, then move. The panel locks itself again.
-# If the lock doesn't turn off (e.g. Tuya cloud is slow), fall back to sending the move twice:
-# the first one wakes the panel, the second one moves the desk
+# The lock is the child lock switch, so turn it off first, then move. The panel locks itself again
 desk_move:
   alias: "Desk: move"
   mode: single
@@ -15,8 +13,6 @@ desk_move:
             - up
             - down
   sequence:
-    - variables:
-        scene: "scene.office_desk_{{ direction }}"
     - if: "{{ not is_state('switch.desk_child_lock', 'off') }}"
       then:
         - action: switch.turn_off
@@ -27,13 +23,7 @@ desk_move:
           timeout: "00:00:15"
     - action: scene.turn_on
       target:
-        entity_id: "{{ scene }}"
-    - if: "{{ not is_state('switch.desk_child_lock', 'off') }}"
-      then:
-        - delay: "00:00:20"
-        - action: scene.turn_on
-          target:
-            entity_id: "{{ scene }}"
+        entity_id: "scene.office_desk_{{ direction }}"
 
 desk_up:
   alias: "Desk: up"
@@ -50,20 +40,3 @@ desk_down:
     - action: script.desk_move
       data:
         direction: down
-
-# Day off stops the desk schedule; turning it off starts the schedule again
-day_off_on:
-  alias: "Day off: on"
-  icon: mdi:beach
-  sequence:
-    - action: automation.turn_off
-      target:
-        entity_id: automation.desk_schedule
-
-day_off_off:
-  alias: "Day off: off"
-  icon: mdi:briefcase
-  sequence:
-    - action: automation.turn_on
-      target:
-        entity_id: automation.desk_schedule
