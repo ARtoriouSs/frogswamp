@@ -102,12 +102,12 @@ in
                 columns = 2;
                 header = false;
               };
-              Library = {
+              Arr = {
                 style = "row";
                 columns = 4;
                 header = false;
               };
-              Watch = {
+              Stream = {
                 style = "row";
                 columns = 2;
                 header = false;
@@ -265,7 +265,7 @@ in
               ];
             }
             {
-              Library = [
+              Arr = [
                 {
                   Radarr = {
                     href = link 7878;
@@ -321,7 +321,7 @@ in
               ];
             }
             {
-              Watch = [
+              Stream = [
                 {
                   Jellyfin = {
                     href = link 8096;

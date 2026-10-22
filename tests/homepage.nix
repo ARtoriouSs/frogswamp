@@ -41,7 +41,7 @@ pkgs.testers.runNixOSTest {
     assert [g["name"] for g in groups] == ["Home", "Media", "Infrastructure"], [g["name"] for g in groups]
     rows = lambda name: {r["name"]: [t["name"] for t in r["services"]] for r in next(g for g in groups if g["name"] == name)["groups"]}
     assert rows("Home")["Modes"] == ["Vacation"], rows("Home")
-    assert rows("Media")["Watch"] == ["Jellyfin", "Ace Stream"], rows("Media")
+    assert rows("Media")["Stream"] == ["Jellyfin", "Ace Stream"], rows("Media")
     # the rows have no titles
     server.succeed("grep -A3 'Modes:' /etc/homepage-dashboard/settings.yaml | grep -q 'header: false'")
     # widget settings are not exposed by the API, so check the generated config
