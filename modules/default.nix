@@ -15,5 +15,6 @@
     ./services/homepage.nix
     ./services/acestream
     ./services/football
+    ./services/mode-switch
   ];
 }

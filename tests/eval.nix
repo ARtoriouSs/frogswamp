@@ -96,6 +96,13 @@ let
       cfg.frogswamp.football.settings.ha.cast_entity == "media_player.philips_tv";
     "football wakes the living room TV" =
       cfg.frogswamp.football.settings.ha.remote_entity == "remote.living_room_philips_tv";
+    "mode switch sends the browser back to Homepage on the LAN" =
+      cfg.frogswamp.modeSwitch.settings.back_url == "http://192.168.101.10:8082/";
+    "mode switch flips the General actions modes" =
+      cfg.frogswamp.modeSwitch.modes.guests == "input_boolean.guests_in_living_room";
+    "homepage mode tiles stay in the same tab" = lib.all (
+      tile: (lib.head (lib.attrValues tile)).target == "_self"
+    ) (lib.head (lib.filter (g: g ? Modes) cfg.services.homepage-dashboard.services)).Modes;
     "backup disk mounts when plugged in later" =
       lib.hasInfix ''ENV{ID_FS_LABEL}=="frogbackup"'' cfg.services.udev.extraRules
       && lib.hasInfix ''ENV{SYSTEMD_WANTS}+="mnt-backup.mount"'' cfg.services.udev.extraRules;

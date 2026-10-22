@@ -75,6 +75,7 @@
           || config.frogswamp.mediaProvision.enable
           || config.frogswamp.mediaJanitor.enable
           || config.frogswamp.football.enable
+          || config.frogswamp.modeSwitch.enable
           || config.frogswamp.backup.local.enable
           || config.frogswamp.backup.b2.enable
         )
@@ -129,6 +130,7 @@
       kodi.passwordFile = lib.mkDefault config.sops.secrets."kodi/password".path;
       haTokenFile = lib.mkDefault config.sops.secrets."home_assistant/api_token".path;
     };
+    modeSwitch.haTokenFile = lib.mkDefault config.sops.secrets."home_assistant/api_token".path;
     mediaProvision = {
       uiPasswordFile = lib.mkDefault config.sops.secrets."arr/ui_password".path;
       jellyfinApiKeyFile = lib.mkDefault config.sops.secrets."jellyfin/api_key".path;

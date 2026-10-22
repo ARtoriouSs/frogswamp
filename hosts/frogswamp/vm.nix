@@ -28,6 +28,7 @@
       kodi.passwordFile = lib.mkForce "/etc/vm-dummy-secret";
       haTokenFile = lib.mkForce "/etc/vm-dummy-secret";
     };
+    modeSwitch.haTokenFile = lib.mkForce "/etc/vm-dummy-secret";
     qbittorrent.webuiPasswordHashFile = lib.mkForce "${../../tests/fixtures/qbittorrent-password-hash}";
     backup.local.enable = lib.mkForce false;
     backup.b2.enable = lib.mkForce false;

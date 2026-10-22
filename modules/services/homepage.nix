@@ -4,6 +4,17 @@ let
   addr = config.frogswamp.lan.publicAddress;
   link = port: "http://${addr}:${toString port}";
   local = port: "http://127.0.0.1:${toString port}";
+  modes = config.frogswamp.modeSwitch;
+  modeTitles = {
+    vacation = "Vacation";
+    day_off = "Day off";
+    guests = "Guests";
+  };
+  modeIcons = {
+    vacation = "mdi-airplane";
+    day_off = "mdi-beach";
+    guests = "mdi-account-multiple";
+  };
   # newest backup time as "20.10 03:41", with a warning sign when older than 36 h
   lastBackup = repo: ''
     {% set t = as_timestamp(states('sensor.backup_last_${repo}'), none) %}
@@ -46,6 +57,10 @@ in
           Home = {
             style = "row";
             columns = 2;
+          };
+          Modes = {
+            style = "row";
+            columns = 3;
           };
           Media = {
             style = "row";
@@ -333,7 +348,29 @@ in
             }
           ];
         }
-      ];
+      ]
+      # one tile per mode: it shows the state; a click flips it and comes back here
+      ++ lib.optional modes.enable {
+        Modes = lib.mapAttrsToList (name: entity: {
+          ${modeTitles.${name} or name} = {
+            href = "${link modes.port}/toggle/${name}";
+            target = "_self";
+            icon = modeIcons.${name} or "mdi-toggle-switch";
+            description = "Click to switch";
+            widget = {
+              type = "homeassistant";
+              url = local 8123;
+              key = "{{HOMEPAGE_VAR_HA_TOKEN}}";
+              custom = [
+                {
+                  state = entity;
+                  label = "now";
+                }
+              ];
+            };
+          };
+        }) modes.modes;
+      };
 
       bookmarks = [
         {

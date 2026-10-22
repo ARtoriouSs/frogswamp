@@ -14,6 +14,7 @@ Everything about the server is declared in this repo. Its state (HA integrations
 | Radarr / Sonarr | http://192.168.101.10:7878 / :8989 |
 | Prowlarr / Bazarr | http://192.168.101.10:9696 / :6767 |
 | Football (Ace Stream → TV) | http://192.168.101.10:8093 |
+| Mode switch (used by the Homepage *Modes* tiles) | http://192.168.101.10:8094 |
 | Media share | `smb://frogswamp.local/media` |
 
 The same URLs work away from home when the Tailscale app is on.

@@ -71,6 +71,15 @@
       tvRemoteEntity = "remote.living_room_philips_tv";
       tvCastEntity = "media_player.philips_tv";
     };
+    # Homepage tiles that flip the General actions modes
+    modeSwitch = {
+      enable = true;
+      modes = {
+        vacation = "input_boolean.vacation";
+        day_off = "input_boolean.day_off";
+        guests = "input_boolean.guests_in_living_room";
+      };
+    };
     backup = {
       local.enable = true;
       b2 = {
