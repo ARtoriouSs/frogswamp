@@ -105,11 +105,15 @@ in
       # Modes tiles: green when on, light red when off. The value box carries the level of the
       # tiles' highlight rules in data-highlight-level
       customCSS = ''
-        /* tiles twice as opaque as Homepage's dark default (white 5%, 10% on hover), to stand out on the wallpaper */
-        .service-card { background-color: rgb(255 255 255 / 0.10); }
-        .service-card:hover { background-color: rgb(255 255 255 / 0.20); }
-        .service:has([data-highlight-level="mode-on"]) .service-card { background-color: rgb(34 197 94 / 0.44); }
-        .service:has([data-highlight-level="mode-off"]) .service-card { background-color: rgb(248 113 113 / 0.44); }
+        /* dark, mostly solid tiles with the wallpaper blurred behind them, so the light text stays readable */
+        .service-card { background-color: rgb(23 23 23 / 0.82); backdrop-filter: blur(6px); }
+        .service-card:hover { background-color: rgb(38 38 38 / 0.9); }
+        /* the same for the top bar (CPU, memory, disks, search) and the bookmarks at the bottom (Docs, Admin) */
+        #information-widgets { background-color: rgb(23 23 23 / 0.82); backdrop-filter: blur(6px); border-radius: 0.375rem; padding: 0.5rem 0.75rem; }
+        .bookmark a { background-color: rgb(23 23 23 / 0.82); backdrop-filter: blur(6px); }
+        .bookmark a:hover { background-color: rgb(38 38 38 / 0.9); }
+        .service:has([data-highlight-level="mode-on"]) .service-card { background-color: rgb(21 128 61 / 0.85); }
+        .service:has([data-highlight-level="mode-off"]) .service-card { background-color: rgb(185 64 64 / 0.85); }
         [data-highlight-level="mode-on"] { background-color: rgb(34 197 94 / 0.35); }
         [data-highlight-level="mode-off"] { background-color: rgb(248 113 113 / 0.35); }
       '';
