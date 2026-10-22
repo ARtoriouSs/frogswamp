@@ -51,11 +51,13 @@ Fixed addresses below `.100`: the server (`.10`) and the TV (`.20`, static IP se
 
 ```bash
 git clone git@github.com:ARtoriouSs/frogswamp.git && cd frogswamp
-bash scripts/bootstrap-local.sh      # installs Nix (asks for sudo), direnv, the age key and the SSH key
+bash scripts/bootstrap-local.sh      # runs dotfiles' bin/bootstrap_frogswamp.sh: Nix (asks for sudo), direnv, age + SSH keys, Tailscale (off)
 # open a new terminal, then:
 cd frogswamp && direnv allow
 just                                  # lists all commands
 ```
+
+The setup and the shell helpers (`ts-up` / `ts-down` for reaching the server through Tailscale away from home) live in the [dotfiles repo](https://github.com/ARtoriouSs/dotfiles/tree/master/frogswamp), which should be cloned to `~/dotfiles`.
 
 **Store `~/.config/sops/age/keys.txt` in your password manager.** It decrypts every secret in this repo. Without it (and without the server) the secrets can't be recovered. On a second PC, copy it from the password manager instead of creating a new one.
 
