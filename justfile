@@ -11,8 +11,11 @@ check:
     nix flake check -L
     just ha-check
 
-# Edit encrypted secrets
+# Edit encrypted secrets (in nvim unless SOPS_EDITOR says otherwise)
 secrets:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ -z "${SOPS_EDITOR:-}" ] && command -v nvim >/dev/null; then export SOPS_EDITOR=nvim; fi
     sops secrets/frogswamp.yaml
 
 # Print one secret, e.g. `just secret mosquitto/ha_password`
