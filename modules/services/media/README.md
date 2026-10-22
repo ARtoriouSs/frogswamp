@@ -11,7 +11,7 @@ Pick a movie or show on your phone, watch it on the TV in minutes, and it cleans
 | Bazarr | http://192.168.101.10:6767 | Subtitles for finished downloads (RU, EN, PL) |
 | Jellyfin | http://192.168.101.10:8096 | Libraries the TV plays from |
 
-The same URLs work away from home with the Tailscale app on. Login: `pupsich`, password from `just secret arr/ui_password`. Radarr, Sonarr and Prowlarr skip the login on the home network. qBittorrent and Bazarr always ask.
+The same URLs work away from home with the Tailscale app on. Login: `pupsich`, password from `just secret arr/ui_password`. Every app asks for it, also on the home network (the browser remembers it).
 
 ## From the phone
 

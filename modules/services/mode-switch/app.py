@@ -2,13 +2,16 @@
 
 GET /toggle/<name> toggles the mode's input_boolean through the HA API and redirects
 to Homepage, which then shows the new state. Only the modes in the config can be
-switched; anything else is a 404 and never reaches HA.
+switched; anything else is a 404 and never reaches HA. A toggle must come from
+Homepage (or a bookmark): any other web page gets a 403, so it can't flip a mode
+with a hidden <img src=".../toggle/vacation">.
 """
 
 import argparse
 import html
 import json
 import re
+import urllib.parse
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -28,8 +31,26 @@ def toggle(cfg, entity_id):
         resp.read()
 
 
+def from_trusted_page(headers, trusted_hosts):
+    """Whether the browser came from our own pages, not from some other site.
+
+    Sec-Fetch-Site is sent by every current browser: same-site covers Homepage on
+    another port of this server, none a bookmark or a typed URL. A cross-site
+    request is fine only from a trusted host name (Homepage opened as frogswamp.local
+    links to the IP). Old clients without the header (curl) are checked by Referer.
+    """
+    site = headers.get("Sec-Fetch-Site")
+    if site in ("same-origin", "same-site", "none"):
+        return True
+    referer = headers.get("Referer")
+    if referer is None:
+        return site is None
+    return urllib.parse.urlsplit(referer).hostname in trusted_hosts
+
+
 def make_handler(cfg):
     back = cfg["back_url"]
+    trusted_hosts = set(cfg["trusted_hosts"])
 
     class Handler(BaseHTTPRequestHandler):
         def redirect(self):
@@ -57,6 +78,9 @@ def make_handler(cfg):
             entity_id = cfg["modes"].get(name)
             if entity_id is None:
                 return self.page(404, "There is no such mode.")
+            if not from_trusted_page(self.headers, trusted_hosts):
+                print(f"refused {entity_id}: request from another site", flush=True)
+                return self.page(403, "Open the modes from the dashboard.")
             try:
                 toggle(cfg, entity_id)
             except Exception as e:  # noqa: BLE001 - any failure is shown to the person who clicked

@@ -12,12 +12,13 @@ let
     prowlarr = 9696;
     bazarr = 6767;
   };
-  # Login with a form, but not from local addresses (LAN)
+  # Login with a form, also on the LAN: "local addresses" would include every LAN device
+  # and every host-network container (they come from 127.0.0.1). Scripts use the API keys
   servarrSettings = app: {
     server.port = ports.${app};
     auth = {
       method = "Forms";
-      required = "DisabledForLocalAddresses";
+      required = "Enabled";
     };
   };
   keyFileOption =

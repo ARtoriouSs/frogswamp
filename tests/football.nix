@@ -61,7 +61,7 @@ pkgs.testers.runNixOSTest {
     server.succeed("curl -sf localhost:8093/ | grep -q 'Chromecast to TV'")
 
     # a link from the phone: the TV is woken, Kodi gets the engine's stream URL
-    out = json.loads(server.succeed("""curl -sf -X POST -d '{"text": "acestream://${id}", "label": "derby"}' localhost:8093/api/play"""))
+    out = json.loads(server.succeed("""curl -sf -X POST -H 'Content-Type: application/json' -d '{"text": "acestream://${id}", "label": "derby"}' localhost:8093/api/play"""))
     assert out["ok"], out
     server.succeed("grep -q 'remote/turn_on' /tmp/calls-8123")
     server.fail("grep -q 'org.xbmc.kodi' /tmp/calls-8123")  # the TV refuses "open app"; only power on
@@ -69,15 +69,25 @@ pkgs.testers.runNixOSTest {
 
     # Chromecast: HA gets the HLS link for the cast entity, Kodi isn't asked
     kodi_before = server.succeed("wc -l < /tmp/calls-8080").strip()
-    out = json.loads(server.succeed("""curl -sf -X POST -d '{"text": "${id}"}' localhost:8093/api/cast"""))
+    out = json.loads(server.succeed("""curl -sf -X POST -H 'Content-Type: application/json' -d '{"text": "${id}"}' localhost:8093/api/cast"""))
     assert out["ok"], out
     server.succeed("grep 'media_player/play_media' /tmp/calls-8123 | grep 'media_player.tv_cast' | grep -q 'manifest.m3u8?id=${id}'")
     assert server.succeed("wc -l < /tmp/calls-8080").strip() == kodi_before
 
     # junk is refused and never reaches Kodi
     before = server.succeed("wc -l < /tmp/calls-8080").strip()
-    server.succeed("""test "$(curl -s -o /dev/null -w '%{http_code}' -X POST -d '{"text": "hello"}' localhost:8093/api/play)" = 400""")
+    server.succeed("""test "$(curl -s -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' -d '{"text": "hello"}' localhost:8093/api/play)" = 400""")
     assert server.succeed("wc -l < /tmp/calls-8080").strip() == before
+
+    # another web site can't start a stream: a text/plain POST needs no preflight, so it's refused
+    before = server.succeed("wc -l < /tmp/calls-8080").strip()
+    server.succeed("""test "$(curl -s -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: text/plain' -d '{"text": "${id}"}' localhost:8093/api/play)" = 403""")
+    server.succeed("""test "$(curl -s -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' -H 'Sec-Fetch-Site: cross-site' -d '{"text": "${id}"}' localhost:8093/api/play)" = 403""")
+    assert server.succeed("wc -l < /tmp/calls-8080").strip() == before
+
+    # not root: systemd hands the secrets to a throw-away user
+    pid = server.succeed("systemctl show football -P MainPID").strip()
+    assert server.succeed(f"stat -c %u /proc/{pid}").strip() != "0"
 
     # the recent list survives a restart
     server.succeed("systemctl restart football.service")

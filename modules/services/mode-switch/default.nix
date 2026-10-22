@@ -38,10 +38,18 @@ in
       listen = "0.0.0.0:${toString cfg.port}";
       ha = {
         url = "http://127.0.0.1:8123";
-        token_file = cfg.haTokenFile;
+        # handed over by systemd (LoadCredential), so the service doesn't need root
+        token_file = "/run/credentials/mode-switch.service/ha_token";
       };
       # Homepage reloads after the redirect and shows the new state
       back_url = "http://${config.frogswamp.lan.publicAddress}:8082/";
+      # names Homepage is opened by; a toggle from any other site is refused
+      trusted_hosts = [
+        config.frogswamp.lan.publicAddress
+        config.networking.hostName
+        "${config.networking.hostName}.local"
+        "localhost"
+      ];
       inherit (cfg) modes;
     };
 
@@ -51,9 +59,17 @@ in
       after = [ "network-online.target" ];
       wants = [ "network-online.target" ];
       serviceConfig = {
-        # root: it reads the HA token
         ExecStart = "${pkgs.python3}/bin/python3 ${./app.py} --config ${pkgs.writeText "mode-switch.json" (builtins.toJSON cfg.settings)}";
         Restart = "on-failure";
+        # a throw-away user instead of root; systemd reads the token for it
+        DynamicUser = true;
+        LoadCredential = [ "ha_token:${cfg.haTokenFile}" ];
+        ProtectHome = true;
+        RestrictAddressFamilies = [
+          "AF_INET"
+          "AF_INET6"
+          "AF_UNIX" # nscd
+        ];
       };
     };
     networking.firewall.allowedTCPPorts = [ cfg.port ];

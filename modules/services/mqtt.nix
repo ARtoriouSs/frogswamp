@@ -35,6 +35,10 @@ in
         default = cfg.z2mPasswordFile;
         description = "Copy of the z2m MQTT password readable by the zigbee2mqtt user.";
       };
+      frontendTokenFile = lib.mkOption {
+        type = lib.types.str;
+        description = "Runtime path of the web UI token (readable by the zigbee2mqtt user); the UI asks for it once per browser";
+      };
     };
   };
 
@@ -79,6 +83,8 @@ in
             frontend = {
               enabled = true;
               port = 8080;
+              # without it anyone on the LAN can control every device and open pairing
+              auth_token = "!secret.yaml frontend_token";
             };
           };
         };
@@ -93,7 +99,11 @@ in
           ];
           serviceConfig.SupplementaryGroups = [ "dialout" ];
           preStart = lib.mkBefore ''
-            printf 'mqtt_password: "%s"\n' "$(cat ${z2m.passwordFile})" > ${config.services.zigbee2mqtt.dataDir}/secret.yaml
+            # an empty token would leave the web UI open, so refuse to start
+            token=$(cat ${z2m.frontendTokenFile})
+            [ -n "$token" ] || { echo "empty frontend token" >&2; exit 1; }
+            printf 'mqtt_password: "%s"\nfrontend_token: "%s"\n' "$(cat ${z2m.passwordFile})" "$token" \
+              > ${config.services.zigbee2mqtt.dataDir}/secret.yaml
             chmod 600 ${config.services.zigbee2mqtt.dataDir}/secret.yaml
           '';
         };

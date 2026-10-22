@@ -43,6 +43,10 @@
           key = "mosquitto/z2m_password";
           owner = "zigbee2mqtt";
         };
+        "zigbee2mqtt/frontend_token" = {
+          owner = "zigbee2mqtt";
+          restartUnits = [ "zigbee2mqtt.service" ];
+        };
       })
       (lib.mkIf config.frogswamp.homeAssistant.enable {
         "home_assistant/secrets_yaml" = { };
@@ -100,7 +104,10 @@
     mqtt = {
       haPasswordFile = lib.mkDefault config.sops.secrets."mosquitto/ha_password".path;
       z2mPasswordFile = lib.mkDefault config.sops.secrets."mosquitto/z2m_password".path;
-      zigbee2mqtt.passwordFile = lib.mkDefault config.sops.secrets."zigbee2mqtt/mqtt_password".path;
+      zigbee2mqtt = {
+        passwordFile = lib.mkDefault config.sops.secrets."zigbee2mqtt/mqtt_password".path;
+        frontendTokenFile = lib.mkDefault config.sops.secrets."zigbee2mqtt/frontend_token".path;
+      };
     };
     homeAssistant = {
       secretsFile = lib.mkDefault config.sops.secrets."home_assistant/secrets_yaml".path;

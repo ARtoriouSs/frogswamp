@@ -44,6 +44,17 @@ def add_recent(recent, content_id, label, now, limit=8):
     return [{"id": content_id, "label": label, "at": now}] + rest[: limit - 1]
 
 
+def from_own_page(headers):
+    """Whether a POST came from this page, so another web site can't start a stream.
+
+    A foreign page can send a "simple" text/plain POST without asking the server first;
+    application/json makes the browser ask (CORS preflight), which this server never allows.
+    Sec-Fetch-Site (every current browser) must say same-origin when present.
+    """
+    ctype = (headers.get("Content-Type") or "").split(";")[0].strip().lower()
+    return ctype == "application/json" and headers.get("Sec-Fetch-Site") in (None, "same-origin")
+
+
 # ---------- I/O ----------
 
 def log(msg):
@@ -287,6 +298,8 @@ def make_handler(cfg):
         def do_POST(self):
             if self.path not in ("/api/play", "/api/cast", "/api/urls"):
                 return self.send(404, {"ok": False, "message": "not found"})
+            if not from_own_page(self.headers):
+                return self.send(403, {"ok": False, "message": "Use the football page."})
             req = self.body()
             content_id = parse_id(req.get("text"))
             if content_id is None:

@@ -38,6 +38,8 @@ pkgs.testers.runNixOSTest {
         server.wait_for_open_port(port, timeout=300)
         server.wait_until_succeeds(f"curl -sf -H 'X-Api-Key: {keys[app]}' http://127.0.0.1:{port}/api/{ver}/system/status", timeout=300)
         server.fail(f"curl -sf -H 'X-Api-Key: wrongwrongwrongwrongwrongwrong00' http://127.0.0.1:{port}/api/{ver}/system/status")
+        # login also from local addresses: no key, no access (even from 127.0.0.1)
+        assert server.succeed(f"curl -s -o /dev/null -w '%{{http_code}}' http://127.0.0.1:{port}/api/{ver}/system/status") == "401", app
     server.wait_for_unit("bazarr.service")
     server.wait_for_open_port(6767, timeout=300)
     server.wait_until_succeeds(f"curl -sf 'http://127.0.0.1:6767/api/system/status?apikey={keys['bazarr']}'", timeout=300)

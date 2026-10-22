@@ -26,6 +26,19 @@ def test_parse_id_rejects():
 
 # ---------- URLs ----------
 
+def test_from_own_page_accepts_the_page_and_curl():
+    assert app.from_own_page({"Content-Type": "application/json", "Sec-Fetch-Site": "same-origin"})
+    assert app.from_own_page({"Content-Type": "application/json; charset=utf-8"})
+
+
+def test_from_own_page_rejects_other_sites():
+    # a "simple" POST another page can send without a preflight
+    assert not app.from_own_page({"Content-Type": "text/plain"})
+    assert not app.from_own_page({})
+    assert not app.from_own_page({"Content-Type": "application/json", "Sec-Fetch-Site": "cross-site"})
+    assert not app.from_own_page({"Content-Type": "application/json", "Sec-Fetch-Site": "same-site"})
+
+
 def test_stream_urls():
     assert app.stream_urls(ID, BASE) == {
         "tv": f"{BASE}/ace/getstream?id={ID}",

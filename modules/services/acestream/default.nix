@@ -27,7 +27,13 @@ in
         environment.ALLOW_REMOTE_ACCESS = "yes";
         # host network, like Home Assistant: the podman bridge had no DNS or internet here,
         # and peers reach the P2P port (8621) directly, without a second NAT
-        extraOptions = [ "--network=host" ];
+        extraOptions = [
+          "--network=host"
+          # closed-source engine from a third-party image: the image already runs it as appuser;
+          # also take away every capability and any way to gain new ones (setuid)
+          "--cap-drop=ALL"
+          "--security-opt=no-new-privileges"
+        ];
       };
     };
     networking.firewall = {

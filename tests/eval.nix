@@ -47,6 +47,11 @@ let
       && unit.serviceConfig.Restart == "on-failure";
     "tailscale0 trusted" = lib.elem "tailscale0" cfg.networking.firewall.trustedInterfaces;
     "tailscale off in vm" = !cfg.virtualisation.vmVariant.services.tailscale.enable;
+    "z2m web UI asks for a token" =
+      cfg.services.zigbee2mqtt.settings.frontend.auth_token == "!secret.yaml frontend_token"
+      &&
+        cfg.frogswamp.mqtt.zigbee2mqtt.frontendTokenFile
+        == cfg.sops.secrets."zigbee2mqtt/frontend_token".path;
     "z2m uses ember adapter" = cfg.services.zigbee2mqtt.settings.serial.adapter == "ember";
     "z2m waits for the dongle instead of crash-looping" =
       lib.elem "dev-zigbee.device" cfg.systemd.services.zigbee2mqtt.bindsTo
@@ -87,6 +92,12 @@ let
     # the podman bridge had no DNS/internet on the server; host network also gives peers a direct path
     "acestream on the host network" =
       lib.elem "--network=host" cfg.virtualisation.oci-containers.containers.acestream.extraOptions;
+    "acestream without capabilities" =
+      lib.all (o: lib.elem o cfg.virtualisation.oci-containers.containers.acestream.extraOptions)
+        [
+          "--cap-drop=ALL"
+          "--security-opt=no-new-privileges"
+        ];
     "acestream P2P port open" =
       lib.elem 8621 cfg.networking.firewall.allowedTCPPorts
       && lib.elem 8621 cfg.networking.firewall.allowedUDPPorts;

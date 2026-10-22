@@ -188,8 +188,8 @@ def ensure_ui_login(app, username, password_file, allowed_hosts):
         return
     password = read(password_file)
     host.update({"username": username, "password": password, "passwordConfirmation": password,
-                 "authenticationMethod": "forms", "authenticationRequired": "disabledForLocalAddresses"})
-    # Newer Radarr/Prowlarr require Allowed Hosts when login is skipped for local addresses
+                 "authenticationMethod": "forms", "authenticationRequired": "enabled"})
+    # Newer Radarr/Prowlarr check Allowed Hosts; fill it when empty
     if "allowedHosts" in host and not host.get("allowedHosts"):
         host["allowedHosts"] = ",".join(allowed_hosts)
     app.call("PUT", f"/config/host/{host['id']}", host)

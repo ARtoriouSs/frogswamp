@@ -7,6 +7,7 @@
 let
   cfg = config.frogswamp.football;
   engine = config.frogswamp.acestream.port;
+  credentials = "/run/credentials/football.service";
 in
 {
   options.frogswamp.football = {
@@ -65,11 +66,12 @@ in
       kodi = {
         url = "http://${cfg.kodi.host}:${toString cfg.kodi.port}";
         inherit (cfg.kodi) username;
-        password_file = cfg.kodi.passwordFile;
+        # handed over by systemd (LoadCredential), so the service doesn't need root
+        password_file = "${credentials}/kodi_password";
       };
       ha = {
         url = "http://127.0.0.1:8123";
-        token_file = cfg.haTokenFile;
+        token_file = "${credentials}/ha_token";
         remote_entity = cfg.tvRemoteEntity;
         cast_entity = cfg.tvCastEntity;
       };
@@ -82,10 +84,22 @@ in
       after = [ "network-online.target" ];
       wants = [ "network-online.target" ];
       serviceConfig = {
-        # root: it reads the Kodi password and the HA token
         ExecStart = "${pkgs.python3}/bin/python3 ${./app.py} --config ${pkgs.writeText "football.json" (builtins.toJSON cfg.settings)}";
+        # with DynamicUser systemd moves an existing /var/lib/football to /var/lib/private/football
         StateDirectory = "football";
         Restart = "on-failure";
+        # a throw-away user instead of root; systemd reads the secrets for it
+        DynamicUser = true;
+        LoadCredential = [
+          "kodi_password:${cfg.kodi.passwordFile}"
+          "ha_token:${cfg.haTokenFile}"
+        ];
+        ProtectHome = true;
+        RestrictAddressFamilies = [
+          "AF_INET"
+          "AF_INET6"
+          "AF_UNIX" # nscd
+        ];
       };
     };
     networking.firewall.allowedTCPPorts = [ cfg.port ];

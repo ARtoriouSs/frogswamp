@@ -53,6 +53,20 @@ pkgs.testers.runNixOSTest {
     assert server.succeed("curl -s -o /dev/null -w '%{http_code}' localhost:8094/toggle/../../api") == "404"
     server.fail("test -e /tmp/ha-calls")
 
+    # another web page can't flip a mode (hidden <img> or link): 403, nothing reaches HA
+    status = "curl -s -o /dev/null -w '%{http_code}' "
+    assert server.succeed(status + "-H 'Sec-Fetch-Site: cross-site' localhost:8094/toggle/vacation") == "403"
+    assert server.succeed(status + "-H 'Sec-Fetch-Site: cross-site' -H 'Referer: http://evil.example/' localhost:8094/toggle/vacation") == "403"
+    assert server.succeed(status + "-H 'Referer: http://evil.example/' localhost:8094/toggle/vacation") == "403"
+    server.fail("test -e /tmp/ha-calls")
+    # Homepage on another port (same-site), or opened by a trusted name, still works
+    assert server.succeed(status + "-H 'Sec-Fetch-Site: same-site' localhost:8094/toggle/vacation") == "303"
+    assert server.succeed(status + "-H 'Sec-Fetch-Site: cross-site' -H 'Referer: http://server.local:8082/' localhost:8094/toggle/vacation") == "303"
+
+    # not root: systemd hands the token to a throw-away user
+    pid = server.succeed("systemctl show mode-switch -P MainPID").strip()
+    assert server.succeed(f"stat -c %u /proc/{pid}").strip() != "0"
+
     # HA failing: a page that says so, with a way back, instead of a silent redirect
     server.succeed("touch /tmp/ha-down")
     page = server.succeed("curl -s -w ' %{http_code}' localhost:8094/toggle/day_off")
