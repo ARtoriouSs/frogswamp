@@ -4,14 +4,22 @@ from __future__ import annotations
 
 import asyncio
 import json
+import socket
 
 CLOSE_TIMEOUT = 2.0
+
+
+def free_port(host: str = "127.0.0.2") -> int:
+    with socket.socket() as sock:
+        sock.bind((host, 0))
+        return sock.getsockname()[1]
 
 
 class FakeLamp:
     def __init__(self, ip: str) -> None:
         self.ip = ip
         self.port = 0
+        self.model = "CubeMatrix"
         self.power = "off"
         self.direct = False
         self.refuse_music = False
@@ -108,7 +116,7 @@ class FakeLamp:
             return {"id": message["id"], "error": self.errors[method]}
         result: list = ["ok"]
         if method == "get_prop":
-            values = {"model": "CubeMatrix", "power": self.power}
+            values = {"model": self.model, "power": self.power}
             result = [values.get(name, "") for name in params]
         elif method == "set_power":
             self.power = params[0]

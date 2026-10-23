@@ -150,6 +150,16 @@ class LanClient:
             self._writer.close()
 
 
+async def get_props(host: str, names: list[str], timeout: float = 5) -> list:
+    """Open a short LAN connection, read some props and close it again"""
+    client = LanClient()
+    await client.connect(host, timeout=timeout)
+    try:
+        return await client.call("get_prop", names)
+    finally:
+        await client.close()
+
+
 class MusicLink:
     """The lamp's music mode connection back to us. Commands get no reply"""
 

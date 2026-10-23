@@ -1,9 +1,7 @@
 import asyncio
 import logging
-import socket
 
 import pytest
-import pytest_socket
 
 from custom_components.cubematrix import connection
 from custom_components.cubematrix.connection import CubeConnection
@@ -14,18 +12,12 @@ from custom_components.cubematrix.protocol import (
     command,
 )
 
-from .fake_lamp import FakeLamp
+from .fake_lamp import FakeLamp, free_port
 
 RED_FRAME = bytes([255, 0, 0]) * 25
 RED_LEDS = "/wAA" * 25
 GREEN_FRAME = bytes([0, 255, 0]) * 25
 GREEN_LEDS = "AP8A" * 25
-
-
-@pytest.fixture
-def loopback(socket_enabled):
-    """Allow sockets to the whole 127.0.0.0/8 range, the fake lamps live there"""
-    pytest_socket.socket_allow_hosts(["127.0.0.0/8"], allow_unix_socket=True)
 
 
 @pytest.fixture
@@ -54,12 +46,6 @@ async def wait_until(check, timeout=2.0):
     async with asyncio.timeout(timeout):
         while not check():
             await asyncio.sleep(0.01)
-
-
-def free_port(host="127.0.0.2"):
-    with socket.socket() as sock:
-        sock.bind((host, 0))
-        return sock.getsockname()[1]
 
 
 def test_command_is_a_json_line():

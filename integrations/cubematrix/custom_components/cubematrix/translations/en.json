@@ -1,0 +1,91 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Yeelight Cube Matrix",
+        "description": "Enter the IP address of the lamp. LAN control must be on in the Yeelight app. Reserve this IP in your router, the integration finds the lamp by it",
+        "data": {
+          "host": "IP address"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Can't connect to the lamp. Check the IP address and that LAN control is on",
+      "wrong_model": "This lamp is not a Cube Matrix"
+    },
+    "abort": {
+      "already_configured": "This lamp is already set up"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Cube Matrix options",
+        "menu_options": {
+          "layout": "Module layout",
+          "music_port": "Music mode port",
+          "preset_add": "Add a preset",
+          "preset_edit": "Edit a preset",
+          "preset_delete": "Delete a preset"
+        }
+      },
+      "layout": {
+        "title": "Module layout",
+        "description": "List the modules in chain order, split by commas, for example: matrix, spot, matrix",
+        "data": {
+          "modules": "Modules",
+          "direction": "Direction"
+        }
+      },
+      "music_port": {
+        "title": "Music mode port",
+        "description": "The lamp connects back to Home Assistant on this port to get frames fast. All cubes with the same port share one server",
+        "data": {
+          "music_port": "Port"
+        }
+      },
+      "preset_add": {
+        "title": "Add a preset",
+        "description": "A preset is one art in the pixel art format. It is shared by all cubes, and a saved preset wins over a file or built-in one with the same name",
+        "data": {
+          "name": "Name",
+          "text": "Definition"
+        }
+      },
+      "preset_edit": {
+        "title": "Edit a preset",
+        "data": {
+          "name": "Preset"
+        }
+      },
+      "preset_edit_text": {
+        "title": "Edit preset {name}",
+        "data": {
+          "text": "Definition"
+        }
+      },
+      "preset_delete": {
+        "title": "Delete a preset",
+        "data": {
+          "name": "Preset"
+        }
+      }
+    },
+    "error": {
+      "invalid_modules": "Invalid module list: {error}",
+      "invalid_name": "The name can't be empty",
+      "invalid_preset": "Invalid preset: {error}"
+    },
+    "abort": {
+      "no_presets": "There are no saved presets"
+    }
+  },
+  "selector": {
+    "direction": {
+      "options": {
+        "horizontal": "Horizontal",
+        "vertical": "Vertical"
+      }
+    }
+  }
+}
