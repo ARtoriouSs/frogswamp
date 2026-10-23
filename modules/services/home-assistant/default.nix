@@ -14,6 +14,8 @@ let
     inherit (hacsPin) hash;
     stripRoot = false;
   };
+  # Mounted as /dev/bus/usb in the container, see the Bluetooth recovery below
+  usbWatchDir = "/run/home-assistant/usb-watch";
   repoOwned = [
     "configuration.yaml"
     "packages"
@@ -59,7 +61,7 @@ in
     haTokenFile = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
       default = null;
-      description = "Runtime path of an HA long-lived token. With it the Bluetooth recovery reloads only the Bluetooth integration; without it, it restarts Home Assistant";
+      description = "Runtime path of an HA long-lived token. With it the Bluetooth recovery refreshes HA's adapter list and reloads only the Bluetooth integration (HA is restarted only if that fails); without it, it restarts Home Assistant";
     };
   };
 
@@ -80,7 +82,8 @@ in
         ++ lib.optionals cfg.cubematrix.enable [
           "${../../../integrations/cubematrix/custom_components/cubematrix}:/config/custom_components/cubematrix:ro"
           "${./config/cubematrix}:/config/cubematrix:ro"
-        ];
+        ]
+        ++ lib.optional cfg.recoverBluetooth "${usbWatchDir}:/dev/bus/usb:ro";
         extraOptions = [
           "--network=host"
           "--cap-add=NET_ADMIN"
@@ -98,6 +101,11 @@ in
       };
       # integrations installed by HACS land here (HACS itself is mounted in it)
       "${stateDir}/custom_components".d = {
+        mode = "0755";
+        user = "root";
+        group = "root";
+      };
+      "${usbWatchDir}".d = lib.mkIf cfg.recoverBluetooth {
         mode = "0755";
         user = "root";
         group = "root";
@@ -120,7 +128,9 @@ in
     networking.firewall.allowedTCPPorts = [ 8123 ];
 
     # The Realtek BT chip sometimes hangs; the kernel resets it and it comes back as a new hciN.
-    # HA's Bluetooth integration stays bound to the old adapter, so reload it when an adapter (not a BLE link) is added.
+    # HA keeps a cached list of adapter names, so it keeps looking for the old hciN even after a reload.
+    # HA refreshes that list only when its USB watcher sees a change in /dev/bus/usb, and a USB reset makes no change there.
+    # So the container gets an empty folder as /dev/bus/usb, and the recovery creates a file in it to wake the watcher up.
     services.udev.extraRules = lib.mkIf cfg.recoverBluetooth ''
       ACTION=="add", SUBSYSTEM=="bluetooth", ENV{DEVTYPE}=="host", TAG+="systemd", ENV{SYSTEMD_WANTS}+="home-assistant-bluetooth-recover.service"
     '';
@@ -130,8 +140,14 @@ in
         pkgs.curl
         pkgs.jq
       ];
-      # HA younger than this finds the new adapter by itself
-      environment.MIN_AGE = lib.mkDefault "120";
+      environment = {
+        # HA younger than this finds the new adapter by itself
+        MIN_AGE = lib.mkDefault "120";
+        # time for HA to refresh its adapter list after the watcher is woken up (two 5 s debounces)
+        SETTLE = lib.mkDefault "15";
+        # seconds to wait for the Bluetooth entry to load before restarting HA
+        READY_TIMEOUT = lib.mkDefault "30";
+      };
       serviceConfig.Type = "oneshot";
       script = ''
         # During boot the adapter appears before HA runs: nothing to recover
@@ -159,10 +175,15 @@ in
             api() {
               curl -fsS -m 30 -H "Authorization: Bearer $token" "$@"
             }
+            entries_url="http://127.0.0.1:8123/api/config/config_entries/entry?domain=bluetooth"
             # give BlueZ a moment to register the new adapter
             sleep 5
+            # wake up HA's USB watcher, so HA refreshes its adapter list
+            touch ${usbWatchDir}/bluetooth-recover
+            rm -f ${usbWatchDir}/bluetooth-recover
+            sleep "$SETTLE"
             # one entry per adapter; HA finds the adapter again by its MAC address
-            entries=$(api "http://127.0.0.1:8123/api/config/config_entries/entry?domain=bluetooth")
+            entries=$(api "$entries_url")
             ids=$(jq -r '.[] | select(.disabled_by == null) | .entry_id' <<<"$entries")
             if [ -z "$ids" ]; then
               echo "No enabled Bluetooth integration in Home Assistant, nothing to do"
@@ -172,6 +193,15 @@ in
               echo "Bluetooth adapter re-appeared, reloading Home Assistant Bluetooth entry $id"
               api -o /dev/null -X POST "http://127.0.0.1:8123/api/config/config_entries/entry/$id/reload"
             done
+            for _ in $(seq "$READY_TIMEOUT"); do
+              if api "$entries_url" | jq -e '[.[] | select(.disabled_by == null) | .state] | all(. == "loaded")' >/dev/null; then
+                echo "Bluetooth is back"
+                exit 0
+              fi
+              sleep 1
+            done
+            echo "Bluetooth entry didn't load in ''${READY_TIMEOUT}s, restarting Home Assistant"
+            systemctl restart podman-home-assistant.service
           ''
       );
     };
