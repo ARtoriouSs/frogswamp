@@ -208,6 +208,12 @@ let
       lib.elem 51413 cfg.networking.firewall.allowedTCPPorts
       && lib.elem 51413 cfg.networking.firewall.allowedUDPPorts;
     "qbittorrent webui 8090 open" = lib.elem 8090 cfg.networking.firewall.allowedTCPPorts;
+    "qbittorrent waits for DNS before start" = lib.any (
+      cmd: lib.hasInfix "qbittorrent-wait-dns" (toString cmd)
+    ) cfg.systemd.services.qbittorrent.serviceConfig.ExecStartPre;
+    "qbittorrent restarts when the LAN is routable again" =
+      cfg.services.networkd-dispatcher.enable
+      && cfg.services.networkd-dispatcher.rules.qbittorrent-restart.onState == [ "routable" ];
     "janitor runs every 5 minutes" = cfg.systemd.timers.media-janitor.timerConfig.OnCalendar == "*:0/5";
     "janitor deletes for real" = !cfg.frogswamp.mediaJanitor.dryRun;
     "janitor waits 48h and warns after 5 days" =

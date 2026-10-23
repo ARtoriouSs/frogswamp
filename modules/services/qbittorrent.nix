@@ -86,6 +86,23 @@ in
       allowedUDPPorts = [ 51413 ];
     };
 
+    # Started into a half-ready network (route up, DNS not yet), qBittorrent stays dead until a restart:
+    # 0 DHT nodes and no peer connections, though tracker announces still work.
+    # So restart it when the LAN comes back (router reboot, cable). At boot it isn't active yet, so it's skipped
+    services.networkd-dispatcher = {
+      enable = true;
+      rules.qbittorrent-restart = {
+        onState = [ "routable" ];
+        script = ''
+          [ -n "$(${pkgs.iproute2}/bin/ip route show default dev "$IFACE")" ] || exit 0
+          if ${config.systemd.package}/bin/systemctl is-active --quiet qbittorrent.service; then
+            echo "$IFACE is routable again, restarting qBittorrent"
+            ${config.systemd.package}/bin/systemctl restart --no-block qbittorrent.service
+          fi
+        '';
+      };
+    };
+
     # The config is written here instead of `serverConfig`, so the password hash (a runtime secret) can be added
     systemd.services.qbittorrent = {
       restartTriggers = [
@@ -95,6 +112,15 @@ in
       serviceConfig = {
         UMask = "0002";
         ExecStartPre = [
+          # network-online.target only means the route is up; also wait for DNS (DHT bootstrap needs it).
+          # Starts anyway after 60 s, so torrents still run without DNS
+          (pkgs.writeShellScript "qbittorrent-wait-dns" ''
+            for _ in $(seq 60); do
+              ${pkgs.getent}/bin/getent hosts dht.transmissionbt.com >/dev/null && exit 0
+              sleep 1
+            done
+            echo "DNS still not working after 60 s, starting anyway" >&2
+          '')
           (pkgs.writeShellScript "qbittorrent-config" ''
             set -eu
             install -d -m 700 ${confDir}
