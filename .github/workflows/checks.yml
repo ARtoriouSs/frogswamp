@@ -1,0 +1,53 @@
+# One more layer on top of `just check`: catches broken config and leaked secrets on every push
+# No repository secrets are used; GITHUB_TOKEN is GitHub's built-in short-lived token, read-only here.
+# Actions are pinned to commit hashes (tag in the comment) because the repo is public
+name: checks
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  nix:
+    name: nix flake check
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # also turns on KVM, so the VM tests run with hardware acceleration
+      - uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # 31.11.3
+      # pre-commit hooks, the full server build and all VM tests
+      - run: nix flake check -L
+
+  ha:
+    name: Home Assistant config
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # 31.11.3
+      # validates the HA YAML with the pinned HA image (runs it with docker)
+      - run: nix develop -c just ha-check
+
+  gitleaks:
+    name: gitleaks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # full history, so every commit is scanned
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # the token is read-only, so it can't comment on PRs
+          GITLEAKS_ENABLE_COMMENTS: false
