@@ -37,10 +37,10 @@ This way the lamp keeps the same address after a restart of the lamp or the rout
 
 Normal LAN control allows only about 60 commands per minute, which is about 1 frame per second. For smooth animations the integration uses **music mode**: the lamp opens a TCP connection **back to Home Assistant** and then accepts frames at full speed.
 
-- Default port: **55440**. All cubes share this one port. Lamps are told apart by their IP.
+- Default port: **55440**. Each cube has this port in its options (see below). Cubes with the same port share one listener, and lamps are told apart by their IP.
+- Keep the same port on every cube (the default 55440 is fine), so the firewall needs only one port. A cube with a different port needs its own firewall rule.
 - Home Assistant's host must accept incoming TCP connections on this port **from the lamp IPs**.
 - Open the port only for the lamp IPs, not for your whole network.
-- You can change the port in the options (see below).
 
 Generic example with `iptables` (replace `<lamp ip>`):
 
@@ -93,7 +93,7 @@ Open the integration and choose **Configure**.
 | --- | --- |
 | Module layout: `modules` | The modules in chain order, split by commas, for example `matrix, spot, matrix`. Default: `matrix`. At least one `matrix` is needed. |
 | Module layout: `direction` | `horizontal` (modules side by side, canvas 5 pixels high) or `vertical` (modules stacked, canvas 5 pixels wide). Default: `horizontal`. The first matrix is the leftmost one, or the bottom one when vertical. |
-| Music mode port: `music_port` | The TCP port the lamp connects back to. Default: 55440. |
+| Music mode port: `music_port` | The TCP port the lamp connects back to. Default: 55440. Use the same port on every cube. |
 | Add a preset (`name`, `text`) | Save a pixel art in the pixel art format. Shared by all cubes. |
 | Edit a preset (`name`, `text`) | Change a saved preset. |
 | Delete a preset (`name`) | Remove a saved preset. |
@@ -131,7 +131,7 @@ frames:
 
 Frames are written **top-left first, row by row**, as you see the cube. Whitespace inside a row is ignored, so `. . x . .` works too.
 
-Colours are `'#rrggbb'`, `"off"` (quote it, or YAML reads it as false), or `[r, g, b]` with values from 0 to 255.
+Colours are `'#rrggbb'`, `off` (with or without quotes, both work), or `[r, g, b]` with values from 0 to 255.
 
 ### Raw arrays
 

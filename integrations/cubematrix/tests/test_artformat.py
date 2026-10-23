@@ -140,9 +140,26 @@ def test_parse_color():
     assert parse_color("#ff8000") == (255, 128, 0)
     assert parse_color("off") == (0, 0, 0)
     assert parse_color([1, 2, 3]) == (1, 2, 3)
-    for bad in ("#12", "red", [1, 2], [1, 2, 256], [1, 2, -1], 5):
+    # Unquoted off in YAML is False
+    assert parse_color(False) == (0, 0, 0)
+    for bad in ("#12", "red", [1, 2], [1, 2, 256], [1, 2, -1], 5, True, 0):
         with pytest.raises(ArtError):
             parse_color(bad)
+
+
+def test_unquoted_off_in_palette():
+    art = parse_text(
+        """
+name: dot
+size: 2x1
+palette:
+  ".": off
+  "x": off
+frames:
+  - ". x"
+"""
+    )[0]
+    assert art.frames[0] == ((0, 0, 0), (0, 0, 0))
 
 
 def _art(name="arrow_up"):

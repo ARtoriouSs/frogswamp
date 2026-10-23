@@ -91,8 +91,10 @@ class Layout:
         brightness: int = 255,
     ) -> bytes:
         """Encode a canvas frame as raw LED bytes in chain order"""
-        if spots is None:
-            spots = [self._average(frame)] * self.spot_count
+        spots = list(spots or ())[: self.spot_count]
+        if len(spots) < self.spot_count:
+            # Missing spot colours get the average canvas colour
+            spots += [self._average(frame)] * (self.spot_count - len(spots))
         raw = bytearray()
         matrix_index = 0
         spot_index = 0

@@ -63,6 +63,19 @@ def test_spot_slots_and_average():
     assert raw[-15:] == bytes([100, 0, 0]) * 5
 
 
+def test_short_spots_padded_with_average_and_extras_ignored():
+    layout = Layout(("spot", "matrix", "spot"))
+    frame = frame_with(5, 5, {}, fill=(40, 0, 0))
+    raw = layout.led_bytes(frame, spots=[(1, 2, 3)])
+    assert len(raw) == (5 + 25 + 5) * 3
+    assert raw[:15] == bytes([1, 2, 3]) * 5
+    # The missing second spot gets the average canvas colour
+    assert raw[-15:] == bytes([40, 0, 0]) * 5
+    raw = layout.led_bytes(frame, spots=[(1, 2, 3), (4, 5, 6), (7, 8, 9)])
+    assert len(raw) == (5 + 25 + 5) * 3
+    assert raw[-15:] == bytes([4, 5, 6]) * 5
+
+
 def test_brightness_scales():
     raw = Layout().led_bytes(frame_with(5, 5, {}, fill=(255, 0, 0)), brightness=128)
     assert raw[0:3] == bytes([128, 0, 0])

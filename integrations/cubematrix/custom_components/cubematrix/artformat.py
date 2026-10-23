@@ -40,8 +40,11 @@ class Art:
         return len(self.frames) == 1
 
 
-def parse_color(value: str | list[int]) -> RGB:
+def parse_color(value: str | list[int] | bool) -> RGB:
     """Parse "#rrggbb", "off" or [r, g, b]"""
+    # YAML reads an unquoted off as False
+    if value is False:
+        return OFF
     if isinstance(value, str):
         if value.lower() == "off":
             return OFF
