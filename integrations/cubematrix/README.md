@@ -33,36 +33,6 @@ The integration finds the lamp by its IP address. Give each lamp a fixed address
 
 This way the lamp keeps the same address after a restart of the lamp or the router.
 
-### Music mode port
-
-Normal LAN control allows only about 60 commands per minute, which is about 1 frame per second. For smooth animations the integration uses **music mode**: the lamp opens a TCP connection **back to Home Assistant** and then accepts frames at full speed.
-
-- Default port: **55440**. Each cube has this port in its options (see below). Cubes with the same port share one listener, and lamps are told apart by their IP.
-- Keep the same port on every cube (the default 55440 is fine), so the firewall needs only one port. A cube with a different port needs its own firewall rule.
-- Home Assistant's host must accept incoming TCP connections on this port **from the lamp IPs**.
-- Open the port only for the lamp IPs, not for your whole network.
-
-Generic example with `iptables` (replace `<lamp ip>`):
-
-```sh
-iptables -A INPUT -p tcp -s <lamp ip> --dport 55440 -j ACCEPT
-```
-
-NixOS example (add one line per lamp):
-
-```nix
-networking.firewall.extraCommands = ''
-  iptables -A nixos-fw -p tcp -s <lamp ip> --dport 55440 -j nixos-fw-accept
-'';
-networking.firewall.extraStopCommands = ''
-  iptables -D nixos-fw -p tcp -s <lamp ip> --dport 55440 -j nixos-fw-accept || true
-'';
-```
-
-If Home Assistant runs in a container, make sure the port is reachable from the lamp: use host networking, or publish the port (`-p 55440:55440`).
-
-If the lamp can't connect, the integration falls back to normal mode (about 1 frame per second) and writes a warning to the log. See [Troubleshooting](#troubleshooting).
-
 ## Installation
 
 ### HACS (custom repository)
@@ -93,12 +63,28 @@ Open the integration and choose **Configure**.
 | --- | --- |
 | Module layout: `modules` | The modules in chain order, split by commas, for example `matrix, spot, matrix`. Default: `matrix`. At least one `matrix` is needed. |
 | Module layout: `direction` | `horizontal` (modules side by side, canvas 5 pixels high) or `vertical` (modules stacked, canvas 5 pixels wide). Default: `horizontal`. The first matrix is the leftmost one, or the bottom one when vertical. |
-| Music mode port: `music_port` | The TCP port the lamp connects back to. Default: 55440. Use the same port on every cube. |
 | Add a preset (`name`, `text`) | Save a pixel art in the pixel art format. Shared by all cubes. |
 | Edit a preset (`name`, `text`) | Change a saved preset. |
 | Delete a preset (`name`) | Remove a saved preset. |
 
 The canvas size follows the layout: two matrices side by side are 10x5, three are 15x5, two stacked are 5x10.
+
+## Connection
+
+The integration talks to the lamp in two ways:
+
+- **LAN control** on TCP port **55443**: setup, power on and off, and messages from the lamp. Normal LAN control allows only about 60 commands per minute, which is about 1 frame per second.
+- A **UDP session** on port **55444** for the frames. The integration opens the session, puts the lamp in direct mode inside it, and then sends frames without waiting for answers. A keep-alive goes out every 10 seconds.
+
+Only outgoing connections are used, so no firewall port has to be opened on the Home Assistant host. If Home Assistant runs in a container, normal outgoing network access is enough.
+
+What to expect:
+
+- **Frame rate**: at most 25 frames per second. Smooth animation up to 40 fps was seen, but the lamp answers only about 30 messages per second on UDP, and keep-alives and commands share that. Higher `fps` values are cut to this limit.
+- **Short blinks**: now and then the lamp leaves direct mode by itself and answers frames with "illegal request". The integration puts direct mode back at once, which shows as a very short blink. This is normal and is only logged at debug level.
+- **Frame size**: the lamp drops UDP messages over about 760 bytes. This is enough for about 6 matrices. With a bigger layout the integration logs a warning and uses LAN control (about 1 frame per second).
+- **Fallback**: if the UDP session doesn't work, the integration logs one warning and sends frames over LAN control at about 1 frame per second. While the background plays, UDP is tried again every 5 minutes.
+- **LED order**: inside a matrix, LED 0 is at the bottom right, the LEDs go to the left along the row, and the rows go from the bottom up. The integration takes care of this, art is always written top-left first.
 
 ## Pixel art format
 
@@ -358,11 +344,11 @@ Matter, the Yeelight app or another integration changed the lamp's colour. The l
 - Check the module layout in the options: the order and the number of `matrix` and `spot` modules must match your chain.
 - Make sure the light is on.
 
-**Animations are slow (about 1 frame per second) and the log says music mode didn't arrive.**
-The lamp could not connect back to Home Assistant, so the integration uses normal mode. Check the firewall for port 55440 (or your own port), only for the lamp IP. Check that the lamp and Home Assistant can reach each other (same network or a route between them), and that the container, if any, publishes the port. Check that no other program uses the port. After you fix it, reload the integration, or wait: while the background plays, music mode is tried again every 5 minutes.
+**Animations are slow (about 1 frame per second) and the log says the UDP session doesn't work.**
+The lamp didn't answer on UDP port 55444, so the integration sends frames over LAN control. Check that nothing between Home Assistant and the lamp blocks UDP to port 55444 (for example a firewall that blocks outgoing traffic, or a different network without a route). After you fix it, reload the integration, or wait: while the background plays, UDP is tried again every 5 minutes. A layout of more than about 6 matrices is always slow, see [Connection](#connection).
 
-**Frame rate limit.**
-In music mode the integration sends at most `MUSIC_MAX_FPS` frames per second. The current value is 10, which is a placeholder: the tested limit is to be measured on real hardware. Higher `fps` values are cut to this limit. In normal mode the limit is about 1 frame per second.
+**The cube blinks for a moment now and then.**
+The lamp left direct mode by itself and the integration put it back. See [Connection](#connection).
 
 ## Development
 
