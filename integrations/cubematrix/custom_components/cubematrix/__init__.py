@@ -23,23 +23,24 @@ from .data import DATA_KEY, CubeMatrixData, CubeRuntime
 from .layout import Layout, parse_modules
 from .player import Player
 from .protocol import LampError, get_props
+from .services import async_setup_services
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
-# The light, select and sensor platforms come with their modules in the next step
-PLATFORMS: list[Platform] = []
+PLATFORMS: list[Platform] = [Platform.LIGHT, Platform.SELECT, Platform.SENSOR]
 
 type CubeMatrixConfigEntry = ConfigEntry[CubeRuntime]
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     hass.data[DATA_KEY] = await CubeMatrixData.async_load(hass)
+    async_setup_services(hass)
     return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: CubeMatrixConfigEntry) -> bool:
-    # Only check that the lamp answers. It is turned on and put in direct mode
-    # when the light turns on, not when HA starts
+    # Only check that the lamp answers. The light entity turns it on (and puts
+    # it in direct mode) when its restored state is on, never this setup
     try:
         await get_props(entry.data[CONF_HOST], ["power"])
     except LampError as err:

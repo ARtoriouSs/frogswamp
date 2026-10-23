@@ -1,3 +1,5 @@
+import asyncio
+
 import pytest
 import pytest_socket
 from homeassistant.config_entries import ConfigEntryState
@@ -49,3 +51,106 @@ async def entry(hass, fake_lamp):
     if entry.state is ConfigEntryState.LOADED:
         assert await hass.config_entries.async_unload(entry.entry_id)
         await hass.async_block_till_done()
+
+
+class FakeConnection:
+    """Stands in for CubeConnection when the lamp itself isn't the point"""
+
+    def __init__(self, host: str, music_port: int, **kwargs) -> None:
+        self.host = host
+        self.music_port = music_port
+        self.on_change = None
+        self.max_fps = 30.0
+        self.available = False
+        self.mode = "offline"
+        # Set to make every call fail, like a lamp that went away
+        self.gone = False
+        self.ready: list[bool] = []
+        self.frames: list[bytes] = []
+        self.power_offs = 0
+        self.closed = False
+
+    async def ensure_ready(self, refresh: bool = False) -> None:
+        if self.gone:
+            self._set(False)
+            raise protocol.LampError("lamp is gone")
+        self.ready.append(refresh)
+        self._set(True)
+
+    async def send_frame(self, raw: bytes) -> None:
+        if not self.available:
+            await self.ensure_ready()
+        self.frames.append(raw)
+
+    async def power_off(self) -> None:
+        if self.gone:
+            raise protocol.LampError("lamp is gone")
+        self.power_offs += 1
+
+    async def close(self) -> None:
+        self.closed = True
+        self._set(False)
+
+    def lose(self) -> None:
+        self.gone = True
+        self._set(False)
+
+    def _set(self, available: bool) -> None:
+        if available == self.available:
+            return
+        self.available = available
+        self.mode = "music" if available else "offline"
+        if self.on_change is not None:
+            self.on_change()
+
+
+@pytest.fixture
+def fake_cubes(monkeypatch):
+    """Fake connections for every entry, by host. The setup probe always answers"""
+    import custom_components.cubematrix as integration
+
+    made: dict[str, FakeConnection] = {}
+
+    def make(host: str, music_port: int, **kwargs) -> FakeConnection:
+        made[host] = FakeConnection(host, music_port, **kwargs)
+        return made[host]
+
+    async def get_props(host: str, names: list[str]) -> list[str]:
+        return ["on" for _ in names]
+
+    monkeypatch.setattr(integration, "CubeConnection", make)
+    monkeypatch.setattr(integration, "get_props", get_props)
+    return made
+
+
+@pytest.fixture
+async def add_cube(hass, fake_cubes):
+    """Set up an entry for a fake cube, unloaded at the end of the test"""
+    entries = []
+
+    async def add(host: str) -> MockConfigEntry:
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            title=f"Cube Matrix ({host})",
+            data={"host": host},
+            unique_id=host,
+        )
+        entry.add_to_hass(hass)
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await settle(hass)
+        entries.append(entry)
+        return entry
+
+    yield add
+    for entry in entries:
+        if entry.state is ConfigEntryState.LOADED:
+            assert await hass.config_entries.async_unload(entry.entry_id)
+    await hass.async_block_till_done()
+
+
+async def settle(hass) -> None:
+    """Let the player tasks run, they are not tracked by hass"""
+    for _ in range(5):
+        await hass.async_block_till_done()
+        for _ in range(10):
+            await asyncio.sleep(0)

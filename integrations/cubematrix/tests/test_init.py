@@ -2,8 +2,13 @@ import logging
 import socket
 
 from homeassistant.config_entries import ConfigEntryState
+from homeassistant.const import STATE_OFF
+from homeassistant.core import State
 from homeassistant.setup import async_setup_component
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant_custom_component.common import (
+    MockConfigEntry,
+    mock_restore_cache,
+)
 
 from custom_components.cubematrix import protocol
 from custom_components.cubematrix.const import CONF_MUSIC_PORT, DOMAIN, STORE_KEY
@@ -26,8 +31,21 @@ frames: [[x]]
 """
 
 
-async def test_setup_entry_builds_runtime(hass, entry, fake_lamp):
+async def test_setup_entry_builds_runtime(hass, fake_lamp):
+    # The light was off before the restart, so nothing turns the lamp on
+    mock_restore_cache(hass, [State("light.cube_matrix_127_0_0_2", STATE_OFF)])
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="Cube Matrix (127.0.0.2)",
+        data={"host": fake_lamp.ip},
+        options={CONF_MUSIC_PORT: free_port("0.0.0.0")},
+        unique_id=fake_lamp.ip,
+    )
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
     assert entry.state is ConfigEntryState.LOADED
+    assert hass.states.get("light.cube_matrix_127_0_0_2").state == STATE_OFF
     runtime = entry.runtime_data
     # Setup only checks the lamp answers, it doesn't turn it on
     assert fake_lamp.calls == ["get_prop"]
@@ -38,6 +56,8 @@ async def test_setup_entry_builds_runtime(hass, entry, fake_lamp):
     assert runtime.connection.music_port == entry.options[CONF_MUSIC_PORT]
     assert runtime.player._layout.modules == ("matrix",)
     assert runtime.player._layout.direction == "horizontal"
+    assert await hass.config_entries.async_unload(entry.entry_id)
+    await hass.async_block_till_done()
 
 
 async def test_setup_not_ready_when_unreachable(hass, loopback, monkeypatch):

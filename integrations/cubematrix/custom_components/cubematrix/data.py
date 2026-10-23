@@ -9,7 +9,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_HOST
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.storage import Store
 from homeassistant.util.hass_dict import HassKey
 
@@ -32,6 +35,16 @@ class CubeRuntime:
 
     connection: CubeConnection
     player: Player
+
+
+def cube_device_info(entry: ConfigEntry) -> DeviceInfo:
+    """One device per cube, all its entities share it"""
+    return DeviceInfo(
+        identifiers={(DOMAIN, entry.data[CONF_HOST])},
+        manufacturer="Yeelight",
+        model="Cube Matrix",
+        name=entry.title,
+    )
 
 
 def parse_preset(name: str, text: str) -> Art:

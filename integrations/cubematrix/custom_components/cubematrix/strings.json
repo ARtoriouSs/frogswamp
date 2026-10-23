@@ -87,5 +87,75 @@
         "vertical": "Vertical"
       }
     }
+  },
+  "entity": {
+    "select": {
+      "background": {
+        "name": "Background"
+      }
+    },
+    "sensor": {
+      "playing": {
+        "name": "Playing"
+      }
+    }
+  },
+  "services": {
+    "show": {
+      "name": "Show",
+      "description": "Plays pixel art or an effect on the cube, then goes back to the background or to what then says",
+      "fields": {
+        "preset": {
+          "name": "Preset",
+          "description": "Name of a preset to play. Give this or definition, not both"
+        },
+        "definition": {
+          "name": "Definition",
+          "description": "One art in the pixel art format, as YAML text or a mapping. Give this or preset, not both"
+        },
+        "repeat": {
+          "name": "Repeat",
+          "description": "How many times an animation plays, or forever"
+        },
+        "duration": {
+          "name": "Duration",
+          "description": "How long the show lasts in seconds. Without it a still picture or an effect stays 5 seconds"
+        },
+        "fps": {
+          "name": "Frames per second",
+          "description": "Speed of the animation, instead of the art's own fps"
+        },
+        "then": {
+          "name": "Then",
+          "description": "What comes after the show: restore (the background), hold (keep the last frame), off (black) or a preset name"
+        },
+        "fit": {
+          "name": "Fit",
+          "description": "What to do when the art size is not the cube size: error, center or tile"
+        },
+        "wait": {
+          "name": "Wait",
+          "description": "Finish the action only when the show part ends"
+        }
+      }
+    },
+    "set_background": {
+      "name": "Set background",
+      "description": "Sets what the cube shows when no show is playing",
+      "fields": {
+        "preset": {
+          "name": "Preset",
+          "description": "Name of a preset, or off for black"
+        }
+      }
+    },
+    "stop": {
+      "name": "Stop",
+      "description": "Ends the current show and goes back to the background"
+    },
+    "reload_presets": {
+      "name": "Reload presets",
+      "description": "Reads the preset files in the cubematrix folder of the config folder again"
+    }
   }
 }
