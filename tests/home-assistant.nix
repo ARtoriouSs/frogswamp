@@ -61,6 +61,10 @@ pkgs.testers.runNixOSTest {
         secretsFile = "${./fixtures/ha-secrets.yaml}";
         uiSnapshotDir = ./fixtures/ha-ui-snapshot;
         hacs = true;
+        cubematrix = {
+          enable = true;
+          lampAddresses = [ "192.168.101.121" ];
+        };
       };
     };
   };
@@ -84,7 +88,12 @@ pkgs.testers.runNixOSTest {
     assert "/config/secrets.yaml:ro" in unit, unit
     assert "/run/dbus:/run/dbus:ro" in unit, unit
     assert "/config/custom_components/hacs:ro" in unit, unit
+    assert "/config/custom_components/cubematrix:ro" in unit, unit
+    assert "/config/cubematrix:ro" in unit, unit
     server.succeed("test -d /var/lib/home-assistant/custom_components")
+    # music mode port: open only for the lamp, never for the whole LAN
+    server.succeed("iptables -S nixos-fw | grep -- '-s 192.168.101.121/32 -p tcp -m tcp --dport 55440 -j nixos-fw-accept'")
+    assert server.succeed("iptables -S nixos-fw | grep -c 'dport 55440'").strip() == "1"
     server.succeed("iptables -S | grep -q 'dport 8123'")
     # Bluetooth recovery: udev rule only for adapters (DEVTYPE=host), never for BLE connections
     rules = server.succeed("cat /etc/udev/rules.d/*.rules")

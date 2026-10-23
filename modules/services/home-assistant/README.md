@@ -69,6 +69,10 @@ Turning a mode off runs no Tuya scene, so the Tuya app's own automations stay of
 
 If the Bluetooth chip hangs, the kernel resets it and it comes back under a new name (`hci0` → `hci1`). HA would keep scanning on the old one. A udev rule then reloads **only HA's Bluetooth integration** through the HA API (`home-assistant-bluetooth-recover.service`), so the rest of HA keeps running. HA finds the adapter again by its MAC address. It does nothing during boot or in HA's first 2 minutes. Check it with `just ssh journalctl -u home-assistant-bluetooth-recover`.
 
+## Yeelight Cube Matrix
+
+The integration lives in `integrations/cubematrix/` (a standalone repo-shaped folder) and is mounted read-only at `/config/custom_components/cubematrix`. Repo presets are in `config/cubematrix/*.yaml`, mounted at `/config/cubematrix`; `tests/cubematrix-presets.nix` checks that each one parses. The music mode port (`musicPort`, 55440) is open only for `lampAddresses`.
+
 ## Update Home Assistant
 
 `just ha-bump` (latest stable) or `just ha-bump 2026.11.0` → `just check` → `just deploy`. Roll back with `just rollback`.

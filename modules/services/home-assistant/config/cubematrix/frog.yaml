@@ -1,0 +1,14 @@
+name: frog
+size: 5x5
+palette:
+  g: '#00c000'
+  w: '#ffffff'
+  k: '#000000'
+  r: '#e00000'
+frames:
+  - |
+    wg.gw
+    kgggk
+    ggggg
+    grrrg
+    .ggg.
