@@ -50,16 +50,6 @@ in
     };
     cubematrix = {
       enable = lib.mkEnableOption "the Yeelight Cube Matrix integration (mounted read-only from integrations/cubematrix)";
-      musicPort = lib.mkOption {
-        type = lib.types.port;
-        default = 55440;
-        description = "TCP port the lamps connect back to in music mode (shared by all cubes)";
-      };
-      lampAddresses = lib.mkOption {
-        type = lib.types.listOf lib.types.str;
-        default = [ ];
-        description = "Lamp IPs allowed to reach the music mode port; it stays closed for the rest of the LAN";
-      };
     };
     recoverBluetooth = lib.mkOption {
       type = lib.types.bool;
@@ -127,22 +117,7 @@ in
       };
     };
 
-    networking.firewall = {
-      allowedTCPPorts = [ 8123 ];
-      # Music mode: the lamp connects to HA, so accept the port from the lamp IPs only
-      extraCommands = lib.mkIf cfg.cubematrix.enable (
-        lib.concatMapStringsSep "\n" (
-          ip:
-          "iptables -A nixos-fw -p tcp -s ${ip} --dport ${toString cfg.cubematrix.musicPort} -j nixos-fw-accept"
-        ) cfg.cubematrix.lampAddresses
-      );
-      extraStopCommands = lib.mkIf cfg.cubematrix.enable (
-        lib.concatMapStringsSep "\n" (
-          ip:
-          "iptables -D nixos-fw -p tcp -s ${ip} --dport ${toString cfg.cubematrix.musicPort} -j nixos-fw-accept || true"
-        ) cfg.cubematrix.lampAddresses
-      );
-    };
+    networking.firewall.allowedTCPPorts = [ 8123 ];
 
     # The Realtek BT chip sometimes hangs; the kernel resets it and it comes back as a new hciN.
     # HA's Bluetooth integration stays bound to the old adapter, so reload it when an adapter (not a BLE link) is added.

@@ -44,10 +44,7 @@
     homeAssistant = {
       enable = true;
       hacs = true;
-      cubematrix = {
-        enable = true;
-        lampAddresses = [ "192.168.101.121" ];
-      };
+      cubematrix.enable = true;
     };
     # Matter devices in HA (Matter integration → ws://localhost:5580/ws)
     matterServer.enable = true;

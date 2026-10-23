@@ -28,7 +28,9 @@ let
         builtins.readFile ../integrations/cubematrix/custom_components/cubematrix/manifest.json
       )).domain == "cubematrix";
     "cubematrix enabled on frogswamp" = cfg.frogswamp.homeAssistant.cubematrix.enable;
-    "music port not open to the whole LAN" = !(lib.elem 55440 cfg.networking.firewall.allowedTCPPorts);
+    "no firewall rule for the old music port" =
+      !(lib.elem 55440 cfg.networking.firewall.allowedTCPPorts)
+      && !(lib.hasInfix "55440" cfg.networking.firewall.extraCommands);
     "sops uses host SSH key" = cfg.sops.age.sshKeyPaths == [ "/etc/ssh/ssh_host_ed25519_key" ];
     "admin password hash from sops" =
       cfg.users.users.pupsich.hashedPasswordFile == cfg.sops.secrets."admin/password_hash".path;

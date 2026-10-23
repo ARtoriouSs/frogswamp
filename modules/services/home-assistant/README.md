@@ -71,7 +71,7 @@ If the Bluetooth chip hangs, the kernel resets it and it comes back under a new 
 
 ## Yeelight Cube Matrix
 
-The integration lives in `integrations/cubematrix/` (a standalone repo-shaped folder) and is mounted read-only at `/config/custom_components/cubematrix`. Repo presets are in `config/cubematrix/*.yaml`, mounted at `/config/cubematrix`; `tests/cubematrix-presets.nix` checks that each one parses. The music mode port (`musicPort`, 55440) is open only for `lampAddresses`.
+The integration lives in `integrations/cubematrix/` (a standalone repo-shaped folder) and is mounted read-only at `/config/custom_components/cubematrix`. Repo presets are in `config/cubematrix/*.yaml`, mounted at `/config/cubematrix`; `tests/cubematrix-presets.nix` checks that each one parses. The integration draws over the lamp's UDP session (outgoing to port 55444, replies on the same socket), so the firewall needs no extra rule.
 
 ## Update Home Assistant
 
