@@ -19,11 +19,11 @@ Tested with Home Assistant 2026.10 (Python 3.14).
 
 ## Before you install
 
-### 1. Turn on LAN Control
+### Turn on LAN Control
 
 In the Yeelight app, open the lamp, go to its settings and turn on **LAN Control**. Without it the lamp does not answer on the network.
 
-### 2. Reserve the lamp IP in your router
+### Reserve the lamp IP in your router
 
 The integration finds the lamp by its IP address. Give each lamp a fixed address:
 
@@ -33,7 +33,7 @@ The integration finds the lamp by its IP address. Give each lamp a fixed address
 
 This way the lamp keeps the same address after a restart of the lamp or the router.
 
-### 3. Music mode port
+### Music mode port
 
 Normal LAN control allows only about 60 commands per minute, which is about 1 frame per second. For smooth animations the integration uses **music mode**: the lamp opens a TCP connection **back to Home Assistant** and then accepts frames at full speed.
 
