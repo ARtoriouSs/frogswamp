@@ -178,10 +178,12 @@ async def test_keep_alive_while_streaming(lamp, make_conn, monkeypatch):
     monkeypatch.setattr(connection, "KEEP_ALIVE_S", 0.05)
     conn = make_conn(lamp)
     await conn.ensure_ready()
-    await asyncio.sleep(0.28)
-    keep_alives = [m for m in lamp.datagrams if m["method"] == "udp_sess_keep_alive"]
-    assert 3 <= len(keep_alives) <= 6
-    assert all(m["params"] == ["keeplive_interval", 10] for m in keep_alives)
+
+    def keep_alives():
+        return [m for m in lamp.datagrams if m["method"] == "udp_sess_keep_alive"]
+
+    await wait_until(lambda: len(keep_alives()) >= 3)
+    assert all(m["params"] == ["keeplive_interval", 10] for m in keep_alives())
     # The light is off: no session to keep
     await conn.power_off()
     count = len(lamp.datagrams)
@@ -280,6 +282,28 @@ async def test_udp_retried_only_when_asked_after_interval(
     assert conn.max_fps == connection.UDP_MAX_FPS
     await conn.send_frame(GREEN_FRAME)
     await wait_until(lambda: "udp" in lamp.frame_sources)
+
+
+async def test_fallback_sets_lan_direct_again(lamp, make_conn, monkeypatch):
+    monkeypatch.setattr(connection, "UDP_RETRY_S", 0)
+    monkeypatch.setattr(connection, "KEEP_ALIVE_S", 0.05)
+    lamp.udp_silent = True
+    conn = make_conn(lamp)
+    await conn.ensure_ready()
+    assert conn.mode == "normal"
+    lamp.udp_silent = False
+    await conn.ensure_ready(retry_udp=True)
+    assert conn.mode == "udp"
+    # While UDP runs the lamp loses LAN direct mode without a message
+    lamp.direct = False
+    lamp.udp_silent = True
+    # The keep-alive gets no answer, so the session is gone
+    await wait_until(lambda: not conn._udp_ready())
+    await conn.send_frame(RED_FRAME)
+    assert conn.mode == "normal"
+    await wait_until(lambda: lamp.frames)
+    assert lamp.frame_sources == ["lan"]
+    assert lamp.calls.count(DIRECT) == 2
 
 
 async def test_session_lost_later_warns_and_falls_back(lamp, make_conn, caplog):

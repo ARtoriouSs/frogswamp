@@ -167,6 +167,8 @@ class CubeConnection:
                 if retry:
                     _LOGGER.info("UDP session with %s works again", self.host)
                 self._udp_failed_at = None
+                # LAN direct mode may go stale while UDP runs, a fallback sets it again
+                self._direct = False
                 self._set_state("udp", True)
                 return
         if refresh or not self._direct:
@@ -207,7 +209,8 @@ class CubeConnection:
             session.on_illegal = self._on_illegal
             session.on_refused = self._on_refused
             self._session = session
-        while True:
+        # An old session that is refused or silent gets one new try
+        for attempt in range(2):
             fresh = not session.is_open
             try:
                 if fresh:
@@ -218,8 +221,7 @@ class CubeConnection:
                     self._udp_direct = True
                 break
             except UdpUnavailable:
-                # An old session that is refused or silent gets one new try
-                if fresh:
+                if fresh or attempt:
                     raise
         if self._keep_alive_task is None or self._keep_alive_task.done():
             self._keep_alive_task = asyncio.get_running_loop().create_task(
@@ -227,14 +229,15 @@ class CubeConnection:
             )
 
     async def _stop_udp(self) -> None:
-        keep_alive, self._keep_alive_task = self._keep_alive_task, None
-        reactivate, self._reactivate_task = self._reactivate_task, None
-        await stop_task(keep_alive)
-        await stop_task(reactivate)
+        # The session goes first, so no reply starts a new task while the old ones stop
         session, self._session = self._session, None
         if session is not None:
             session.close()
         self._udp_direct = False
+        keep_alive, self._keep_alive_task = self._keep_alive_task, None
+        reactivate, self._reactivate_task = self._reactivate_task, None
+        await stop_task(keep_alive)
+        await stop_task(reactivate)
 
     async def _keep_alive(self, session: UdpSession) -> None:
         while True:
@@ -303,6 +306,8 @@ class CubeConnection:
 
     def _on_illegal(self) -> None:
         # Normal: the lamp drops direct mode now and then over UDP
+        if self._session is None:
+            return
         now = asyncio.get_running_loop().time()
         if (
             self._last_reactivate is not None
