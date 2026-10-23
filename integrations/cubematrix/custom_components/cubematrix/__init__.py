@@ -13,10 +13,8 @@ from .connection import CubeConnection
 from .const import (
     CONF_DIRECTION,
     CONF_MODULES,
-    CONF_MUSIC_PORT,
     DEFAULT_DIRECTION,
     DEFAULT_MODULES,
-    DEFAULT_MUSIC_PORT,
     DOMAIN,
 )
 from .data import DATA_KEY, CubeMatrixData, CubeRuntime
@@ -45,14 +43,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: CubeMatrixConfigEntry) -
         await get_props(entry.data[CONF_HOST], ["power"])
     except LampError as err:
         raise ConfigEntryNotReady(str(err)) from err
+    # An old music_port option is left in the options and not used
     options = entry.options
     layout = Layout(
         modules=parse_modules(options.get(CONF_MODULES, DEFAULT_MODULES)),
         direction=options.get(CONF_DIRECTION, DEFAULT_DIRECTION),
     )
-    connection = CubeConnection(
-        entry.data[CONF_HOST], options.get(CONF_MUSIC_PORT, DEFAULT_MUSIC_PORT)
-    )
+    connection = CubeConnection(entry.data[CONF_HOST])
     player = Player(connection, layout, hass.data[DATA_KEY].library)
     entry.runtime_data = CubeRuntime(connection=connection, player=player)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)

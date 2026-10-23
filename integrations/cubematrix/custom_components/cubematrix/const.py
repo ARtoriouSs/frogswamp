@@ -2,14 +2,12 @@
 
 DOMAIN = "cubematrix"
 
-DEFAULT_MUSIC_PORT = 55440
 DEFAULT_MODULES = "matrix"
 DEFAULT_DIRECTION = "horizontal"
 DIRECTIONS = ["horizontal", "vertical"]
 
 CONF_MODULES = "modules"
 CONF_DIRECTION = "direction"
-CONF_MUSIC_PORT = "music_port"
 
 # Folder for preset files, under the HA config folder
 PRESET_DIR = "cubematrix"

@@ -65,12 +65,12 @@ class FakeSink:
         self.hang = False
         self.release = asyncio.Event()
 
-    async def ensure_ready(self, refresh: bool = False, retry_music: bool = False) -> None:
+    async def ensure_ready(self, refresh: bool = False, retry_udp: bool = False) -> None:
         if self.fail_ready:
             self.fail_ready -= 1
             raise LampError("lamp is gone")
         self.ready.append(refresh)
-        self.retries.append(retry_music)
+        self.retries.append(retry_udp)
 
     async def send_frame(self, raw: bytes) -> None:
         if self.hang:
@@ -117,8 +117,8 @@ class ReadySink(FakeSink):
         self.max_fps = 1.0
         self.is_ready = False
 
-    async def ensure_ready(self, refresh: bool = False, retry_music: bool = False) -> None:
-        await super().ensure_ready(refresh, retry_music)
+    async def ensure_ready(self, refresh: bool = False, retry_udp: bool = False) -> None:
+        await super().ensure_ready(refresh, retry_udp)
         self.is_ready = True
         self.max_fps = 10.0
 
@@ -561,7 +561,7 @@ async def test_then_hold_and_static_show_also_watched(rig, monkeypatch):
     assert sink.colours(since=start) == [BLACK]
 
 
-async def test_background_animation_retries_music(rig):
+async def test_background_animation_retries_udp(rig):
     player, sink = rig.player, rig.sink
     await player.turn_on()
     await rig.time.advance(29)
@@ -569,7 +569,7 @@ async def test_background_animation_retries_music(rig):
     await rig.time.advance(2)
     assert sink.retries.count(True) == 1
     assert sink.ready[sink.retries.index(True)] is False
-    # A show never asks for a music retry
+    # A show never asks for a UDP retry
     count = len(sink.retries)
     await player.show(UP, name="arrow_up")
     await rig.time.advance(1.1)

@@ -9,7 +9,6 @@ from custom_components.cubematrix import protocol
 from custom_components.cubematrix.const import (
     CONF_DIRECTION,
     CONF_MODULES,
-    CONF_MUSIC_PORT,
     DOMAIN,
     STORE_KEY,
 )
@@ -138,20 +137,6 @@ async def test_options_layout_invalid(hass, entry):
     assert dict(entry.options) == old_options
 
 
-async def test_options_music_port_reloads(hass, entry):
-    old_runtime = entry.runtime_data
-    port = free_port("0.0.0.0")
-    result = await open_options(hass, entry, "music_port")
-    result = await hass.config_entries.options.async_configure(
-        result["flow_id"], {CONF_MUSIC_PORT: port}
-    )
-    assert result["type"] is FlowResultType.CREATE_ENTRY
-    await hass.async_block_till_done()
-    assert entry.options[CONF_MUSIC_PORT] == port
-    assert entry.runtime_data is not old_runtime
-    assert entry.runtime_data.connection.music_port == port
-
-
 async def test_options_preset_add_and_priority(hass, entry, hass_storage):
     data = hass.data[DOMAIN]
     assert data.library().source("arrow_up") == "builtin"
@@ -242,12 +227,11 @@ async def test_options_preset_delete(hass, entry, hass_storage):
 async def test_options_menu_hides_edit_without_presets(hass, entry):
     result = await hass.config_entries.options.async_init(entry.entry_id)
     assert result["type"] is FlowResultType.MENU
-    assert list(result["menu_options"]) == ["layout", "music_port", "preset_add"]
+    assert list(result["menu_options"]) == ["layout", "preset_add"]
     await hass.data[DOMAIN].save_preset("dot", ARROW)
     result = await hass.config_entries.options.async_init(entry.entry_id)
     assert list(result["menu_options"]) == [
         "layout",
-        "music_port",
         "preset_add",
         "preset_edit",
         "preset_delete",

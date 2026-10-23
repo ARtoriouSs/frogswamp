@@ -1,5 +1,4 @@
 import logging
-import socket
 
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.const import STATE_OFF
@@ -11,8 +10,7 @@ from pytest_homeassistant_custom_component.common import (
 )
 
 from custom_components.cubematrix import protocol
-from custom_components.cubematrix.const import CONF_MUSIC_PORT, DOMAIN, STORE_KEY
-from custom_components.cubematrix.protocol import MusicServer
+from custom_components.cubematrix.const import DOMAIN, STORE_KEY
 
 from .fake_lamp import free_port
 
@@ -38,7 +36,6 @@ async def test_setup_entry_builds_runtime(hass, fake_lamp):
         domain=DOMAIN,
         title="Cube Matrix (127.0.0.2)",
         data={"host": fake_lamp.ip},
-        options={CONF_MUSIC_PORT: free_port("0.0.0.0")},
         unique_id=fake_lamp.ip,
     )
     entry.add_to_hass(hass)
@@ -53,7 +50,6 @@ async def test_setup_entry_builds_runtime(hass, fake_lamp):
     assert not fake_lamp.direct
     assert runtime.connection.mode == "offline"
     assert runtime.connection.host == fake_lamp.ip
-    assert runtime.connection.music_port == entry.options[CONF_MUSIC_PORT]
     assert runtime.player._layout.modules == ("matrix",)
     assert runtime.player._layout.direction == "horizontal"
     assert await hass.config_entries.async_unload(entry.entry_id)
@@ -65,7 +61,6 @@ async def test_setup_not_ready_when_unreachable(hass, loopback, monkeypatch):
     entry = MockConfigEntry(
         domain=DOMAIN,
         data={"host": "127.0.0.2"},
-        options={CONF_MUSIC_PORT: free_port("0.0.0.0")},
         unique_id="127.0.0.2",
     )
     entry.add_to_hass(hass)
@@ -78,20 +73,37 @@ async def test_setup_not_ready_when_unreachable(hass, loopback, monkeypatch):
     await hass.async_block_till_done()
 
 
-async def test_unload_releases_music_port(hass, entry):
-    port = entry.options[CONF_MUSIC_PORT]
-    # The light does this in use, it takes the shared music server
-    await entry.runtime_data.connection.ensure_ready()
-    assert entry.runtime_data.connection.mode == "music"
-    assert port in MusicServer._instances
+async def test_unload_closes_udp_session(hass, entry, fake_lamp):
+    connection = entry.runtime_data.connection
+    # The light does this in use
+    await connection.ensure_ready()
+    assert connection.mode == "udp"
+    assert fake_lamp.udp_calls == ["udp_sess_new", "activate_fx_mode"]
     assert await hass.config_entries.async_unload(entry.entry_id)
     await hass.async_block_till_done()
     assert entry.state is ConfigEntryState.NOT_LOADED
-    assert port not in MusicServer._instances
-    with socket.socket() as sock:
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        sock.bind(("0.0.0.0", port))
-        sock.listen()
+    assert connection.mode == "offline"
+    assert connection._session is None
+    assert connection._keep_alive_task is None
+
+
+async def test_old_music_port_option_is_ignored(hass, fake_lamp):
+    # Saved by an older version, before frames went over UDP
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={"host": fake_lamp.ip},
+        options={"music_port": 55440, "modules": "matrix, matrix"},
+        unique_id=fake_lamp.ip,
+    )
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    assert entry.state is ConfigEntryState.LOADED
+    assert entry.runtime_data.player._layout.modules == ("matrix", "matrix")
+    await entry.runtime_data.connection.ensure_ready()
+    assert entry.runtime_data.connection.mode == "udp"
+    assert await hass.config_entries.async_unload(entry.entry_id)
+    await hass.async_block_till_done()
 
 
 async def test_setup_not_ready_on_error_reply(hass, fake_lamp):
@@ -99,7 +111,6 @@ async def test_setup_not_ready_on_error_reply(hass, fake_lamp):
     entry = MockConfigEntry(
         domain=DOMAIN,
         data={"host": fake_lamp.ip},
-        options={CONF_MUSIC_PORT: free_port("0.0.0.0")},
         unique_id=fake_lamp.ip,
     )
     entry.add_to_hass(hass)

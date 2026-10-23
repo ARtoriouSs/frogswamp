@@ -23,7 +23,6 @@
         "title": "Cube Matrix options",
         "menu_options": {
           "layout": "Module layout",
-          "music_port": "Music mode port",
           "preset_add": "Add a preset",
           "preset_edit": "Edit a preset",
           "preset_delete": "Delete a preset"
@@ -35,13 +34,6 @@
         "data": {
           "modules": "Modules",
           "direction": "Direction"
-        }
-      },
-      "music_port": {
-        "title": "Music mode port",
-        "description": "The lamp connects back to Home Assistant on this port to get frames fast. All cubes with the same port share one server",
-        "data": {
-          "music_port": "Port"
         }
       },
       "preset_add": {

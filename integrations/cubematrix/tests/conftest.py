@@ -5,10 +5,10 @@ import pytest_socket
 from homeassistant.config_entries import ConfigEntryState
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.cubematrix import protocol
-from custom_components.cubematrix.const import CONF_MUSIC_PORT, DOMAIN
+from custom_components.cubematrix import protocol, udp
+from custom_components.cubematrix.const import DOMAIN
 
-from .fake_lamp import FakeLamp, free_port
+from .fake_lamp import FakeLamp
 
 
 @pytest.fixture(autouse=True)
@@ -26,22 +26,22 @@ def loopback(socket_enabled):
 
 @pytest.fixture
 async def fake_lamp(loopback, monkeypatch):
-    """A fake lamp on 127.0.0.2, the integration talks to its LAN port"""
+    """A fake lamp on 127.0.0.2, the integration talks to its LAN and UDP ports"""
     fake = FakeLamp("127.0.0.2")
     await fake.start()
     monkeypatch.setattr(protocol, "LAN_PORT", fake.port)
+    monkeypatch.setattr(udp, "UDP_PORT", fake.udp_port)
     yield fake
     await fake.stop()
 
 
 @pytest.fixture
 async def entry(hass, fake_lamp):
-    """A loaded entry for the fake lamp, with a free music port"""
+    """A loaded entry for the fake lamp"""
     entry = MockConfigEntry(
         domain=DOMAIN,
         title="Cube Matrix (127.0.0.2)",
         data={"host": fake_lamp.ip},
-        options={CONF_MUSIC_PORT: free_port("0.0.0.0")},
         unique_id=fake_lamp.ip,
     )
     entry.add_to_hass(hass)
@@ -56,9 +56,8 @@ async def entry(hass, fake_lamp):
 class FakeConnection:
     """Stands in for CubeConnection when the lamp itself isn't the point"""
 
-    def __init__(self, host: str, music_port: int, **kwargs) -> None:
+    def __init__(self, host: str, **kwargs) -> None:
         self.host = host
-        self.music_port = music_port
         self.on_change = None
         self.max_fps = 30.0
         self.available = False
@@ -70,7 +69,7 @@ class FakeConnection:
         self.power_offs = 0
         self.closed = False
 
-    async def ensure_ready(self, refresh: bool = False, retry_music: bool = False) -> None:
+    async def ensure_ready(self, refresh: bool = False, retry_udp: bool = False) -> None:
         if self.gone:
             self._set(False)
             raise protocol.LampError("lamp is gone")
@@ -99,7 +98,7 @@ class FakeConnection:
         if available == self.available:
             return
         self.available = available
-        self.mode = "music" if available else "offline"
+        self.mode = "udp" if available else "offline"
         if self.on_change is not None:
             self.on_change()
 
@@ -111,8 +110,8 @@ def fake_cubes(monkeypatch):
 
     made: dict[str, FakeConnection] = {}
 
-    def make(host: str, music_port: int, **kwargs) -> FakeConnection:
-        made[host] = FakeConnection(host, music_port, **kwargs)
+    def make(host: str, **kwargs) -> FakeConnection:
+        made[host] = FakeConnection(host, **kwargs)
         return made[host]
 
     async def get_props(host: str, names: list[str]) -> list[str]:

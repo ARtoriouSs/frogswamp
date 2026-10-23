@@ -25,7 +25,7 @@ RETRY_S = 5.0
 # Fit mode for the background, a small art sits in the middle of a bigger canvas
 BACKGROUND_FIT = "center"
 # How often endless content checks the lamp. A still picture is sent again (a shorter
-# STATIC_REFRESH_S wins), and music mode may be tried again after a failure
+# STATIC_REFRESH_S wins), and UDP may be tried again after a failure
 WATCHDOG_S = 30.0
 
 THEN_WORDS = ("restore", "hold", "off")
@@ -35,7 +35,7 @@ Then = str
 class Sink(Protocol):
     max_fps: float
 
-    async def ensure_ready(self, refresh: bool = False, retry_music: bool = False) -> None: ...
+    async def ensure_ready(self, refresh: bool = False, retry_udp: bool = False) -> None: ...
 
     async def send_frame(self, raw: bytes) -> None: ...
 
@@ -420,11 +420,11 @@ class Player:
             if until is not None and self._clock() >= until:
                 return
             if steady and self._clock() >= check_at:
-                # Gives music mode another chance after a failed connect-back
-                await self._sink.ensure_ready(retry_music=True)
+                # Gives UDP another chance after it failed
+                await self._sink.ensure_ready(retry_udp=True)
                 check_at = self._clock() + WATCHDOG_S
             await self._send(frame, spots)
-            # Read after the send, the sink may have just switched to music mode
+            # Read after the send, the sink may have just switched to UDP
             max_fps = self._sink.max_fps
             if seconds is None:
                 seconds = 1 / min(fps, max_fps)
@@ -471,7 +471,7 @@ class Player:
                 if self._clock() >= check_at - 1e-6:
                     # Puts back direct mode after a lamp restart or a colour change from
                     # another app, and finds out when the lamp is gone
-                    await self._sink.ensure_ready(refresh=True, retry_music=steady)
+                    await self._sink.ensure_ready(refresh=True, retry_udp=steady)
                     check_at = self._clock() + WATCHDOG_S
         finally:
             self._held = None

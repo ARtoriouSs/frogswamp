@@ -1,4 +1,4 @@
-"""Config flow (lamp address) and options flow (layout, port, presets)"""
+"""Config flow (lamp address) and options flow (layout, presets)"""
 
 from __future__ import annotations
 
@@ -14,9 +14,6 @@ from homeassistant.config_entries import (
 from homeassistant.const import CONF_HOST
 from homeassistant.core import callback
 from homeassistant.helpers.selector import (
-    NumberSelector,
-    NumberSelectorConfig,
-    NumberSelectorMode,
     SelectSelector,
     SelectSelectorConfig,
     SelectSelectorMode,
@@ -28,10 +25,8 @@ from .artformat import ArtError
 from .const import (
     CONF_DIRECTION,
     CONF_MODULES,
-    CONF_MUSIC_PORT,
     DEFAULT_DIRECTION,
     DEFAULT_MODULES,
-    DEFAULT_MUSIC_PORT,
     DIRECTIONS,
     DOMAIN,
     MODEL,
@@ -42,9 +37,6 @@ from .protocol import LampError, get_props
 
 CONF_NAME = "name"
 CONF_TEXT = "text"
-
-MIN_PORT = 1024
-MAX_PORT = 65535
 
 
 async def _read_model(host: str) -> str:
@@ -107,7 +99,7 @@ class CubeMatrixOptionsFlow(OptionsFlowWithReload):
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        menu = ["layout", "music_port", "preset_add"]
+        menu = ["layout", "preset_add"]
         if self._data.stored:
             menu += ["preset_edit", "preset_delete"]
         return self.async_show_menu(step_id="init", menu_options=menu)
@@ -155,25 +147,6 @@ class CubeMatrixOptionsFlow(OptionsFlowWithReload):
             errors=errors,
             description_placeholders=placeholders,
         )
-
-    async def async_step_music_port(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
-        if user_input is not None:
-            return self._finish_with(
-                **{CONF_MUSIC_PORT: int(user_input[CONF_MUSIC_PORT])}
-            )
-        port = self.config_entry.options.get(CONF_MUSIC_PORT, DEFAULT_MUSIC_PORT)
-        schema = vol.Schema(
-            {
-                vol.Required(CONF_MUSIC_PORT, default=port): NumberSelector(
-                    NumberSelectorConfig(
-                        min=MIN_PORT, max=MAX_PORT, step=1, mode=NumberSelectorMode.BOX
-                    )
-                ),
-            }
-        )
-        return self.async_show_form(step_id="music_port", data_schema=schema)
 
     async def async_step_preset_add(
         self, user_input: dict[str, Any] | None = None
