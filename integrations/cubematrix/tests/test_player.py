@@ -1,10 +1,12 @@
 import asyncio
 import heapq
 import itertools
+import logging
 
 import pytest
 
 from custom_components.cubematrix import connection
+from custom_components.cubematrix import player as player_module
 from custom_components.cubematrix.artformat import Art, ArtError
 from custom_components.cubematrix.effects import EFFECTS
 from custom_components.cubematrix.layout import Layout
@@ -55,13 +57,28 @@ class FakeSink:
         self.max_fps = 30.0
         self.frames: list[tuple[float, bytes]] = []
         self.ready: list[bool] = []
+        self.retries: list[bool] = []
         self.power_offs = 0
         self.fail = 0
+        self.fail_ready = 0
+        # When set, send_frame never ends and a cancel waits for release
+        self.hang = False
+        self.release = asyncio.Event()
 
-    async def ensure_ready(self, refresh: bool = False) -> None:
+    async def ensure_ready(self, refresh: bool = False, retry_music: bool = False) -> None:
+        if self.fail_ready:
+            self.fail_ready -= 1
+            raise LampError("lamp is gone")
         self.ready.append(refresh)
+        self.retries.append(retry_music)
 
     async def send_frame(self, raw: bytes) -> None:
+        if self.hang:
+            try:
+                await asyncio.get_running_loop().create_future()
+            except asyncio.CancelledError:
+                await self.release.wait()
+                raise
         if self.fail:
             self.fail -= 1
             raise LampError("lamp is gone")
@@ -92,20 +109,51 @@ def solid_art(name, colours, *, fps=5, size=(5, 5), durations=None, spots=None) 
     )
 
 
+class ReadySink(FakeSink):
+    """Like CubeConnection: slow until the first ensure_ready"""
+
+    def __init__(self, time: FakeTime) -> None:
+        super().__init__(time)
+        self.max_fps = 1.0
+        self.is_ready = False
+
+    async def ensure_ready(self, refresh: bool = False, retry_music: bool = False) -> None:
+        await super().ensure_ready(refresh, retry_music)
+        self.is_ready = True
+        self.max_fps = 10.0
+
+    async def send_frame(self, raw: bytes) -> None:
+        if not self.is_ready:
+            await self.ensure_ready()
+        await super().send_frame(raw)
+
+
+class Broken:
+    """An effect with a bug: it fails on its third frame"""
+
+    name = "broken"
+    fps = 10.0
+
+    def frame(self, index: int, width: int, height: int):
+        if index >= 2:
+            raise RuntimeError("bug in effect")
+        return ((9, 9, 9),) * (width * height)
+
+
 UP = solid_art("arrow_up", [(1, 0, 0), (2, 0, 0), (3, 0, 0), (4, 0, 0), (5, 0, 0)])
 DOWN = solid_art("arrow_down", [(0, 1, 0), (0, 2, 0), (0, 3, 0), (0, 4, 0), (0, 5, 0)])
 CHECK = solid_art("check", [(0, 0, 200)])
 FAST = solid_art("fast", [(n, n, n) for n in range(1, 31)], fps=30)
 WIDE = solid_art("wide", [(7, 7, 7)], size=(15, 5))
+SMALL = solid_art("small", [(6, 6, 6)], size=(3, 3))
 
 
 class Rig:
-    def __init__(self, layout: Layout | None = None) -> None:
+    def __init__(self, layout: Layout | None = None, sink_class=None) -> None:
         self.time = FakeTime()
-        self.sink = FakeSink(self.time)
-        library = PresetLibrary(
-            {art.name: art for art in (UP, DOWN, CHECK, FAST, WIDE)} | EFFECTS, {}, {}
-        )
+        self.sink = (sink_class or FakeSink)(self.time)
+        arts = {art.name: art for art in (UP, DOWN, CHECK, FAST, WIDE, SMALL)}
+        library = PresetLibrary(arts | EFFECTS | {"broken": Broken()}, {}, {})
         self.player = Player(
             self.sink,
             layout or Layout(),
@@ -465,12 +513,67 @@ async def test_static_refresh(rig, monkeypatch):
     start = rig.time.now
     await rig.time.advance(4)
     assert sink.colours(since=start) == [(0, 0, 200), (0, 0, 200)]
+    # A longer refresh than the watchdog: the watchdog wins
+    monkeypatch.setattr(connection, "STATIC_REFRESH_S", 100.0)
+    await rig.time.advance(0.1)
+    start = rig.time.now
+    await rig.time.advance(70)
+    assert len(sink.colours(since=start)) == 3
+
+
+async def test_held_picture_watchdog(rig, monkeypatch):
+    player, sink = rig.player, rig.sink
     monkeypatch.setattr(connection, "STATIC_REFRESH_S", None)
+    await player.turn_on()
     await player.set_background(None)
     await rig.time.advance(0.1)
     start = rig.time.now
-    await rig.time.advance(10)
+    readies = len(sink.ready)
+    await rig.time.advance(29)
     assert sink.colours(since=start) == []
+    # After 30 s the lamp is checked (direct mode again) and the picture goes out again
+    await rig.time.advance(2)
+    assert sink.colours(since=start) == [BLACK]
+    assert sink.ready[readies:] == [True]
+    assert sink.retries[readies:] == [True]
+    # A lamp that is gone is noticed at the next check, then tried again
+    sink.fail_ready = 1
+    start = rig.time.now
+    await rig.time.advance(30)
+    assert sink.colours(since=start) == []
+    await rig.time.advance(5.1)
+    assert sink.colours(since=start) == [BLACK]
+
+
+async def test_then_hold_and_static_show_also_watched(rig, monkeypatch):
+    player, sink = rig.player, rig.sink
+    monkeypatch.setattr(connection, "STATIC_REFRESH_S", None)
+    await player.turn_on()
+    await player.show(UP, name="arrow_up", then="hold")
+    await rig.time.advance(1.1)
+    start = rig.time.now
+    await rig.time.advance(31)
+    assert sink.colours(since=start) == [(5, 0, 0)]
+    await player.show(UP, name="arrow_up", then="off")
+    await rig.time.advance(1.1)
+    start = rig.time.now
+    await rig.time.advance(31)
+    assert sink.colours(since=start) == [BLACK]
+
+
+async def test_background_animation_retries_music(rig):
+    player, sink = rig.player, rig.sink
+    await player.turn_on()
+    await rig.time.advance(29)
+    assert True not in sink.retries
+    await rig.time.advance(2)
+    assert sink.retries.count(True) == 1
+    assert sink.ready[sink.retries.index(True)] is False
+    # A show never asks for a music retry
+    count = len(sink.retries)
+    await player.show(UP, name="arrow_up")
+    await rig.time.advance(1.1)
+    assert True not in sink.retries[count:]
 
 
 async def test_listeners(rig):
@@ -535,3 +638,132 @@ async def test_set_background_right_after_show_keeps_show(rig):
     assert player.playing == "arrow_up"
     await rig.time.advance(0.6)
     assert player.playing == "rainbow"
+
+
+async def test_background_fps_follows_sink_after_ready():
+    rig = Rig(sink_class=ReadySink)
+    try:
+        await rig.player.turn_on()
+        await rig.time.advance(3)
+        # Fire runs at 10 fps once the sink is ready, not at the 1 fps from before
+        assert 28 <= len(rig.sink.frames) <= 31
+    finally:
+        await rig.player.shutdown()
+
+
+async def test_then_preset_uses_background_fit(rig):
+    player = rig.player
+    await player.turn_on()
+    # A 3x3 art on a 5x5 cube: the show fit is "error", the then preset is centred
+    await player.show(UP, name="arrow_up", then="small")
+    await rig.time.advance(1.1)
+    assert player.playing == "small"
+
+
+async def test_turn_on_restarts_finished_task(rig):
+    player, sink = rig.player, rig.sink
+    await player.turn_on()
+    await settle()
+    player._task.cancel()
+    await settle()
+    count = len(sink.frames)
+    await rig.time.advance(1)
+    assert len(sink.frames) == count
+    await player.turn_on()
+    await rig.time.advance(1)
+    assert len(sink.frames) > count
+
+
+async def test_content_bug_in_show_goes_back_to_background(rig, caplog):
+    player = rig.player
+    await player.turn_on()
+    with caplog.at_level(logging.ERROR):
+        task = await player.show(Broken(), name="broken", duration=10)
+        await rig.time.advance(0.5)
+    assert task.done()
+    assert any(record.exc_info for record in caplog.records)
+    await rig.time.advance(5.1)
+    assert player.playing == "fire"
+
+
+async def test_content_bug_in_then_preset_goes_back_to_background(rig):
+    player = rig.player
+    await player.turn_on()
+    await player.show(UP, name="arrow_up", then="broken")
+    await rig.time.advance(1.5)
+    await rig.time.advance(5.1)
+    assert player.playing == "fire"
+
+
+async def test_content_bug_in_background_shows_black(rig):
+    player, sink = rig.player, rig.sink
+    await player.turn_on()
+    await player.set_background("broken")
+    await rig.time.advance(0.5)
+    await rig.time.advance(5.1)
+    assert sink.last() == BLACK
+    assert player.playing is None
+    assert not player._task.done()
+    await player.set_background("fire")
+    await rig.time.advance(0.5)
+    assert player.playing == "fire"
+
+
+async def test_cancelled_stop_caller_leaves_no_stale_flags(rig):
+    player, sink = rig.player, rig.sink
+    await player.turn_on()
+    await rig.time.advance(0.5)
+    waiter = await player.show(UP, name="arrow_up", repeat=None)
+    await rig.time.advance(0.5)
+    sink.hang = True
+    await rig.time.advance(0.3)
+    # Like an automation in restart mode: the caller is cancelled while it waits
+    caller = asyncio.create_task(player.stop())
+    await settle()
+    assert not caller.done()
+    caller.cancel()
+    await settle()
+    assert caller.cancelled()
+    assert waiter.done()
+    sink.hang = False
+    sink.release.set()
+    await settle()
+    await player.set_background("rainbow")
+    await rig.time.advance(0.5)
+    assert player.playing == "rainbow"
+
+
+async def test_cancelled_show_caller_leaves_no_stale_flags(rig):
+    player, sink = rig.player, rig.sink
+    await player.turn_on()
+    await rig.time.advance(0.5)
+    sink.hang = True
+    await rig.time.advance(0.2)
+    caller = asyncio.create_task(player.show(UP, name="arrow_up"))
+    await settle()
+    assert not caller.done()
+    caller.cancel()
+    await settle()
+    assert caller.cancelled()
+    sink.hang = False
+    sink.release.set()
+    await settle()
+    count = len(sink.frames)
+    await player.stop()
+    await rig.time.advance(0.5)
+    assert len(sink.frames) > count
+    assert player.playing == "fire"
+
+
+async def test_lamp_loss_logged_once(rig, caplog):
+    player, sink = rig.player, rig.sink
+    sink.fail = 5
+    with caplog.at_level(logging.DEBUG, logger=player_module.__name__):
+        await player.turn_on()
+        await rig.time.advance(30)
+    records = [record for record in caplog.records if record.name == player_module.__name__]
+    levels = [record.levelno for record in records]
+    assert levels.count(logging.WARNING) == 1
+    assert levels.count(logging.DEBUG) == 4
+    assert levels.count(logging.INFO) == 1
+    assert sink.frames

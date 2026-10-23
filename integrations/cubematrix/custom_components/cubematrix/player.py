@@ -24,6 +24,9 @@ DEFAULT_SHOW_S = 5.0
 RETRY_S = 5.0
 # Fit mode for the background, a small art sits in the middle of a bigger canvas
 BACKGROUND_FIT = "center"
+# How often endless content checks the lamp. A still picture is sent again (a shorter
+# STATIC_REFRESH_S wins), and music mode may be tried again after a failure
+WATCHDOG_S = 30.0
 
 THEN_WORDS = ("restore", "hold", "off")
 Then = str
@@ -32,7 +35,7 @@ Then = str
 class Sink(Protocol):
     max_fps: float
 
-    async def ensure_ready(self, refresh: bool = False) -> None: ...
+    async def ensure_ready(self, refresh: bool = False, retry_music: bool = False) -> None: ...
 
     async def send_frame(self, raw: bytes) -> None: ...
 
@@ -93,6 +96,8 @@ class Player:
         # The frame on the cube while content holds still, sent again on a brightness change
         self._held: tuple[Frame, Sequence[RGB] | None] | None = None
         self._last: tuple[Frame, Sequence[RGB] | None] | None = None
+        # Set after a lamp error until a frame goes out again, so the log is not flooded
+        self._lamp_lost = False
 
     # Public API
 
@@ -107,7 +112,8 @@ class Player:
 
     async def turn_on(self) -> None:
         async with self._lock:
-            if self._closed or (self.power and self._task is not None):
+            running = self._task is not None and not self._task.done()
+            if self._closed or (self.power and running):
                 return
             self.power = True
             self._notify()
@@ -178,7 +184,7 @@ class Player:
             then_playable = self._library().get(then)
             if then_playable is None:
                 raise KeyError(then)
-            after = self._fit(then_playable, then, fit)
+            after = self._fit(then_playable, then, BACKGROUND_FIT)
         async with self._lock:
             if self._closed or not self.power:
                 _LOGGER.debug("Light is off, %s is muted", name)
@@ -223,17 +229,20 @@ class Player:
 
     async def _cancel(self) -> None:
         task, self._task = self._task, None
-        if task is not None and not task.done():
-            task.cancel()
-            # asyncio.wait does not swallow a cancel of the caller itself
-            await asyncio.wait({task})
-        if self._event_done is not None:
-            # Also covers a show that was replaced before its task started
-            self._event_done.set()
-            self._event_done = None
-        self._in_event = False
-        self._on_background = False
-        self._held = None
+        try:
+            if task is not None and not task.done():
+                task.cancel()
+                # asyncio.wait does not swallow a cancel of the caller itself
+                await asyncio.wait({task})
+        finally:
+            # Runs even when the caller is cancelled, so no flag is left behind
+            if self._event_done is not None:
+                # Also covers a show that was replaced before its task started
+                self._event_done.set()
+                self._event_done = None
+            self._in_event = False
+            self._on_background = False
+            self._held = None
 
     async def _guard(self, factory: Callable[[], Awaitable[None]]) -> None:
         # The coroutine is made here, so a task cancelled before it starts leaves nothing behind
@@ -260,11 +269,14 @@ class Player:
                 except ValueError as err:
                     _LOGGER.warning("Background %s does not fit, showing black: %s", name, err)
         if content is None:
-            self._set_playing(None)
-            await self._steady(lambda: self._hold(self._black(), None, None))
+            await self._run_black()
         else:
             self._set_playing(content.name)
-            await self._steady(lambda: self._loop(content))
+            await self._steady(lambda: self._loop(content), fallback=self._run_black)
+
+    async def _run_black(self) -> None:
+        self._set_playing(None)
+        await self._steady(lambda: self._hold(self._black(), None, None, steady=True))
 
     async def _run_show(
         self,
@@ -283,7 +295,14 @@ class Player:
             await self._play_event(content, repeat, duration, fps)
         except LampError as err:
             # The moment for this event has passed, it is not played again
-            _LOGGER.warning("Show %s failed: %s", content.name, err)
+            if self._lamp_lost:
+                _LOGGER.debug("Show %s failed: %s", content.name, err)
+            else:
+                _LOGGER.warning("Show %s failed: %s", content.name, err)
+            self._lamp_lost = True
+            failed = True
+        except Exception:
+            _LOGGER.exception("Show %s stopped with an error", content.name)
             failed = True
         finally:
             self._in_event = False
@@ -296,16 +315,18 @@ class Player:
         elif then == "hold":
             last = self._last
             if last is not None:
-                await self._steady(lambda: self._hold(last[0], last[1], None))
+                await self._steady(
+                    lambda: self._hold(last[0], last[1], None, steady=True),
+                    fallback=self._run_background,
+                )
             else:
                 await self._forever()
         elif then == "off":
-            self._set_playing(None)
-            await self._steady(lambda: self._hold(self._black(), None, None))
+            await self._run_black()
         else:
             assert after is not None
             self._set_playing(after.name)
-            await self._steady(lambda: self._loop(after))
+            await self._steady(lambda: self._loop(after), fallback=self._run_background)
 
     async def _play_event(
         self,
@@ -324,57 +345,91 @@ class Player:
             # An effect has no loops to count, so it runs for the default time
             duration = DEFAULT_SHOW_S
         until = None if duration is None else self._clock() + duration
-        await self._animate(self._frames(content, fps, repeat), until)
+        await self._animate(self._frames(content, repeat), until, fps or content.playable.fps)
 
     async def _loop(self, content: _Content) -> None:
         """Play content until cancelled"""
         if content.is_static:
             assert content.frames is not None
-            await self._hold(content.frames[0], content.spots, None)
+            await self._hold(content.frames[0], content.spots, None, steady=True)
         else:
-            await self._animate(self._frames(content, None, None), None)
+            frames = self._frames(content, None)
+            await self._animate(frames, None, content.playable.fps, steady=True)
 
-    async def _steady(self, play: Callable[[], Awaitable[None]]) -> None:
-        """Run endless content, after a lamp error wait and start it again"""
+    async def _steady(
+        self,
+        play: Callable[[], Awaitable[None]],
+        fallback: Callable[[], Awaitable[None]] | None = None,
+    ) -> None:
+        """Run endless content, after a lamp error wait and start it again
+
+        After any other error, wait and run fallback instead (with no fallback the error goes up)
+        """
         while True:
             try:
                 await play()
                 return
             except LampError as err:
-                _LOGGER.warning("Lamp error, trying again in %s s: %s", RETRY_S, err)
+                if self._lamp_lost:
+                    _LOGGER.debug("Lamp still not reachable: %s", err)
+                else:
+                    _LOGGER.warning(
+                        "Lamp error, trying again every %s s (repeats are logged at debug level): %s",
+                        RETRY_S,
+                        err,
+                    )
+                self._lamp_lost = True
                 await self._sleep(RETRY_S)
+            except Exception:
+                if fallback is None:
+                    raise
+                _LOGGER.exception("Player content stopped with an error, going back to the background")
+                await self._sleep(RETRY_S)
+                await fallback()
+                return
 
     def _frames(
-        self, content: _Content, fps: float | None, loops: int | None
-    ) -> Iterator[tuple[Frame, Sequence[RGB] | None, float]]:
-        """Yield (frame, spots, seconds) for each frame to show"""
+        self, content: _Content, loops: int | None
+    ) -> Iterator[tuple[Frame, Sequence[RGB] | None, float | None]]:
+        """Yield (frame, spots, seconds) for each frame to show, None seconds means use fps"""
         playable = content.playable
-        max_fps = self._sink.max_fps
-        step = 1 / min(fps or playable.fps, max_fps)
-        shortest = 1 / max_fps
         if content.frames is None:
             width, height = self._layout.width, self._layout.height
             # An effect has no loops, the caller ends it by time
             for index in itertools.count():
-                yield playable.frame(index, width, height), None, step
+                yield playable.frame(index, width, height), None, None
             return
         assert isinstance(playable, Art)
         for loop in itertools.count():
             if loops is not None and loop >= loops:
                 return
             for frame, seconds in zip(content.frames, playable.durations):
-                yield frame, content.spots, step if seconds is None else max(seconds, shortest)
+                yield frame, content.spots, seconds
 
     async def _animate(
         self,
-        frames: Iterator[tuple[Frame, Sequence[RGB] | None, float]],
+        frames: Iterator[tuple[Frame, Sequence[RGB] | None, float | None]],
         until: float | None,
+        fps: float,
+        *,
+        steady: bool = False,
     ) -> None:
         next_at = self._clock()
+        check_at = next_at + WATCHDOG_S
         for frame, spots, seconds in frames:
             if until is not None and self._clock() >= until:
                 return
+            if steady and self._clock() >= check_at:
+                # Gives music mode another chance after a failed connect-back
+                await self._sink.ensure_ready(retry_music=True)
+                check_at = self._clock() + WATCHDOG_S
             await self._send(frame, spots)
+            # Read after the send, the sink may have just switched to music mode
+            max_fps = self._sink.max_fps
+            if seconds is None:
+                seconds = 1 / min(fps, max_fps)
+            else:
+                seconds = max(seconds, 1 / max_fps)
             next_at += seconds
             wake = next_at if until is None else min(next_at, until)
             delay = wake - self._clock()
@@ -385,33 +440,48 @@ class Player:
                 next_at = self._clock()
 
     async def _hold(
-        self, frame: Frame, spots: Sequence[RGB] | None, seconds: float | None
+        self,
+        frame: Frame,
+        spots: Sequence[RGB] | None,
+        seconds: float | None,
+        *,
+        steady: bool = False,
     ) -> None:
-        """Show one frame for seconds (None is forever), sent again every STATIC_REFRESH_S"""
+        """Show one frame for seconds (None is forever)
+
+        The frame is sent again every STATIC_REFRESH_S or WATCHDOG_S, whichever is shorter,
+        and every WATCHDOG_S the lamp is checked first
+        """
         until = None if seconds is None else self._clock() + seconds
+        check_at = self._clock() + WATCHDOG_S
         try:
             while True:
                 await self._send(frame, spots)
                 self._held = (frame, spots)
                 refresh = connection.STATIC_REFRESH_S
+                if refresh is None or refresh > WATCHDOG_S:
+                    refresh = WATCHDOG_S
                 left = None if until is None else until - self._clock()
                 if left is not None and left <= 0:
-                    return
-                if refresh is None:
-                    if left is None:
-                        await self._forever()
-                    await self._sleep(left)
                     return
                 if left is not None and left <= refresh:
                     await self._sleep(left)
                     return
                 await self._sleep(refresh)
+                if self._clock() >= check_at - 1e-6:
+                    # Puts back direct mode after a lamp restart or a colour change from
+                    # another app, and finds out when the lamp is gone
+                    await self._sink.ensure_ready(refresh=True, retry_music=steady)
+                    check_at = self._clock() + WATCHDOG_S
         finally:
             self._held = None
 
     async def _send(self, frame: Frame, spots: Sequence[RGB] | None) -> None:
         self._last = (frame, spots)
         await self._sink.send_frame(self._layout.led_bytes(frame, spots, self.brightness))
+        if self._lamp_lost:
+            self._lamp_lost = False
+            _LOGGER.info("Lamp is reachable again")
 
     # Helpers
 

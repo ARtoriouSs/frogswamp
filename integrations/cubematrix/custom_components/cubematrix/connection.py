@@ -19,6 +19,9 @@ MUSIC_MAX_FPS: float = 10.0
 NORMAL_MAX_FPS = 1.0
 # Placeholder: how often a still picture is sent again, set by a hardware check
 STATIC_REFRESH_S: float | None = None
+# After a failed connect-back, music mode is tried again at most this often, and only
+# when the caller asks for it (the background does, a show does not)
+MUSIC_RETRY_S = 300.0
 
 # Any of these in a props message means the lamp left direct mode
 DIRECT_LOST_PROPS = ("rgb", "ct", "hue", "sat", "color_mode", "flowing")
@@ -50,8 +53,8 @@ class CubeConnection:
         self._link: MusicLink | None = None
         self._power_on = False
         self._direct = False
-        # After a fallback, music is tried again only on a new LAN connection
-        self._music_failed = False
+        # Loop time of the last failed music try, None when music may be tried now
+        self._music_failed_at: float | None = None
         self._mode: Mode = "offline"
         self._available = False
         self._lock = asyncio.Lock()
@@ -71,10 +74,10 @@ class CubeConnection:
     def available(self) -> bool:
         return self._available
 
-    async def ensure_ready(self, refresh: bool = False) -> None:
+    async def ensure_ready(self, refresh: bool = False, retry_music: bool = False) -> None:
         async with self._lock:
             try:
-                await self._prepare(refresh)
+                await self._prepare(refresh, retry_music)
             except LampError:
                 self._after_failure()
                 raise
@@ -123,7 +126,7 @@ class CubeConnection:
             self._direct = False
             self._set_state("offline", False)
 
-    async def _prepare(self, refresh: bool) -> None:
+    async def _prepare(self, refresh: bool, retry_music: bool) -> None:
         lan = await self._connect_lan()
         if not self._power_on:
             await lan.call("set_power", ["on", "smooth", 300])
@@ -132,9 +135,13 @@ class CubeConnection:
             await lan.call("activate_fx_mode", [{"mode": "direct"}])
             self._direct = True
         music = self._link is not None and not self._link.closed
-        if not music and not self._music_failed:
-            music = await self._start_music(lan)
-            self._music_failed = not music
+        if not music and self._music_may_start(retry_music):
+            # Warn only on the first failure, a retry that fails again is quiet
+            retry = self._music_failed_at is not None
+            music = await self._start_music(lan, warn=not retry)
+            if music and retry:
+                _LOGGER.info("Music mode works again for %s", self.host)
+            self._music_failed_at = None if music else asyncio.get_running_loop().time()
         self._set_state("music" if music else "normal", True)
 
     async def _connect_lan(self) -> LanClient:
@@ -151,16 +158,23 @@ class CubeConnection:
         # A new connection knows nothing about the lamp state
         self._power_on = False
         self._direct = False
-        self._music_failed = False
+        self._music_failed_at = None
         return lan
 
-    async def _start_music(self, lan: LanClient) -> bool:
+    def _music_may_start(self, retry_music: bool) -> bool:
+        if self._music_failed_at is None:
+            return True
+        waited = asyncio.get_running_loop().time() - self._music_failed_at
+        return retry_music and waited >= MUSIC_RETRY_S
+
+    async def _start_music(self, lan: LanClient, *, warn: bool = True) -> bool:
+        log = _LOGGER.warning if warn else _LOGGER.debug
         if self._server is None:
             server = MusicServer.shared(self.music_port)
             try:
                 await server.acquire()
             except LampError as err:
-                _LOGGER.warning(
+                log(
                     "%s; using normal mode (about 1 frame per second). "
                     "See README: Music mode port",
                     err,
@@ -178,7 +192,7 @@ class CubeConnection:
                 raise
             link = None
         if link is None or link.closed:
-            _LOGGER.warning(MUSIC_FALLBACK, self.host, self.music_port)
+            log(MUSIC_FALLBACK, self.host, self.music_port)
             return False
         link.on_close = lambda: self._on_link_closed(link)
         self._link = link

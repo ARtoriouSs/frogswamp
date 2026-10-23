@@ -350,7 +350,7 @@ actions:
 ## Troubleshooting
 
 **The colour changes by itself, or the picture disappears.**
-Matter, the Yeelight app or another integration changed the lamp's colour. The lamp then leaves direct mode. The integration notices this and recovers, but there can be a short flash. Do not control the same lamp from other apps or integrations while the cube is in use.
+Matter, the Yeelight app or another integration changed the lamp's colour. The lamp then leaves direct mode. The integration notices this and recovers, but there can be a short flash. A still picture (for example the `off` background) is checked and sent again every 30 seconds, so it can take up to 30 seconds to come back. The same check finds a lamp that lost power: the light becomes unavailable and comes back by itself. Do not control the same lamp from other apps or integrations while the cube is in use.
 
 **The lamp ignores frames, or the cube stays dark or shows wrong pixels.**
 - Check that **LAN Control** is on in the Yeelight app.
@@ -359,7 +359,7 @@ Matter, the Yeelight app or another integration changed the lamp's colour. The l
 - Make sure the light is on.
 
 **Animations are slow (about 1 frame per second) and the log says music mode didn't arrive.**
-The lamp could not connect back to Home Assistant, so the integration uses normal mode. Check the firewall for port 55440 (or your own port), only for the lamp IP. Check that the lamp and Home Assistant can reach each other (same network or a route between them), and that the container, if any, publishes the port. Check that no other program uses the port. After you fix it, reload the integration.
+The lamp could not connect back to Home Assistant, so the integration uses normal mode. Check the firewall for port 55440 (or your own port), only for the lamp IP. Check that the lamp and Home Assistant can reach each other (same network or a route between them), and that the container, if any, publishes the port. Check that no other program uses the port. After you fix it, reload the integration, or wait: while the background plays, music mode is tried again every 5 minutes.
 
 **Frame rate limit.**
 In music mode the integration sends at most `MUSIC_MAX_FPS` frames per second. The current value is 10, which is a placeholder: the tested limit is to be measured on real hardware. Higher `fps` values are cut to this limit. In normal mode the limit is about 1 frame per second.

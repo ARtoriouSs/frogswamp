@@ -70,7 +70,7 @@ class FakeConnection:
         self.power_offs = 0
         self.closed = False
 
-    async def ensure_ready(self, refresh: bool = False) -> None:
+    async def ensure_ready(self, refresh: bool = False, retry_music: bool = False) -> None:
         if self.gone:
             self._set(False)
             raise protocol.LampError("lamp is gone")

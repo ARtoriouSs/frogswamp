@@ -4,7 +4,12 @@ import logging
 import pytest
 
 from custom_components.cubematrix import connection
+from custom_components.cubematrix import player as player_module
 from custom_components.cubematrix.connection import CubeConnection
+from custom_components.cubematrix.effects import EFFECTS
+from custom_components.cubematrix.layout import Layout
+from custom_components.cubematrix.player import Player
+from custom_components.cubematrix.presets import PresetLibrary
 from custom_components.cubematrix.protocol import (
     LampError,
     LanClient,
@@ -145,6 +150,37 @@ async def test_fallback_normal_when_music_refused(lamp, make_conn, caplog):
     assert lamp.frame_sources == ["lan"]
 
 
+async def test_music_retried_only_when_asked_after_interval(
+    lamp, make_conn, monkeypatch, caplog
+):
+    monkeypatch.setattr(connection, "MUSIC_RETRY_S", 0.3)
+    lamp.refuse_music = True
+    conn = make_conn(lamp, music_timeout=0.1)
+    await conn.ensure_ready()
+    assert conn.mode == "normal"
+    # Still refused at the first retry: no second warning
+    await asyncio.sleep(0.35)
+    caplog.clear()
+    with caplog.at_level(logging.WARNING):
+        await conn.ensure_ready(retry_music=True)
+    assert conn.mode == "normal"
+    assert [r for r in caplog.records if r.levelno >= logging.WARNING] == []
+    lamp.refuse_music = False
+    # Too soon after the last try
+    await conn.ensure_ready(retry_music=True)
+    assert conn.mode == "normal"
+    await asyncio.sleep(0.35)
+    # Shows and frames never wait for music
+    await conn.ensure_ready()
+    await conn.ensure_ready(refresh=True)
+    await conn.send_frame(RED_FRAME)
+    assert conn.mode == "normal"
+    assert lamp.calls.count("set_music") == 2
+    await conn.ensure_ready(retry_music=True)
+    assert conn.mode == "music"
+    assert conn.max_fps == connection.MUSIC_MAX_FPS
+
+
 async def test_normal_mode_keeps_only_newest_waiting_frame(
     lamp, make_conn, monkeypatch
 ):
@@ -245,3 +281,39 @@ async def test_lamp_comes_back_after_failure(loopback, make_conn):
     finally:
         await conn.close()
         await fake.stop()
+
+
+def player_for(conn):
+    library = PresetLibrary(dict(EFFECTS), {}, {})
+    return Player(conn, Layout(), lambda: library)
+
+
+async def test_player_background_runs_fast_on_real_connection(lamp, make_conn):
+    conn = make_conn(lamp)
+    player = player_for(conn)
+    try:
+        await player.turn_on()
+        await asyncio.sleep(1.0)
+        # Fire at 10 fps in music mode, not 1 fps from the offline start
+        assert len(lamp.frames) >= 7
+        assert set(lamp.frame_sources) == {"music"}
+    finally:
+        await player.shutdown()
+
+
+async def test_player_brings_music_back_after_failed_connect_back(
+    lamp, make_conn, monkeypatch
+):
+    monkeypatch.setattr(connection, "MUSIC_RETRY_S", 0.3)
+    monkeypatch.setattr(player_module, "WATCHDOG_S", 0.2)
+    lamp.refuse_music = True
+    conn = make_conn(lamp, music_timeout=0.1)
+    player = player_for(conn)
+    try:
+        await player.turn_on()
+        await wait_until(lambda: conn.mode == "normal")
+        lamp.refuse_music = False
+        await wait_until(lambda: conn.mode == "music")
+        await wait_until(lambda: "music" in lamp.frame_sources)
+    finally:
+        await player.shutdown()
