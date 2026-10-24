@@ -1,8 +1,8 @@
-# Both bathroom floors, through the Tuya scenes. Weekdays on 08:00–11:00 and 22:00–00:00,
-# weekends on 09:00–12:00 and 23:00–01:00. A night ends on the next day, so its "off" is
-# checked against the day the night started (Friday night ends at 00:00, Sunday night at 01:00).
-# Vacation and Tuya rule mode stop it. One automation per bathroom (each has its own area),
-# the second one reuses the first one's schedule
+# Both bathroom floors, through the Tuya scenes. Mornings: weekdays 08:00–11:00, weekends 09:00–12:00.
+# Nights: Sunday–Thursday 22:00–00:00, Friday and Saturday 23:00–01:00. A night ends on the next day,
+# so its "off" is checked against the day the night started (Thursday night ends at 00:00 on Friday,
+# Saturday night at 01:00 on Sunday). Vacation and Tuya rule mode stop it. One automation per bathroom
+# (each has its own area), the second one reuses the first one's schedule
 - id: repo_floor_warming_guest
   alias: "Floor warming: guest"
   description: Guest bathroom floor
@@ -10,25 +10,27 @@
   triggers: &floor_warming_triggers
     - trigger: time
       id: on_weekday
-      at:
-        - "08:00:00"
-        - "22:00:00"
+      at: "08:00:00"
     - trigger: time
       id: off_weekday
       at: "11:00:00"
     - trigger: time
-      id: off_weekday_night
-      at: "00:00:00"
-    - trigger: time
       id: on_weekend
-      at:
-        - "09:00:00"
-        - "23:00:00"
+      at: "09:00:00"
     - trigger: time
       id: off_weekend
       at: "12:00:00"
     - trigger: time
-      id: off_weekend_night
+      id: on_night
+      at: "22:00:00"
+    - trigger: time
+      id: off_night
+      at: "00:00:00"
+    - trigger: time
+      id: on_late_night
+      at: "23:00:00"
+    - trigger: time
+      id: off_late_night
       at: "01:00:00"
   conditions: &floor_warming_conditions
     - condition: state
@@ -46,13 +48,6 @@
                 - off_weekday
             - condition: time
               weekday: [mon, tue, wed, thu, fri]
-        # midnight after Monday–Friday
-        - condition: and
-          conditions:
-            - condition: trigger
-              id: off_weekday_night
-            - condition: time
-              weekday: [tue, wed, thu, fri, sat]
         - condition: and
           conditions:
             - condition: trigger
@@ -61,13 +56,32 @@
                 - off_weekend
             - condition: time
               weekday: [sat, sun]
-        # 01:00 after Saturday and Sunday
         - condition: and
           conditions:
             - condition: trigger
-              id: off_weekend_night
+              id: on_night
             - condition: time
-              weekday: [sun, mon]
+              weekday: [sun, mon, tue, wed, thu]
+        # midnight after Sunday–Thursday
+        - condition: and
+          conditions:
+            - condition: trigger
+              id: off_night
+            - condition: time
+              weekday: [mon, tue, wed, thu, fri]
+        - condition: and
+          conditions:
+            - condition: trigger
+              id: on_late_night
+            - condition: time
+              weekday: [fri, sat]
+        # 01:00 after Friday and Saturday
+        - condition: and
+          conditions:
+            - condition: trigger
+              id: off_late_night
+            - condition: time
+              weekday: [sat, sun]
   actions:
     - action: scene.turn_on
       target:

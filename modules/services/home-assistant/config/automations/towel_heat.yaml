@@ -1,0 +1,75 @@
+# Master bathroom towel heat, through its Zigbee relay (the heater itself stays on, the relay gives it power).
+# Follows the night floor warming and turns off 1 h after it: Sunday–Thursday 22:00–01:00, Friday and Saturday 23:00–02:00.
+# A night ends on the next day, so its "off" is checked against the day the night started.
+# Vacation on turns it off, Vacation off turns it on. Tuya rule mode doesn't stop it, the relay isn't a Tuya device
+- id: repo_towel_heat_master
+  alias: "Towel heat: master"
+  description: Master bathroom towel heat relay, night floor warming + 1 h, off during Vacation
+  mode: queued
+  triggers:
+    - trigger: time
+      id: on_night
+      at: "22:00:00"
+    - trigger: time
+      id: off_night
+      at: "01:00:00"
+    - trigger: time
+      id: on_late_night
+      at: "23:00:00"
+    - trigger: time
+      id: off_late_night
+      at: "02:00:00"
+    - trigger: state
+      id: off_vacation_start
+      entity_id: input_boolean.vacation
+      from: "off"
+      to: "on"
+    - trigger: state
+      id: on_vacation_end
+      entity_id: input_boolean.vacation
+      from: "on"
+      to: "off"
+  conditions:
+    - condition: or
+      conditions:
+        - condition: trigger
+          id:
+            - off_vacation_start
+            - on_vacation_end
+        - condition: and
+          conditions:
+            - condition: state
+              entity_id: input_boolean.vacation
+              state: "off"
+            - condition: or
+              conditions:
+                - condition: and
+                  conditions:
+                    - condition: trigger
+                      id: on_night
+                    - condition: time
+                      weekday: [sun, mon, tue, wed, thu]
+                # 01:00 after Sunday–Thursday
+                - condition: and
+                  conditions:
+                    - condition: trigger
+                      id: off_night
+                    - condition: time
+                      weekday: [mon, tue, wed, thu, fri]
+                - condition: and
+                  conditions:
+                    - condition: trigger
+                      id: on_late_night
+                    - condition: time
+                      weekday: [fri, sat]
+                # 02:00 after Friday and Saturday
+                - condition: and
+                  conditions:
+                    - condition: trigger
+                      id: off_late_night
+                    - condition: time
+                      weekday: [sat, sun]
+  actions:
+    - action: "switch.turn_{{ 'on' if trigger.id.startswith('on') else 'off' }}"
+      target:
+        entity_id: switch.master_bathroom_towel_heat_relay

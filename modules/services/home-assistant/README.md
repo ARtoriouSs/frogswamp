@@ -59,7 +59,7 @@ Switches in `config/packages/modes.yaml`. Automations check them in their condit
 | Mode | Stops | When turned on, also runs the Tuya scene |
 |---|---|---|
 | Day off | desk schedule | `Days off - on` |
-| Vacation | desk, floor warming, blinds, curtains | `Vacation - on` |
+| Vacation | desk, floor warming, blinds, curtains, master towel heat (turned off, and on again when Vacation ends) | `Vacation - on` |
 | Guests in the living room | blinds opening in the morning | `Guests in the living room - on` |
 | Tuya rule mode | every HA automation that moves Tuya devices (alerts keep running) | none |
 
