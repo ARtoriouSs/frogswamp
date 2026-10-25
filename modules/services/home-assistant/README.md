@@ -56,7 +56,7 @@ Scripts → `config/scripts/<name>.yaml` (mapping). Helpers/template sensors →
 
 Daily timings live in `config/packages/schedule.yaml` as `input_datetime` helpers, and automations use them in time triggers (with an offset when needed). A change in the UI is reset on the next HA restart, so change them in the file.
 
-Workdays come from the **Workday** integration (`binary_sensor.workday_sensor`), so a holiday counts like a weekend day. Wakeup goes by the day itself, bedtime by the next day: before a workday it is the early one, before a weekend day or a holiday the late one. Night automations ask `workday.check_date` about the next day. While **Day off** is on, every check counts as a weekend day, so that morning and that night get the late timings. Turn it off the next day, after the night is over.
+Workdays come from the **Workday** integration (`binary_sensor.workday_sensor_pl`), so a holiday counts like a weekend day. Wakeup goes by the day itself, bedtime by the next day: before a workday it is the early one, before a weekend day or a holiday the late one. Night automations ask `workday.check_date` about the next day. While **Day off** is on, every check counts as a weekend day, so that morning and that night get the late timings. Turn it off the next day, after the night is over.
 
 | Timing | Value | Used by |
 |---|---|---|
@@ -64,7 +64,7 @@ Workdays come from the **Workday** integration (`binary_sensor.workday_sensor`),
 | Bedtime | before a workday 00:00, before a weekend day or holiday 01:00 | floor warming: from 1 h before to bedtime. Master towel heat relay: from 1 h before to 1 h after |
 | Work | workdays 10:00–19:00 | cube on at the start (workdays only), off at the end. Desk schedule runs on workdays |
 
-Workday can only be added in the UI (once, it is kept in HA's state dir): **Settings → Devices & services → Add integration → Workday**. Keep the name `Workday Sensor`, country Poland, workdays Monday–Friday, excludes Saturday, Sunday and Holidays, offset 0. Without it the floors, the towel heat nights, the cube and the desk don't run (Vacation still works).
+Workday can only be added in the UI (once, it is kept in HA's state dir): **Settings → Devices & services → Add integration → Workday**. Country Poland (the entity becomes `binary_sensor.workday_sensor_pl`), workdays Monday–Friday, excludes Saturday, Sunday and Holidays, offset 0. Without it the floors, the towel heat nights, the cube and the desk don't run (Vacation still works).
 
 ## Modes (General actions card)
 

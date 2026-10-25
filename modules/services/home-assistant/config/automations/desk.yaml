@@ -25,7 +25,7 @@
       state: "off"
     # Workday integration: weekdays without holidays
     - condition: state
-      entity_id: binary_sensor.workday_sensor
+      entity_id: binary_sensor.workday_sensor_pl
       state: "on"
   actions:
     - action: "script.desk_{{ trigger.id }}"

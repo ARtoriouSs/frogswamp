@@ -15,7 +15,7 @@
       state: "off"
     # Workday integration: weekdays without holidays
     - condition: state
-      entity_id: binary_sensor.workday_sensor
+      entity_id: binary_sensor.workday_sensor_pl
       state: "on"
   actions:
     - action: cubematrix.set_background
@@ -109,13 +109,13 @@
     # night's start day)
     - action: workday.check_date
       target:
-        entity_id: binary_sensor.workday_sensor
+        entity_id: binary_sensor.workday_sensor_pl
       data:
         check_date: "{{ (now() - timedelta(hours=12)).date() + timedelta(days=1) }}"
       response_variable: workday
     - condition: template
       value_template: >-
-        {{ (workday['binary_sensor.workday_sensor'].workday and is_state('input_boolean.day_off', 'off'))
+        {{ (workday['binary_sensor.workday_sensor_pl'].workday and is_state('input_boolean.day_off', 'off'))
            == (trigger.id == 'workday') }}
     - action: light.turn_off
       target:

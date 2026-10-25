@@ -57,7 +57,7 @@
         # (12 h back from any time between noon and the next noon is that start day)
         - action: workday.check_date
           target:
-            entity_id: binary_sensor.workday_sensor
+            entity_id: binary_sensor.workday_sensor_pl
           data:
             check_date: "{{ (now() - timedelta(hours=12)).date() + timedelta(days=1) }}"
           response_variable: workday
@@ -66,7 +66,7 @@
         - if:
             - condition: template
               value_template: >-
-                {{ (workday['binary_sensor.workday_sensor'].workday and is_state('input_boolean.day_off', 'off'))
+                {{ (workday['binary_sensor.workday_sensor_pl'].workday and is_state('input_boolean.day_off', 'off'))
                    != trigger.id.endswith('workday') }}
           then:
             - stop: Not this night's bedtime

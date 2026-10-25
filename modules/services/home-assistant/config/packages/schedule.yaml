@@ -1,7 +1,7 @@
 # Daily timings that automations use in their time triggers (with an offset when needed, e.g.
 # floor warming starts 1 h before wakeup). They work like constants: a change made in the UI
 # is reset to `initial` on the next HA restart, so change them here.
-# Workdays come from the Workday integration (binary_sensor.workday_sensor), so holidays count as
+# Workdays come from the Workday integration (binary_sensor.workday_sensor_pl), so holidays count as
 # weekend days. Wakeup depends on the day itself, bedtime on the next day: an early bedtime before
 # a workday, a late one before a weekend day or a holiday. Day off on counts as a weekend day.
 # Work is only on workdays

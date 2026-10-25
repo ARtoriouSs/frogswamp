@@ -77,7 +77,7 @@
         - climate.guest_bathroom_towel_heat_guest
         - switch.master_bathroom_towel_heat_relay
         - switch.desk_child_lock
-        - binary_sensor.workday_sensor
+        - binary_sensor.workday_sensor_pl
       to: unavailable
       for: "01:00:00"
   conditions:
