@@ -99,6 +99,9 @@ pkgs.testers.runNixOSTest {
     # an empty folder stands in for /dev/bus/usb, so the recovery can wake up HA's USB watcher
     assert "/run/home-assistant/usb-watch:/dev/bus/usb:ro" in unit, unit
     server.succeed("test -d /run/home-assistant/usb-watch")
+    # HA's service makes the folder itself before it starts, in case a deploy removed it
+    pre = server.succeed("cat $(systemctl cat podman-home-assistant.service | sed -n 's/^ExecStartPre=//p')")
+    assert "mkdir -p /run/home-assistant/usb-watch" in pre, pre
     server.succeed("test -d /var/lib/home-assistant/custom_components")
     # the lamp UDP session needs no inbound rule: no music mode port in the firewall
     fw = server.succeed("iptables -S nixos-fw")

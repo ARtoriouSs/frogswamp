@@ -134,76 +134,83 @@ in
     services.udev.extraRules = lib.mkIf cfg.recoverBluetooth ''
       ACTION=="add", SUBSYSTEM=="bluetooth", ENV{DEVTYPE}=="host", TAG+="systemd", ENV{SYSTEMD_WANTS}+="home-assistant-bluetooth-recover.service"
     '';
-    systemd.services.home-assistant-bluetooth-recover = lib.mkIf cfg.recoverBluetooth {
-      description = "Reload Home Assistant's Bluetooth integration after the adapter re-appears";
-      path = [
-        pkgs.curl
-        pkgs.jq
-      ];
-      environment = {
-        # HA younger than this finds the new adapter by itself
-        MIN_AGE = lib.mkDefault "120";
-        # time for HA to refresh its adapter list after the watcher is woken up (two 5 s debounces)
-        SETTLE = lib.mkDefault "15";
-        # seconds to wait for the Bluetooth entry to load before restarting HA
-        READY_TIMEOUT = lib.mkDefault "30";
-      };
-      serviceConfig.Type = "oneshot";
-      script = ''
-        # During boot the adapter appears before HA runs: nothing to recover
-        if ! systemctl is-active --quiet podman-home-assistant.service; then
-          echo "Home Assistant not running, nothing to do"
-          exit 0
-        fi
-        started=$(systemctl show podman-home-assistant.service -P ActiveEnterTimestampMonotonic)
-        uptime=$(cut -d. -f1 /proc/uptime)
-        age=$(( uptime - started / 1000000 ))
-        if [ "$age" -lt "$MIN_AGE" ]; then
-          echo "Home Assistant started ''${age}s ago, skipping"
-          exit 0
-        fi
-      ''
-      + (
-        if cfg.haTokenFile == null then
-          ''
-            echo "Bluetooth adapter re-appeared, restarting Home Assistant"
-            systemctl restart podman-home-assistant.service
-          ''
-        else
-          ''
-            token="$(cat ${cfg.haTokenFile})"
-            api() {
-              curl -fsS -m 30 -H "Authorization: Bearer $token" "$@"
-            }
-            entries_url="http://127.0.0.1:8123/api/config/config_entries/entry?domain=bluetooth"
-            # give BlueZ a moment to register the new adapter
-            sleep 5
-            # wake up HA's USB watcher, so HA refreshes its adapter list
-            touch ${usbWatchDir}/bluetooth-recover
-            rm -f ${usbWatchDir}/bluetooth-recover
-            sleep "$SETTLE"
-            # one entry per adapter; HA finds the adapter again by its MAC address
-            entries=$(api "$entries_url")
-            ids=$(jq -r '.[] | select(.disabled_by == null) | .entry_id' <<<"$entries")
-            if [ -z "$ids" ]; then
-              echo "No enabled Bluetooth integration in Home Assistant, nothing to do"
-              exit 0
-            fi
-            for id in $ids; do
-              echo "Bluetooth adapter re-appeared, reloading Home Assistant Bluetooth entry $id"
-              api -o /dev/null -X POST "http://127.0.0.1:8123/api/config/config_entries/entry/$id/reload"
-            done
-            for _ in $(seq "$READY_TIMEOUT"); do
-              if api "$entries_url" | jq -e '[.[] | select(.disabled_by == null) | .state] | all(. == "loaded")' >/dev/null; then
-                echo "Bluetooth is back"
+    systemd.services = {
+      # The folder is also in tmpfiles, but a deploy can remove it while HA restarts,
+      # and podman does not start a container with a missing volume. So make it right before the start
+      podman-home-assistant.preStart = lib.mkIf cfg.recoverBluetooth (
+        lib.mkBefore "mkdir -p ${usbWatchDir}"
+      );
+      home-assistant-bluetooth-recover = lib.mkIf cfg.recoverBluetooth {
+        description = "Reload Home Assistant's Bluetooth integration after the adapter re-appears";
+        path = [
+          pkgs.curl
+          pkgs.jq
+        ];
+        environment = {
+          # HA younger than this finds the new adapter by itself
+          MIN_AGE = lib.mkDefault "120";
+          # time for HA to refresh its adapter list after the watcher is woken up (two 5 s debounces)
+          SETTLE = lib.mkDefault "15";
+          # seconds to wait for the Bluetooth entry to load before restarting HA
+          READY_TIMEOUT = lib.mkDefault "30";
+        };
+        serviceConfig.Type = "oneshot";
+        script = ''
+          # During boot the adapter appears before HA runs: nothing to recover
+          if ! systemctl is-active --quiet podman-home-assistant.service; then
+            echo "Home Assistant not running, nothing to do"
+            exit 0
+          fi
+          started=$(systemctl show podman-home-assistant.service -P ActiveEnterTimestampMonotonic)
+          uptime=$(cut -d. -f1 /proc/uptime)
+          age=$(( uptime - started / 1000000 ))
+          if [ "$age" -lt "$MIN_AGE" ]; then
+            echo "Home Assistant started ''${age}s ago, skipping"
+            exit 0
+          fi
+        ''
+        + (
+          if cfg.haTokenFile == null then
+            ''
+              echo "Bluetooth adapter re-appeared, restarting Home Assistant"
+              systemctl restart podman-home-assistant.service
+            ''
+          else
+            ''
+              token="$(cat ${cfg.haTokenFile})"
+              api() {
+                curl -fsS -m 30 -H "Authorization: Bearer $token" "$@"
+              }
+              entries_url="http://127.0.0.1:8123/api/config/config_entries/entry?domain=bluetooth"
+              # give BlueZ a moment to register the new adapter
+              sleep 5
+              # wake up HA's USB watcher, so HA refreshes its adapter list
+              touch ${usbWatchDir}/bluetooth-recover
+              rm -f ${usbWatchDir}/bluetooth-recover
+              sleep "$SETTLE"
+              # one entry per adapter; HA finds the adapter again by its MAC address
+              entries=$(api "$entries_url")
+              ids=$(jq -r '.[] | select(.disabled_by == null) | .entry_id' <<<"$entries")
+              if [ -z "$ids" ]; then
+                echo "No enabled Bluetooth integration in Home Assistant, nothing to do"
                 exit 0
               fi
-              sleep 1
-            done
-            echo "Bluetooth entry didn't load in ''${READY_TIMEOUT}s, restarting Home Assistant"
-            systemctl restart podman-home-assistant.service
-          ''
-      );
+              for id in $ids; do
+                echo "Bluetooth adapter re-appeared, reloading Home Assistant Bluetooth entry $id"
+                api -o /dev/null -X POST "http://127.0.0.1:8123/api/config/config_entries/entry/$id/reload"
+              done
+              for _ in $(seq "$READY_TIMEOUT"); do
+                if api "$entries_url" | jq -e '[.[] | select(.disabled_by == null) | .state] | all(. == "loaded")' >/dev/null; then
+                  echo "Bluetooth is back"
+                  exit 0
+                fi
+                sleep 1
+              done
+              echo "Bluetooth entry didn't load in ''${READY_TIMEOUT}s, restarting Home Assistant"
+              systemctl restart podman-home-assistant.service
+            ''
+        );
+      };
     };
   };
 }
