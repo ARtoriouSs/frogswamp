@@ -2,11 +2,11 @@
 # plus short animations when the desk, blinds or modes change. The short ones play even
 # when the cube is off (wake) and then go back to what was there before
 - id: repo_cube_on_weekdays
-  alias: "Cube: on at 11:00 on weekdays"
+  alias: "Cube: on at work start on weekdays"
   description: Not on Day off or Vacation, the short animations still play then
   triggers:
     - trigger: time
-      at: "11:00:00"
+      at: input_datetime.work_start
   conditions:
     - condition: state
       entity_id:
@@ -58,10 +58,10 @@
              | list | random }}
 
 - id: repo_cube_off_evening
-  alias: "Cube: off at 19:00"
+  alias: "Cube: off at work end"
   triggers:
     - trigger: time
-      at: "19:00:00"
+      at: input_datetime.work_end
   actions:
     - action: light.turn_off
       target:

@@ -52,6 +52,16 @@ Scripts → `config/scripts/<name>.yaml` (mapping). Helpers/template sensors →
 | Internet was down | Router WAN back on after at least 1 min down. Also written to the logbook |
 | Printer ink low | A cartridge drops below 15% |
 
+## Schedule
+
+Daily timings live in `config/packages/schedule.yaml` as `input_datetime` helpers, and automations use them in time triggers (with an offset when needed). A change in the UI is reset on the next HA restart, so change them in the file.
+
+| Timing | Value | Used by |
+|---|---|---|
+| Wakeup | weekdays 09:30, weekends 11:00 | floor warming: from 1 h before to 1 h after |
+| Bedtime | Sunday–Thursday nights 00:00, Friday and Saturday nights 01:00 | floor warming: from 1 h before to bedtime. Master towel heat relay: from 1 h before to 1 h after |
+| Work | weekdays 10:00–19:00 | cube on at the start (weekdays only), off at the end |
+
 ## Modes (General actions card)
 
 Switches in `config/packages/modes.yaml`. Automations check them in their conditions, so modes can be on together.

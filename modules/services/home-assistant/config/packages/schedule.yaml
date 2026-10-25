@@ -1,0 +1,42 @@
+# Daily timings that automations use in their time triggers (with an offset when needed, e.g.
+# floor warming starts 1 h before wakeup). They work like constants: a change made in the UI
+# is reset to `initial` on the next HA restart, so change them here.
+# Bedtime belongs to the night it ends: Sunday–Thursday nights are workday ones, Friday and
+# Saturday nights are weekend ones. Work is only on weekdays
+input_datetime:
+  wakeup_weekday:
+    name: Wakeup on weekdays
+    icon: mdi:alarm
+    has_date: false
+    has_time: true
+    initial: "09:30:00"
+  wakeup_weekend:
+    name: Wakeup on weekends
+    icon: mdi:alarm
+    has_date: false
+    has_time: true
+    initial: "11:00:00"
+  bedtime_workday:
+    name: Bedtime before a workday
+    icon: mdi:bed
+    has_date: false
+    has_time: true
+    initial: "00:00:00"
+  bedtime_weekend:
+    name: Bedtime on weekends
+    icon: mdi:bed
+    has_date: false
+    has_time: true
+    initial: "01:00:00"
+  work_start:
+    name: Work start
+    icon: mdi:briefcase
+    has_date: false
+    has_time: true
+    initial: "10:00:00"
+  work_end:
+    name: Work end
+    icon: mdi:briefcase-off
+    has_date: false
+    has_time: true
+    initial: "19:00:00"

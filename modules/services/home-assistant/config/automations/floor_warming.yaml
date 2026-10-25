@@ -1,87 +1,67 @@
-# Both bathroom floors, through the Tuya scenes. Mornings: weekdays 08:00–11:00, weekends 09:00–12:00.
-# Nights: Sunday–Thursday 22:00–00:00, Friday and Saturday 23:00–01:00. A night ends on the next day,
-# so its "off" is checked against the day the night started (Thursday night ends at 00:00 on Friday,
-# Saturday night at 01:00 on Sunday). Vacation and Tuya rule mode stop it. One automation per bathroom
-# (each has its own area), the second one reuses the first one's schedule
+# Both bathroom floors, through the Tuya scenes. Timings come from packages/schedule.yaml:
+# mornings from 1 h before wakeup to 1 h after it, nights from 1 h before bedtime to bedtime.
+# Vacation and Tuya rule mode stop it. One automation per bathroom (each has its own area),
+# the second one reuses the first one's schedule
 - id: repo_floor_warming_guest
   alias: "Floor warming: guest"
   description: Guest bathroom floor
   mode: queued
   triggers: &floor_warming_triggers
     - trigger: time
-      id: on_weekday
-      at: "08:00:00"
+      id: on_morning_weekday
+      at:
+        entity_id: input_datetime.wakeup_weekday
+        offset: "-01:00:00"
     - trigger: time
-      id: off_weekday
-      at: "11:00:00"
+      id: off_morning_weekday
+      at:
+        entity_id: input_datetime.wakeup_weekday
+        offset: "01:00:00"
     - trigger: time
-      id: on_weekend
-      at: "09:00:00"
+      id: on_morning_weekend
+      at:
+        entity_id: input_datetime.wakeup_weekend
+        offset: "-01:00:00"
     - trigger: time
-      id: off_weekend
-      at: "12:00:00"
+      id: off_morning_weekend
+      at:
+        entity_id: input_datetime.wakeup_weekend
+        offset: "01:00:00"
     - trigger: time
-      id: on_night
-      at: "22:00:00"
+      id: on_night_workday
+      at:
+        entity_id: input_datetime.bedtime_workday
+        offset: "-01:00:00"
     - trigger: time
-      id: off_night
-      at: "00:00:00"
+      id: off_night_workday
+      at: input_datetime.bedtime_workday
     - trigger: time
-      id: on_late_night
-      at: "23:00:00"
+      id: on_night_weekend
+      at:
+        entity_id: input_datetime.bedtime_weekend
+        offset: "-01:00:00"
     - trigger: time
-      id: off_late_night
-      at: "01:00:00"
+      id: off_night_weekend
+      at: input_datetime.bedtime_weekend
+  variables: &floor_warming_variables
+    # ISO weekdays (1 is Monday) of each period. A night counts on the day it started
+    days:
+      morning_weekday: [1, 2, 3, 4, 5]
+      morning_weekend: [6, 7]
+      night_workday: [7, 1, 2, 3, 4]
+      night_weekend: [5, 6]
   conditions: &floor_warming_conditions
     - condition: state
       entity_id:
         - input_boolean.vacation
         - input_boolean.tuya_mode
       state: "off"
-    - condition: or
-      conditions:
-        - condition: and
-          conditions:
-            - condition: trigger
-              id:
-                - on_weekday
-                - off_weekday
-            - condition: time
-              weekday: [mon, tue, wed, thu, fri]
-        - condition: and
-          conditions:
-            - condition: trigger
-              id:
-                - on_weekend
-                - off_weekend
-            - condition: time
-              weekday: [sat, sun]
-        - condition: and
-          conditions:
-            - condition: trigger
-              id: on_night
-            - condition: time
-              weekday: [sun, mon, tue, wed, thu]
-        # midnight after Sunday–Thursday
-        - condition: and
-          conditions:
-            - condition: trigger
-              id: off_night
-            - condition: time
-              weekday: [mon, tue, wed, thu, fri]
-        - condition: and
-          conditions:
-            - condition: trigger
-              id: on_late_night
-            - condition: time
-              weekday: [fri, sat]
-        # 01:00 after Friday and Saturday
-        - condition: and
-          conditions:
-            - condition: trigger
-              id: off_late_night
-            - condition: time
-              weekday: [sat, sun]
+    # A night can go past midnight, so its day is taken 12 h back (any time from noon to the next noon)
+    - condition: template
+      value_template: >-
+        {% set period = trigger.id.split('_', 1)[1] %}
+        {% set moment = now() - timedelta(hours=12) if period.startswith('night') else now() %}
+        {{ moment.isoweekday() in days[period] }}
   actions:
     - action: scene.turn_on
       target:
@@ -92,6 +72,7 @@
   description: Master bathroom floor
   mode: queued
   triggers: *floor_warming_triggers
+  variables: *floor_warming_variables
   conditions: *floor_warming_conditions
   actions:
     - action: scene.turn_on
