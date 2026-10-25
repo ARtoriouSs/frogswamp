@@ -57,11 +57,62 @@
           {{ frogs | reject('eq', states('select.cube_matrix_192_168_101_121_background'))
              | list | random }}
 
+# A short tap on the lamp's button: the next frog, always in the same order
+- id: repo_cube_tap_next_frog
+  alias: "Cube: next frog on button tap"
+  mode: queued
+  triggers:
+    - trigger: state
+      entity_id: event.cube_matrix_192_168_101_121_button
+      not_from: unavailable
+  conditions:
+    - condition: template
+      value_template: "{{ trigger.to_state.attributes.event_type == 'tap' }}"
+  variables:
+    frogs: *frogs
+    current: "{{ states('select.cube_matrix_192_168_101_121_background') }}"
+  actions:
+    - action: cubematrix.set_background
+      target:
+        entity_id: light.cube_matrix_192_168_101_121
+      data:
+        # Not a frog yet: start with the first one
+        preset: >-
+          {% set i = frogs.index(current) if current in frogs else -1 %}
+          {{ frogs[(i + 1) % frogs | length] }}
+
 - id: repo_cube_off_evening
   alias: "Cube: off at work end"
   triggers:
     - trigger: time
       at: input_datetime.work_end
+  actions:
+    - action: light.turn_off
+      target:
+        entity_id: light.cube_matrix_192_168_101_121
+
+# Backup for a cube turned on by hand in the evening: off at bedtime, so it never stays on overnight.
+# Bedtime belongs to the night it ends (packages/schedule.yaml): the workday one before Monday–Friday,
+# the weekend one before Saturday and Sunday
+- id: repo_cube_off_bedtime
+  alias: "Cube: off at bedtime"
+  triggers:
+    - trigger: time
+      id: workday
+      at: input_datetime.bedtime_workday
+    - trigger: time
+      id: weekend
+      at: input_datetime.bedtime_weekend
+  conditions:
+    - condition: state
+      entity_id: light.cube_matrix_192_168_101_121
+      state: "on"
+    # The morning after this night (12 h back from any time between noon and the next noon is the
+    # night's start day): Monday–Friday mornings follow workday nights
+    - condition: template
+      value_template: >-
+        {% set morning = (now() - timedelta(hours=12)).date() + timedelta(days=1) %}
+        {{ (morning.weekday() < 5) == (trigger.id == 'workday') }}
   actions:
     - action: light.turn_off
       target:
