@@ -227,6 +227,59 @@ async def test_show_muted_when_off(rig):
     assert player.playing is None
 
 
+async def test_wake_show_plays_when_off_then_powers_off(rig):
+    player, sink = rig.player, rig.sink
+    task = await player.show(UP, name="arrow_up", wake=True)
+    await rig.time.advance(0.5)
+    assert player.playing == "arrow_up"
+    assert player.power is False
+    assert sink.ready == [True]
+    await rig.time.advance(0.6)
+    assert task.done()
+    assert sink.colours() == [(1, 0, 0), (2, 0, 0), (3, 0, 0), (4, 0, 0), (5, 0, 0)]
+    assert player.playing is None
+    assert player.power is False
+    assert sink.power_offs == 1
+    # Nothing more is drawn after the lamp goes off again
+    count = len(sink.frames)
+    await rig.time.advance(5)
+    assert len(sink.frames) == count
+
+
+async def test_wake_show_when_on_restores_background(rig):
+    player, sink = rig.player, rig.sink
+    await player.turn_on()
+    await player.show(UP, name="arrow_up", wake=True)
+    await rig.time.advance(1.1)
+    assert player.playing == "fire"
+    assert sink.power_offs == 0
+
+
+async def test_turn_on_during_wake_show_keeps_light_on(rig):
+    player, sink = rig.player, rig.sink
+    await player.show(UP, name="arrow_up", wake=True)
+    await rig.time.advance(0.3)
+    await player.turn_on()
+    await rig.time.advance(2)
+    assert player.power is True
+    assert player.playing == "fire"
+    assert sink.power_offs == 0
+
+
+async def test_new_wake_show_replaces_wake_show(rig):
+    player, sink = rig.player, rig.sink
+    up = await player.show(UP, name="arrow_up", wake=True)
+    await rig.time.advance(0.3)
+    down = await player.show(DOWN, name="arrow_down", wake=True)
+    await rig.time.advance(0.1)
+    assert up.done()
+    assert sink.power_offs == 0
+    await rig.time.advance(1.1)
+    assert down.done()
+    assert player.playing is None
+    assert sink.power_offs == 1
+
+
 async def test_background_off_event_then_dark(rig):
     player, sink = rig.player, rig.sink
     await player.turn_on()

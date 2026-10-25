@@ -128,6 +128,10 @@
         "wait": {
           "name": "Wait",
           "description": "Finish the action only when the show part ends"
+        },
+        "wake": {
+          "name": "Wake",
+          "description": "Play the show even when the cube is off, then turn the lamp off again"
         }
       }
     },

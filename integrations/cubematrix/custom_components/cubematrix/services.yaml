@@ -62,6 +62,10 @@ show:
       default: false
       selector:
         boolean:
+    wake:
+      default: false
+      selector:
+        boolean:
 
 set_background:
   target:

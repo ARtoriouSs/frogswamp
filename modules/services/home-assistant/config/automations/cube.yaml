@@ -1,0 +1,123 @@
+# Yeelight Cube Matrix in the office: a random animated frog on weekday working hours,
+# plus short animations when the desk, blinds or modes change. The short ones play even
+# when the cube is off (wake) and then go back to what was there before
+- id: repo_cube_on_weekdays
+  alias: "Cube: on at 11:00 on weekdays"
+  description: Not on Day off or Vacation, the short animations still play then
+  triggers:
+    - trigger: time
+      at: "11:00:00"
+  conditions:
+    - condition: state
+      entity_id:
+        - input_boolean.day_off
+        - input_boolean.vacation
+      state: "off"
+    - condition: time
+      weekday:
+        - mon
+        - tue
+        - wed
+        - thu
+        - fri
+  actions:
+    - action: cubematrix.set_background
+      target:
+        entity_id: light.cube_matrix_192_168_101_121
+      data:
+        preset: "{{ frogs | random }}"
+    - action: light.turn_on
+      target:
+        entity_id: light.cube_matrix_192_168_101_121
+  variables:
+    frogs: &frogs
+      - frog_jump
+      - frog_sway
+      - frog_blink
+      - frog_croak
+
+# Another frog every hour while the cube is on, never the same one twice in a row
+- id: repo_cube_next_frog
+  alias: "Cube: another frog every hour"
+  triggers:
+    - trigger: time_pattern
+      minutes: 0
+  conditions:
+    - condition: state
+      entity_id: light.cube_matrix_192_168_101_121
+      state: "on"
+  variables:
+    frogs: *frogs
+  actions:
+    - action: cubematrix.set_background
+      target:
+        entity_id: light.cube_matrix_192_168_101_121
+      data:
+        preset: >-
+          {{ frogs | reject('eq', states('select.cube_matrix_192_168_101_121_background'))
+             | list | random }}
+
+- id: repo_cube_off_evening
+  alias: "Cube: off at 19:00"
+  triggers:
+    - trigger: time
+      at: "19:00:00"
+  actions:
+    - action: light.turn_off
+      target:
+        entity_id: light.cube_matrix_192_168_101_121
+
+# A scene's state is the time it was last run from HA, so a new value means it just ran.
+# Desk and blinds moved from the Tuya app or by hand are not seen here
+- id: repo_cube_event_animations
+  alias: "Cube: animations for desk, blinds and modes"
+  mode: restart
+  triggers:
+    - trigger: state
+      entity_id: scene.office_desk_up
+      id: arrow_up
+    - trigger: state
+      entity_id: scene.office_desk_down
+      id: arrow_down
+    - trigger: state
+      entity_id:
+        - scene.living_room_blinds_open
+        - scene.living_room_blinds_full_open_door
+        - scene.bedroom_curtains_open
+      id: blinds_open
+    - trigger: state
+      entity_id:
+        - scene.living_room_blinds_full_close
+        - scene.bedroom_curtains_close
+      id: blinds_close
+    - trigger: state
+      entity_id:
+        - input_boolean.day_off
+        - input_boolean.vacation
+        - input_boolean.guests_in_living_room
+      from:
+        - "on"
+        - "off"
+      to:
+        - "on"
+        - "off"
+      id: mode
+  conditions:
+    # Not when an entity only comes back after a restart
+    - condition: template
+      value_template: >-
+        {{ trigger.from_state is not none
+           and trigger.from_state.state not in ['unavailable', 'unknown']
+           and trigger.to_state.state not in ['unavailable', 'unknown'] }}
+  actions:
+    - action: cubematrix.show
+      target:
+        entity_id: light.cube_matrix_192_168_101_121
+      data:
+        # A mode turned on shows the green check, turned off the red one
+        preset: >-
+          {% if trigger.id == 'mode' %}{{ 'check' if trigger.to_state.state == 'on' else 'check_red' }}{% else %}{{ trigger.id }}{% endif %}
+        # The checks are still pictures, the rest are animations looped for the time
+        repeat: forever
+        duration: "{{ 10 if trigger.id == 'mode' else 5 }}"
+        wake: true

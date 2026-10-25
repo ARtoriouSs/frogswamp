@@ -1,0 +1,183 @@
+# Animated frogs for the Yeelight Cube Matrix (5x5). g green, d dark green, w eye, r mouth, y throat
+- name: frog_jump
+  size: 5x5
+  palette: {g: '#00c000', w: '#ffffff', r: '#e00000'}
+  fps: 6
+  frames:
+    - |
+      .....
+      .w.w.
+      ggggg
+      grrrg
+      gg.gg
+    - |
+      .....
+      .w.w.
+      ggggg
+      grrrg
+      gg.gg
+    # Gets ready
+    - |
+      .....
+      .....
+      .w.w.
+      ggggg
+      ggggg
+    # Pushes off with long legs
+    - |
+      .w.w.
+      ggggg
+      grrrg
+      .g.g.
+      g...g
+    # In the air
+    - |
+      .w.w.
+      ggggg
+      grrrg
+      gg.gg
+      .....
+    # Lands
+    - |
+      .....
+      .....
+      .w.w.
+      ggggg
+      ggggg
+    - |
+      .....
+      .w.w.
+      ggggg
+      grrrg
+      gg.gg
+
+- name: frog_sway
+  size: 5x5
+  palette: {g: '#00c000', w: '#ffffff', r: '#e00000'}
+  fps: 3
+  frames:
+    - |
+      w.w..
+      ggg..
+      grg..
+      ggg..
+      g.g..
+    - |
+      .w.w.
+      .ggg.
+      .grg.
+      .ggg.
+      .g.g.
+    - |
+      ..w.w
+      ..ggg
+      ..grg
+      ..ggg
+      ..g.g
+    # Blinks on the right
+    - |
+      ..g.g
+      ..ggg
+      ..grg
+      ..ggg
+      ..g.g
+    - |
+      ..w.w
+      ..ggg
+      ..grg
+      ..ggg
+      ..g.g
+    - |
+      .w.w.
+      .ggg.
+      .grg.
+      .ggg.
+      .g.g.
+    - |
+      w.w..
+      ggg..
+      grg..
+      ggg..
+      g.g..
+    # Blinks on the left
+    - |
+      g.g..
+      ggg..
+      grg..
+      ggg..
+      g.g..
+
+- name: frog_blink
+  size: 5x5
+  palette: {g: '#00c000', w: '#ffffff', k: '#000000', r: '#e00000'}
+  fps: 4
+  frames:
+    - pixels: |
+        wg.gw
+        kgggk
+        ggggg
+        grrrg
+        .ggg.
+      duration: 1.5
+    - |
+      gg.gg
+      ggggg
+      ggggg
+      grrrg
+      .ggg.
+    - |
+      wg.gw
+      kgggk
+      ggggg
+      grrrg
+      .ggg.
+    - |
+      gg.gg
+      ggggg
+      ggggg
+      grrrg
+      .ggg.
+
+- name: frog_croak
+  size: 5x5
+  palette: {g: '#00c000', w: '#ffffff', k: '#000000', r: '#e00000', y: '#ffe680'}
+  fps: 4
+  frames:
+    - pixels: |
+        wg.gw
+        kgggk
+        ggggg
+        grrrg
+        .ggg.
+      duration: 1
+    # Throat fills up
+    - |
+      wg.gw
+      kgggk
+      ggggg
+      gyyyg
+      .ggg.
+    - |
+      wg.gw
+      kgggk
+      ggggg
+      gyyyg
+      .yyy.
+    - |
+      wg.gw
+      kgggk
+      gyyyg
+      yyyyy
+      .yyy.
+    - |
+      wg.gw
+      kgggk
+      ggggg
+      gyyyg
+      .yyy.
+    - |
+      wg.gw
+      kgggk
+      ggggg
+      gyyyg
+      .ggg.

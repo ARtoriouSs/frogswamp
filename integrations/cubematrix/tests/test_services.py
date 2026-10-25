@@ -85,6 +85,20 @@ async def test_show_on_off_cube_is_muted(hass, entry):
     assert hass.states.get(SENSOR).state == "off"
 
 
+async def test_show_wake_plays_on_off_cube_and_stays_off(hass, entry):
+    await hass.services.async_call(
+        "light", "turn_off", {"entity_id": LIGHT}, blocking=True
+    )
+    player = entry.runtime_data.player
+    seen = []
+    player.add_listener(lambda: seen.append(player.playing))
+    await show(hass, entity_id=LIGHT, preset="check", duration=0.05, wake=True, wait=True)
+    await settle(hass)
+    assert "check" in seen
+    assert hass.states.get(LIGHT).state == "off"
+    assert hass.states.get(SENSOR).state == "off"
+
+
 @pytest.mark.parametrize(
     ("data", "message"),
     [

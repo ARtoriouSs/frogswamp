@@ -28,6 +28,7 @@ ATTR_FPS = "fps"
 ATTR_THEN = "then"
 ATTR_FIT = "fit"
 ATTR_WAIT = "wait"
+ATTR_WAKE = "wake"
 
 FOREVER = "forever"
 FIT_MODES = ["error", "center", "tile"]
@@ -46,6 +47,7 @@ SHOW_SCHEMA = {
     vol.Optional(ATTR_THEN, default="restore"): cv.string,
     vol.Optional(ATTR_FIT, default="error"): vol.In(FIT_MODES),
     vol.Optional(ATTR_WAIT, default=False): cv.boolean,
+    vol.Optional(ATTR_WAKE, default=False): cv.boolean,
 }
 SET_BACKGROUND_SCHEMA = {vol.Required(ATTR_PRESET): cv.string}
 
@@ -86,6 +88,7 @@ async def _show(entity: CubeLight, call: ServiceCall) -> None:
             fps=data.get(ATTR_FPS),
             then=data[ATTR_THEN],
             fit=data[ATTR_FIT],
+            wake=data[ATTR_WAKE],
         )
     except ArtError as err:
         raise ServiceValidationError(str(err)) from err

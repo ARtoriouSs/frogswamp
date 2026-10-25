@@ -187,9 +187,10 @@ A preset is a named art. Names are found in three places. If the same name is in
 
 Built-in arts, all 5x5:
 
-- `arrow_up`, `arrow_down`, `arrow_left`, `arrow_right`
-- `blinds_open`, `blinds_close`
-- `check`
+- `arrow_up`, `arrow_down`, `arrow_left`, `arrow_right`: a running arrow with one empty line between arrows
+- `blinds_open`, `blinds_close`: slats in a light and a dark colour, one after the other
+- `check` (green), `check_red`
+- `cross_red`, `cross_green`
 
 ## Generated effects
 
@@ -221,6 +222,7 @@ Plays an art or effect on top of the background. When it ends, the cube goes on 
 | `then` | What comes after: `restore` (the background), `hold` (keep the last frame), `off` (black), or a preset name (shown until something else is played). | `restore` |
 | `fit` | `error`, `center` or `tile`. | `error` |
 | `wait` | If `true`, the action finishes only when the show part ends (not the `then` part). | `false` |
+| `wake` | If `true`, the show also plays when the cube light is off. The light stays off, and the lamp goes off again when the show ends (`then` is not used). Without it, a show on a cube that is off does nothing. | `false` |
 
 With `repeat: forever` and no `duration`, the show never ends by itself. Use `stop` or another `show`. A new `show` replaces the current one.
 

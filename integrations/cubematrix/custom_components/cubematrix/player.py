@@ -29,6 +29,8 @@ BACKGROUND_FIT = "center"
 WATCHDOG_S = 30.0
 
 THEN_WORDS = ("restore", "hold", "off")
+# Internal: after an event that woke a cube that is off, the lamp goes off again
+WAKE_OFF = "_wake_off"
 Then = str
 
 
@@ -175,8 +177,12 @@ class Player:
         fps: float | None = None,
         then: Then = "restore",
         fit: str = "error",
+        wake: bool = False,
     ) -> asyncio.Task:
-        """Play an event, the returned task ends when the event part ends"""
+        """Play an event, the returned task ends when the event part ends.
+
+        With wake, an event on a cube that is off still plays, and the lamp goes off again after it
+        """
         # Every check comes first, so a bad show leaves the cube as it is
         content = self._fit(playable, name, fit)
         after: _Content | None = None
@@ -186,9 +192,11 @@ class Player:
                 raise KeyError(then)
             after = self._fit(then_playable, then, BACKGROUND_FIT)
         async with self._lock:
-            if self._closed or not self.power:
+            if self._closed or not (self.power or wake):
                 _LOGGER.debug("Light is off, %s is muted", name)
                 return _done_task()
+            # The light stays off, so after the event the lamp goes off again
+            then = then if self.power else WAKE_OFF
             done = asyncio.Event()
             await self._replace(
                 lambda: self._run_show(content, repeat, duration, fps, then, after, done),
@@ -310,7 +318,13 @@ class Player:
         if failed:
             await self._sleep(RETRY_S)
 
-        if then == "restore":
+        if then == WAKE_OFF:
+            self._set_playing(None)
+            try:
+                await self._sink.power_off()
+            except LampError as err:
+                _LOGGER.debug("Could not turn the lamp off after %s: %s", content.name, err)
+        elif then == "restore":
             await self._run_background()
         elif then == "hold":
             last = self._last
