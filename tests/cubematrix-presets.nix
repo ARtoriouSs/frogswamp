@@ -1,10 +1,13 @@
-{ pkgs, ... }:
+{ pkgs, self, ... }:
 let
   python = pkgs.python3.withPackages (p: [ p.pyyaml ]);
   presets = ../modules/services/home-assistant/config/cubematrix;
-  artformat = ../integrations/cubematrix/custom_components/cubematrix/artformat.py;
+  integration = "${self.nixosConfigurations.frogswamp.config.frogswamp.homeAssistant.cubematrix.src}/custom_components/cubematrix";
   checker = pkgs.writeText "check-presets.py" ''
-    import importlib.util, pathlib, sys
+    import importlib.util, json, pathlib, sys
+
+    manifest = json.loads(pathlib.Path(sys.argv[3]).read_text())
+    assert manifest["domain"] == "cubematrix", manifest
 
     spec = importlib.util.spec_from_file_location("artformat", sys.argv[1])
     artformat = importlib.util.module_from_spec(spec)
@@ -24,8 +27,8 @@ let
     sys.exit(1 if failed else 0)
   '';
 in
-# Every repo preset must parse with the integration's own parser
+# The pinned integration is the right one, and every repo preset parses with its own parser
 pkgs.runCommand "test-cubematrix-presets" { } ''
-  ${python}/bin/python3 ${checker} ${artformat} ${presets}
+  ${python}/bin/python3 ${checker} ${integration}/artformat.py ${presets} ${integration}/manifest.json
   touch $out
 ''

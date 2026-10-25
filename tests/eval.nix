@@ -23,10 +23,6 @@ let
       lib.attrNames cfg.disko.devices.disk == [ "main" ]
       && !(lib.hasInfix "frogbackup" cfg.disko.devices.disk.main.device);
     "hostname" = cfg.networking.hostName == "frogswamp";
-    "cubematrix manifest domain" =
-      (builtins.fromJSON (
-        builtins.readFile ../integrations/cubematrix/custom_components/cubematrix/manifest.json
-      )).domain == "cubematrix";
     "cubematrix enabled on frogswamp" = cfg.frogswamp.homeAssistant.cubematrix.enable;
     "no firewall rule for the old music port" =
       !(lib.elem 55440 cfg.networking.firewall.allowedTCPPorts)

@@ -51,7 +51,23 @@ in
       description = "HACS (community store), pinned in hacs.nix and mounted read-only. What it installs goes to the writable custom_components/";
     };
     cubematrix = {
-      enable = lib.mkEnableOption "the Yeelight Cube Matrix integration (mounted read-only from integrations/cubematrix)";
+      enable = lib.mkEnableOption "the Yeelight Cube Matrix integration (pinned in cubematrix.nix, mounted read-only)";
+      src = lib.mkOption {
+        type = lib.types.path;
+        default =
+          let
+            pin = import ./cubematrix.nix;
+          in
+          pkgs.fetchFromGitHub {
+            inherit (pin)
+              owner
+              repo
+              rev
+              hash
+              ;
+          };
+        description = "Source of the integration repo; tests read the parser from it";
+      };
     };
     recoverBluetooth = lib.mkOption {
       type = lib.types.bool;
@@ -80,7 +96,7 @@ in
         ++ map (name: "${configDir}/${name}:/config/${name}:ro") repoOwned
         ++ lib.optional cfg.hacs "${hacs}:/config/custom_components/hacs:ro"
         ++ lib.optionals cfg.cubematrix.enable [
-          "${../../../integrations/cubematrix/custom_components/cubematrix}:/config/custom_components/cubematrix:ro"
+          "${cfg.cubematrix.src}/custom_components/cubematrix:/config/custom_components/cubematrix:ro"
           "${./config/cubematrix}:/config/cubematrix:ro"
         ]
         ++ lib.optional cfg.recoverBluetooth "${usbWatchDir}:/dev/bus/usb:ro";

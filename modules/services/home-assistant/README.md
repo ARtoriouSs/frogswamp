@@ -71,7 +71,7 @@ If the Bluetooth chip hangs, the kernel resets it and it comes back under a new 
 
 ## Yeelight Cube Matrix
 
-The integration lives in `integrations/cubematrix/` (a standalone repo-shaped folder) and is mounted read-only at `/config/custom_components/cubematrix`. Repo presets are in `config/cubematrix/*.yaml`, mounted at `/config/cubematrix`; `tests/cubematrix-presets.nix` checks that each one parses. The integration draws over the lamp's UDP session (outgoing to port 55444, replies on the same socket), so the firewall needs no extra rule.
+The integration lives in its own repo, [yeelight-cubematrix-ha](https://github.com/ARtoriouSs/yeelight-cubematrix-ha). `cubematrix.nix` pins a commit (update it with `just cubematrix-bump`), and it is mounted read-only at `/config/custom_components/cubematrix`; its tests run in that repo. Repo presets are in `config/cubematrix/*.yaml`, mounted at `/config/cubematrix`; `tests/cubematrix-presets.nix` checks that each one parses. The integration draws over the lamp's UDP session (outgoing to port 55444, replies on the same socket), so the firewall needs no extra rule.
 
 ## Update Home Assistant
 

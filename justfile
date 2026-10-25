@@ -129,6 +129,17 @@ ha-bump version="stable":
     git add --intent-to-add modules/services/home-assistant/image.nix
     echo "Pinned Home Assistant $ver ($digest)"
 
+# Pin the Yeelight Cube Matrix integration to a commit of its repo (default: latest main)
+cubematrix-bump ref="main":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    info="$(nix flake prefetch --json "github:ARtoriouSs/yeelight-cubematrix-ha/{{ref}}")"
+    rev="$(jq -r .locked.rev <<<"$info")"
+    hash="$(jq -r .hash <<<"$info")"
+    file=modules/services/home-assistant/cubematrix.nix
+    sed -i -e "s|rev = \".*\";|rev = \"$rev\";|" -e "s|hash = \".*\";|hash = \"$hash\";|" "$file"
+    echo "Pinned yeelight-cubematrix-ha $rev"
+
 # Copy UI-made automations/scripts/scenes from the server into git (they stay editable in the UI)
 ha-pull:
     #!/usr/bin/env bash
