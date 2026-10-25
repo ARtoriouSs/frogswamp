@@ -60,7 +60,7 @@
   mode: queued
   triggers:
     - trigger: state
-      entity_id: event.cube_matrix_192_168_101_121_button
+      entity_id: event.office_cube_matrix_192_168_101_121_button
       not_from: unavailable
   conditions:
     - condition: template
