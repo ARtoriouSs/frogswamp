@@ -1,8 +1,8 @@
-# Yeelight Cube Matrix in the office: a random animated frog on weekday working hours,
+# Yeelight Cube Matrix in the office: a random animated frog on workday working hours,
 # plus short animations when the desk, blinds or modes change. The short ones play even
 # when the cube is off (wake) and then go back to what was there before
 - id: repo_cube_on_weekdays
-  alias: "Cube: on at work start on weekdays"
+  alias: "Cube: on at work start on workdays"
   description: Not on Day off or Vacation, the short animations still play then
   triggers:
     - trigger: time
@@ -13,13 +13,10 @@
         - input_boolean.day_off
         - input_boolean.vacation
       state: "off"
-    - condition: time
-      weekday:
-        - mon
-        - tue
-        - wed
-        - thu
-        - fri
+    # Workday integration: weekdays without holidays
+    - condition: state
+      entity_id: binary_sensor.workday_sensor
+      state: "on"
   actions:
     - action: cubematrix.set_background
       target:

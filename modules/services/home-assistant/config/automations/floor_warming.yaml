@@ -1,5 +1,6 @@
 # Both bathroom floors, through the Tuya scenes. Timings come from packages/schedule.yaml:
 # mornings from 1 h before wakeup to 1 h after it, nights from 1 h before bedtime to bedtime.
+# Workday or weekend timings are picked by the Workday integration, so holidays get the weekend ones.
 # Vacation and Tuya rule mode stop it. One automation per bathroom (each has its own area),
 # the second one reuses the first one's schedule
 - id: repo_floor_warming_guest
@@ -8,14 +9,14 @@
   mode: queued
   triggers: &floor_warming_triggers
     - trigger: time
-      id: on_morning_weekday
+      id: on_morning_workday
       at:
-        entity_id: input_datetime.wakeup_weekday
+        entity_id: input_datetime.wakeup_workday
         offset: "-01:00:00"
     - trigger: time
-      id: off_morning_weekday
+      id: off_morning_workday
       at:
-        entity_id: input_datetime.wakeup_weekday
+        entity_id: input_datetime.wakeup_workday
         offset: "01:00:00"
     - trigger: time
       id: on_morning_weekend
@@ -43,38 +44,41 @@
     - trigger: time
       id: off_night_weekend
       at: input_datetime.bedtime_weekend
-  variables: &floor_warming_variables
-    # ISO weekdays (1 is Monday) of each period. A night counts on the day it started
-    days:
-      morning_weekday: [1, 2, 3, 4, 5]
-      morning_weekend: [6, 7]
-      night_workday: [7, 1, 2, 3, 4]
-      night_weekend: [5, 6]
+  variables:
+    scene: scene.guest_bathroom_floor_warming_guest
   conditions: &floor_warming_conditions
     - condition: state
       entity_id:
         - input_boolean.vacation
         - input_boolean.tuya_mode
       state: "off"
-    # A night can go past midnight, so its day is taken 12 h back (any time from noon to the next noon)
+  actions: &floor_warming_actions
+    # A morning goes by its own day, a night by the day after the one it started on
+    # (12 h back from any time between noon and the next noon is that start day)
+    - action: workday.check_date
+      target:
+        entity_id: binary_sensor.workday_sensor
+      data:
+        check_date: >-
+          {% if 'night' in trigger.id %}{{ (now() - timedelta(hours=12)).date() + timedelta(days=1) }}
+          {%- else %}{{ now().date() }}{% endif %}
+      response_variable: workday
+    # Workday timings run only for a workday, weekend ones only for a weekend day or a holiday.
+    # Day off on counts as a weekend day: late wakeup and late bedtime
     - condition: template
       value_template: >-
-        {% set period = trigger.id.split('_', 1)[1] %}
-        {% set moment = now() - timedelta(hours=12) if period.startswith('night') else now() %}
-        {{ moment.isoweekday() in days[period] }}
-  actions:
+        {{ (workday['binary_sensor.workday_sensor'].workday and is_state('input_boolean.day_off', 'off'))
+           == trigger.id.endswith('workday') }}
     - action: scene.turn_on
       target:
-        entity_id: "scene.guest_bathroom_floor_warming_guest_{{ 'on' if trigger.id.startswith('on') else 'off' }}"
+        entity_id: "{{ scene }}_{{ 'on' if trigger.id.startswith('on') else 'off' }}"
 
 - id: repo_floor_warming_master
   alias: "Floor warming: master"
   description: Master bathroom floor
   mode: queued
   triggers: *floor_warming_triggers
-  variables: *floor_warming_variables
+  variables:
+    scene: scene.master_bathroom_floor_warming_master
   conditions: *floor_warming_conditions
-  actions:
-    - action: scene.turn_on
-      target:
-        entity_id: "scene.master_bathroom_floor_warming_master_{{ 'on' if trigger.id.startswith('on') else 'off' }}"
+  actions: *floor_warming_actions

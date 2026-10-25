@@ -56,11 +56,15 @@ Scripts → `config/scripts/<name>.yaml` (mapping). Helpers/template sensors →
 
 Daily timings live in `config/packages/schedule.yaml` as `input_datetime` helpers, and automations use them in time triggers (with an offset when needed). A change in the UI is reset on the next HA restart, so change them in the file.
 
+Workdays come from the **Workday** integration (`binary_sensor.workday_sensor`), so a holiday counts like a weekend day. Wakeup goes by the day itself, bedtime by the next day: before a workday it is the early one, before a weekend day or a holiday the late one. Night automations ask `workday.check_date` about the next day. While **Day off** is on, every check counts as a weekend day, so that morning and that night get the late timings. Turn it off the next day, after the night is over.
+
 | Timing | Value | Used by |
 |---|---|---|
-| Wakeup | weekdays 09:30, weekends 11:00 | floor warming: from 1 h before to 1 h after |
-| Bedtime | Sunday–Thursday nights 00:00, Friday and Saturday nights 01:00 | floor warming: from 1 h before to bedtime. Master towel heat relay: from 1 h before to 1 h after |
-| Work | weekdays 10:00–19:00 | cube on at the start (weekdays only), off at the end |
+| Wakeup | workdays 09:30, weekends and holidays 11:00 | floor warming: from 1 h before to 1 h after |
+| Bedtime | before a workday 00:00, before a weekend day or holiday 01:00 | floor warming: from 1 h before to bedtime. Master towel heat relay: from 1 h before to 1 h after |
+| Work | workdays 10:00–19:00 | cube on at the start (workdays only), off at the end. Desk schedule runs on workdays |
+
+Workday can only be added in the UI (once, it is kept in HA's state dir): **Settings → Devices & services → Add integration → Workday**. Keep the name `Workday Sensor`, country Poland, workdays Monday–Friday, excludes Saturday, Sunday and Holidays, offset 0. Without it the floors, the towel heat nights, the cube and the desk don't run (Vacation still works).
 
 ## Modes (General actions card)
 
@@ -68,7 +72,7 @@ Switches in `config/packages/modes.yaml`. Automations check them in their condit
 
 | Mode | Stops | When turned on, also runs the Tuya scene |
 |---|---|---|
-| Day off | desk schedule | `Days off - on` |
+| Day off | desk schedule, cube turning on. Also counts the day as a weekend day for the schedule (late wakeup and bedtime) | `Days off - on` |
 | Vacation | desk, floor warming, blinds, curtains, cube. Also turns off both floors, guest towel heat, the cube and the master towel heat relay (the relay turns on again when Vacation ends) | `Vacation - on` |
 | Guests in the living room | blinds opening in the morning | `Guests in the living room - on` |
 | Tuya rule mode | every HA automation that moves Tuya devices (alerts keep running) | none |

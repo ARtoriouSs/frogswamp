@@ -1,5 +1,6 @@
 # Master bathroom towel heat, through its Zigbee relay (the heater itself stays on, the relay gives it power).
 # Nights only: from 1 h before bedtime, like the floor warming, to 1 h after bedtime (packages/schedule.yaml).
+# Workday or weekend bedtime is picked by the Workday integration for the next day.
 # Vacation on turns it off, Vacation off turns it on. Tuya rule mode doesn't stop it, the relay isn't a Tuya device
 - id: repo_towel_heat_master
   alias: "Towel heat: master"
@@ -36,11 +37,6 @@
       entity_id: input_boolean.vacation
       from: "on"
       to: "off"
-  variables:
-    # ISO weekdays (1 is Monday) of each night, counted on the day it started
-    days:
-      night_workday: [7, 1, 2, 3, 4]
-      night_weekend: [5, 6]
   conditions:
     - condition: or
       conditions:
@@ -48,16 +44,32 @@
           id:
             - off_vacation_start
             - on_vacation_end
-        - condition: and
-          conditions:
-            - condition: state
-              entity_id: input_boolean.vacation
-              state: "off"
-            # A night goes past midnight, so its day is taken 12 h back (any time from noon to the next noon)
+        - condition: state
+          entity_id: input_boolean.vacation
+          state: "off"
+  actions:
+    # Only for the night triggers, so Vacation works even without the Workday integration
+    - if:
+        - condition: template
+          value_template: "{{ 'night' in trigger.id }}"
+      then:
+        # A night goes by the day after the one it started on
+        # (12 h back from any time between noon and the next noon is that start day)
+        - action: workday.check_date
+          target:
+            entity_id: binary_sensor.workday_sensor
+          data:
+            check_date: "{{ (now() - timedelta(hours=12)).date() + timedelta(days=1) }}"
+          response_variable: workday
+        # Workday bedtime runs only before a workday, weekend one only before a weekend day or a holiday.
+        # Day off on counts as a weekend day: late bedtime
+        - if:
             - condition: template
               value_template: >-
-                {{ (now() - timedelta(hours=12)).isoweekday() in days[trigger.id.split('_', 1)[1]] }}
-  actions:
+                {{ (workday['binary_sensor.workday_sensor'].workday and is_state('input_boolean.day_off', 'off'))
+                   != trigger.id.endswith('workday') }}
+          then:
+            - stop: Not this night's bedtime
     - action: "switch.turn_{{ 'on' if trigger.id.startswith('on') else 'off' }}"
       target:
         entity_id: switch.master_bathroom_towel_heat_relay
