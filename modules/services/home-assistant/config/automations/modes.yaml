@@ -20,3 +20,28 @@
     - action: scene.turn_on
       target:
         entity_id: "{{ trigger.id }}"
+
+# Vacation on also turns the devices off. The master towel heat relay is turned off in towel_heat.yaml.
+# Nothing here turns them on again: the floors and the cube come back with their schedules
+- id: repo_modes_vacation_off
+  alias: "Modes: devices off on Vacation on"
+  mode: queued
+  triggers:
+    - trigger: state
+      entity_id: input_boolean.vacation
+      from: "off"
+      to: "on"
+  actions:
+    - action: climate.turn_off
+      target:
+        entity_id: climate.guest_bathroom_towel_heat_guest
+    - action: scene.turn_on
+      target:
+        entity_id:
+          - scene.guest_bathroom_floor_warming_guest_off
+          - scene.master_bathroom_floor_warming_master_off
+    # After the mode's check on the cube (10 s), it goes back to the state it had before
+    - delay: "00:00:15"
+    - action: light.turn_off
+      target:
+        entity_id: light.cube_matrix_192_168_101_121
