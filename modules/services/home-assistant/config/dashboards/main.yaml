@@ -33,12 +33,6 @@ views:
             name: Cube
           - entity: select.cube_matrix_192_168_101_121_background
             name: Background
-          - entity: automation.cube_on_at_11_00_on_weekdays
-            name: On at work start (workdays)
-          - entity: automation.cube_off_at_19_00
-            name: Off at work end
-          - entity: automation.cube_off_at_bedtime
-            name: Off at bedtime
           - entity: automation.cube_another_frog_every_hour
             name: Another frog every hour
           - entity: automation.cube_animations_for_desk_blinds_and_modes

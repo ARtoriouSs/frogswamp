@@ -62,9 +62,9 @@ Workdays come from the **Workday** integration (`binary_sensor.workday_sensor_pl
 |---|---|---|
 | Wakeup | workdays 09:30, weekends and holidays 11:00 | floor warming: from 1 h before to 1 h after |
 | Bedtime | before a workday 00:00, before a weekend day or holiday 01:00 | floor warming: from 1 h before to bedtime. Master towel heat relay: from 1 h before to 1 h after |
-| Work | workdays 10:00–19:00 | cube on at the start (workdays only), off at the end. Desk schedule runs on workdays |
+| Work | workdays 10:00–19:00 | desk schedule runs on workdays |
 
-Workday can only be added in the UI (once, it is kept in HA's state dir): **Settings → Devices & services → Add integration → Workday**. Country Poland (the entity becomes `binary_sensor.workday_sensor_pl`), workdays Monday–Friday, excludes Saturday, Sunday and Holidays, offset 0. Without it the floors, the towel heat nights, the cube and the desk don't run (Vacation still works).
+Workday can only be added in the UI (once, it is kept in HA's state dir): **Settings → Devices & services → Add integration → Workday**. Country Poland (the entity becomes `binary_sensor.workday_sensor_pl`), workdays Monday–Friday, excludes Saturday, Sunday and Holidays, offset 0. Without it the floors, the towel heat nights and the desk don't run (Vacation still works).
 
 ## Modes (General actions card)
 
@@ -72,8 +72,8 @@ Switches in `config/packages/modes.yaml`. Automations check them in their condit
 
 | Mode | Stops | When turned on, also runs the Tuya scene |
 |---|---|---|
-| Day off | desk schedule, cube turning on. Also counts the day as a weekend day for the schedule (late wakeup and bedtime) | `Days off - on` |
-| Vacation | desk, floor warming, blinds, curtains, cube. Also turns off both floors, guest towel heat, the cube and the master towel heat relay. Nothing turns on again when Vacation ends, everything waits for its next scheduled time | `Vacation - on` |
+| Day off | desk schedule. Also counts the day as a weekend day for the schedule (late wakeup and bedtime) | `Days off - on` |
+| Vacation | desk, floor warming, blinds, curtains. Also turns off both floors, guest towel heat and the master towel heat relay. Nothing turns on again when Vacation ends, everything waits for its next scheduled time | `Vacation - on` |
 | Guests in the living room | blinds opening in the morning | `Guests in the living room - on` |
 | Tuya rule mode | every HA automation that moves Tuya devices (alerts keep running) | none |
 
