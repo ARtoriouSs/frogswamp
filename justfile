@@ -169,6 +169,10 @@ ha-check:
     if grep -qE 'Invalid config|Failed config|Fatal error' <<<"$out"; then echo "ha-check: invalid Home Assistant config" >&2; exit 1; fi
     echo "ha-check: configuration valid"
 
+# Restart Home Assistant on the server
+restart-ha:
+    ssh root@{{host}} 'systemctl restart podman-home-assistant.service && systemctl is-active podman-home-assistant.service'
+
 # One-time: format the external backup disk on the server (ERASES it)
 init-backup-disk device:
     #!/usr/bin/env bash
