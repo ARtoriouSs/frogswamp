@@ -1,0 +1,77 @@
+# Signs for events on the cube (5x5)
+- name: integration_down
+  size: 5x5
+  palette: {y: '#ffa000', k: '#000000'}
+  frames:
+    - |
+      ..y..
+      .yky.
+      .yky.
+      yyyyy
+      yykyy
+
+# Pulses, so it stands out from an integration warning
+- name: server_problem
+  size: 5x5
+  palette: {r: '#ff1a1a', d: '#5a0000', k: '#000000'}
+  fps: 2
+  frames:
+    - |
+      ..r..
+      .rkr.
+      .rkr.
+      rrrrr
+      rrkrr
+    - |
+      ..d..
+      .dkd.
+      .dkd.
+      ddddd
+      ddkdd
+
+- name: coffee
+  size: 5x5
+  palette: {s: '#9a9a9a', c: '#6b3a12', w: '#ffffff'}
+  fps: 3
+  frames:
+    - |
+      s.s..
+      .s.s.
+      cccc.
+      wwwww
+      .ww..
+    - |
+      .s.s.
+      s.s..
+      cccc.
+      wwwww
+      .ww..
+
+- name: moon
+  size: 5x5
+  palette: {m: '#ffd84a', s: '#ffffff', t: '#404040'}
+  fps: 2
+  frames:
+    - |
+      .mm.s
+      mm...
+      mm..t
+      mm...
+      .mm..
+    - |
+      .mm.t
+      mm...
+      mm..s
+      mm...
+      .mm..
+
+- name: play
+  size: 5x5
+  palette: {x: '#ffffff'}
+  frames:
+    - |
+      .x...
+      .xx..
+      .xxx.
+      .xx..
+      .x...

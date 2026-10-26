@@ -106,3 +106,107 @@
         repeat: forever
         duration: "{{ 10 if trigger.id == 'mode' else 5 }}"
         wake: true
+
+# Coffee at work start, moon at work end, on workdays that aren't a day off or vacation
+- id: repo_cube_work_start_end
+  alias: "Cube: coffee at work start, moon at work end"
+  triggers:
+    - trigger: time
+      at: input_datetime.work_start
+      id: coffee
+    - trigger: time
+      at: input_datetime.work_end
+      id: moon
+  conditions:
+    - condition: state
+      entity_id: binary_sensor.workday_sensor_pl
+      state: "on"
+    - condition: state
+      entity_id:
+        - input_boolean.day_off
+        - input_boolean.vacation
+      state: "off"
+  actions:
+    - action: cubematrix.show
+      target:
+        entity_id: light.cube_matrix_192_168_101_121
+      data:
+        preset: "{{ trigger.id }}"
+        repeat: forever
+        duration: 10
+        wake: true
+
+# Something starts playing through the TV's Chromecast: Jellyfin cast from the phone, or a match
+# from the football page. Kodi isn't in HA, so a match played in Kodi isn't seen
+- id: repo_cube_tv_play
+  alias: "Cube: play sign when the TV starts casting"
+  mode: restart
+  triggers:
+    - trigger: state
+      entity_id: media_player.philips_tv
+      to: playing
+      not_from:
+        - unavailable
+        - unknown
+  actions:
+    - action: cubematrix.show
+      target:
+        entity_id: light.cube_matrix_192_168_101_121
+      data:
+        preset: play
+        duration: 5
+        wake: true
+
+# The same problems as in alerts.yaml, shown when they start and again every hour (at :30, between
+# the frog changes) while they last. A failed integration is amber, a server problem pulses red
+- id: repo_cube_problems
+  alias: "Cube: integration and server problems"
+  mode: queued
+  variables:
+    integration_down: "{{ states('sensor.failed_integrations') | int(0) > 0 }}"
+    server_problem: &server_problem >-
+      {% set ns = namespace(old=false) %}
+      {% for repo in ['local', 'b2'] %}
+        {% set s = states('sensor.backup_last_' ~ repo) %}
+        {% set t = as_timestamp(s, none) %}
+        {% if s in ['none', 'unreachable'] or (t is not none and now().timestamp() - t > 48 * 3600) %}
+          {% set ns.old = true %}
+        {% endif %}
+      {% endfor %}
+      {% set disk = states.sensor.backup_disk %}
+      {% set zigbee = states.binary_sensor.zigbee2mqtt_bridge_connection_state %}
+      {{ ns.old
+         or (disk is not none and disk.state == 'missing' and now() - disk.last_changed > timedelta(minutes=30))
+         or (zigbee is not none and zigbee.state != 'on' and now() - zigbee.last_changed > timedelta(minutes=10)) }}
+  triggers:
+    - trigger: state
+      entity_id: sensor.failed_integrations
+      for: "00:10:00"
+    - trigger: template
+      value_template: *server_problem
+    - trigger: time_pattern
+      minutes: 30
+  conditions:
+    - "{{ integration_down or server_problem }}"
+  actions:
+    - if: "{{ integration_down }}"
+      then:
+        - action: cubematrix.show
+          target:
+            entity_id: light.cube_matrix_192_168_101_121
+          data:
+            preset: integration_down
+            duration: 10
+            wait: true
+            wake: true
+    - if: "{{ server_problem }}"
+      then:
+        - action: cubematrix.show
+          target:
+            entity_id: light.cube_matrix_192_168_101_121
+          data:
+            preset: server_problem
+            repeat: forever
+            duration: 10
+            wait: true
+            wake: true
