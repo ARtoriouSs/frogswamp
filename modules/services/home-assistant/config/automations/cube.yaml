@@ -196,6 +196,7 @@
             entity_id: light.cube_matrix_192_168_101_121
           data:
             preset: integration_down
+            repeat: forever
             duration: 10
             wait: true
             wake: true
