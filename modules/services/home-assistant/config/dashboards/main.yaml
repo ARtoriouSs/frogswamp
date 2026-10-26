@@ -1,10 +1,12 @@
 title: Home
 views:
   - title: Overview
+    # No title toggles on the cards: one tap there switches every row of the card at once
     cards:
       # Modes for the whole flat, no area
       - type: entities
         title: General actions
+        show_header_toggle: false
         entities:
           - input_boolean.day_off
           - input_boolean.vacation
@@ -12,6 +14,7 @@ views:
 
       - type: entities
         title: Office
+        show_header_toggle: false
         icon: mdi:chair-rolling
         entities:
           - type: section
@@ -28,6 +31,7 @@ views:
 
       - type: entities
         title: Living room
+        show_header_toggle: false
         icon: mdi:sofa
         entities:
           - input_boolean.guests_in_living_room
@@ -62,6 +66,7 @@ views:
 
       - type: entities
         title: Bedroom
+        show_header_toggle: false
         icon: mdi:bed
         entities:
           - cover.bedroom_curtains
@@ -78,6 +83,7 @@ views:
 
       - type: entities
         title: Guest bathroom
+        show_header_toggle: false
         icon: mdi:shower
         entities:
           - climate.guest_bathroom_thermostat_guest
@@ -87,6 +93,7 @@ views:
 
       - type: entities
         title: Master bathroom
+        show_header_toggle: false
         icon: mdi:shower-head
         entities:
           - climate.master_bathroom_thermostat_master
@@ -95,6 +102,7 @@ views:
 
       - type: entities
         title: Hall
+        show_header_toggle: false
         icon: mdi:wardrobe-outline
         entities:
           - entity: binary_sensor.huawei_igd_wan_status
