@@ -255,3 +255,462 @@ views:
         initial_view: dayGridMonth
         entities:
           - calendar.workday_sensor_pl_calendar
+
+  - title: Uptime
+    path: uptime
+    icon: mdi:lan-connect
+    cards:
+      # Day, week or month for every card below: the % comes from the attribute, the timelines are swapped
+      - type: entities
+        title: Range
+        show_header_toggle: false
+        icon: mdi:calendar-range
+        entities:
+          - entity: input_select.uptime_range
+            name: Showing
+          - type: buttons
+            entities:
+              - entity: input_select.uptime_range
+                name: Day
+                icon: mdi:calendar-today
+                tap_action:
+                  action: perform-action
+                  perform_action: input_select.select_option
+                  target:
+                    entity_id: input_select.uptime_range
+                  data:
+                    option: Day
+              - entity: input_select.uptime_range
+                name: Week
+                icon: mdi:calendar-week
+                tap_action:
+                  action: perform-action
+                  perform_action: input_select.select_option
+                  target:
+                    entity_id: input_select.uptime_range
+                  data:
+                    option: Week
+              - entity: input_select.uptime_range
+                name: Month
+                icon: mdi:calendar-month
+                tap_action:
+                  action: perform-action
+                  perform_action: input_select.select_option
+                  target:
+                    entity_id: input_select.uptime_range
+                  data:
+                    option: Month
+
+      - type: vertical-stack
+        cards:
+          - type: entities
+            title: Living room
+            show_header_toggle: false
+            entities:
+              - type: attribute
+                entity: binary_sensor.blinds_right_online
+                attribute: uptime
+                name: Blinds right
+                suffix: "%"
+              - type: attribute
+                entity: binary_sensor.blinds_middle_online
+                attribute: uptime
+                name: Blinds middle
+                suffix: "%"
+              - type: attribute
+                entity: binary_sensor.blinds_left_door_online
+                attribute: uptime
+                name: Blinds left / door
+                suffix: "%"
+              - type: attribute
+                entity: binary_sensor.tv_online
+                attribute: uptime
+                name: TV
+                suffix: "%"
+              - type: attribute
+                entity: binary_sensor.fridge_online
+                attribute: uptime
+                name: Fridge
+                suffix: "%"
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Day
+            card:
+              type: history-graph
+              hours_to_show: 24
+              entities:
+                - entity: binary_sensor.blinds_right_online
+                  name: Blinds right
+                - entity: binary_sensor.blinds_middle_online
+                  name: Blinds middle
+                - entity: binary_sensor.blinds_left_door_online
+                  name: Blinds left / door
+                - entity: binary_sensor.tv_online
+                  name: TV
+                - entity: binary_sensor.fridge_online
+                  name: Fridge
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Week
+            card:
+              type: history-graph
+              hours_to_show: 168
+              entities:
+                - entity: binary_sensor.blinds_right_online
+                  name: Blinds right
+                - entity: binary_sensor.blinds_middle_online
+                  name: Blinds middle
+                - entity: binary_sensor.blinds_left_door_online
+                  name: Blinds left / door
+                - entity: binary_sensor.tv_online
+                  name: TV
+                - entity: binary_sensor.fridge_online
+                  name: Fridge
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Month
+            card:
+              type: history-graph
+              hours_to_show: 744
+              entities:
+                - entity: binary_sensor.blinds_right_online
+                  name: Blinds right
+                - entity: binary_sensor.blinds_middle_online
+                  name: Blinds middle
+                - entity: binary_sensor.blinds_left_door_online
+                  name: Blinds left / door
+                - entity: binary_sensor.tv_online
+                  name: TV
+                - entity: binary_sensor.fridge_online
+                  name: Fridge
+
+      - type: vertical-stack
+        cards:
+          - type: entities
+            title: Bedroom
+            show_header_toggle: false
+            entities:
+              - type: attribute
+                entity: binary_sensor.curtains_online
+                attribute: uptime
+                name: Curtains
+                suffix: "%"
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Day
+            card:
+              type: history-graph
+              hours_to_show: 24
+              entities:
+                - entity: binary_sensor.curtains_online
+                  name: Curtains
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Week
+            card:
+              type: history-graph
+              hours_to_show: 168
+              entities:
+                - entity: binary_sensor.curtains_online
+                  name: Curtains
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Month
+            card:
+              type: history-graph
+              hours_to_show: 744
+              entities:
+                - entity: binary_sensor.curtains_online
+                  name: Curtains
+
+      - type: vertical-stack
+        cards:
+          - type: entities
+            title: Office
+            show_header_toggle: false
+            entities:
+              - type: attribute
+                entity: binary_sensor.desk_online
+                attribute: uptime
+                name: Desk
+                suffix: "%"
+              - type: attribute
+                entity: binary_sensor.cube_online
+                attribute: uptime
+                name: Cube
+                suffix: "%"
+              - type: attribute
+                entity: binary_sensor.printer_online
+                attribute: uptime
+                name: Printer
+                suffix: "%"
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Day
+            card:
+              type: history-graph
+              hours_to_show: 24
+              entities:
+                - entity: binary_sensor.desk_online
+                  name: Desk
+                - entity: binary_sensor.cube_online
+                  name: Cube
+                - entity: binary_sensor.printer_online
+                  name: Printer
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Week
+            card:
+              type: history-graph
+              hours_to_show: 168
+              entities:
+                - entity: binary_sensor.desk_online
+                  name: Desk
+                - entity: binary_sensor.cube_online
+                  name: Cube
+                - entity: binary_sensor.printer_online
+                  name: Printer
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Month
+            card:
+              type: history-graph
+              hours_to_show: 744
+              entities:
+                - entity: binary_sensor.desk_online
+                  name: Desk
+                - entity: binary_sensor.cube_online
+                  name: Cube
+                - entity: binary_sensor.printer_online
+                  name: Printer
+
+      - type: vertical-stack
+        cards:
+          - type: entities
+            title: Guest bathroom
+            show_header_toggle: false
+            entities:
+              - type: attribute
+                entity: binary_sensor.guest_thermostat_online
+                attribute: uptime
+                name: Thermostat
+                suffix: "%"
+              - type: attribute
+                entity: binary_sensor.guest_towel_heat_online
+                attribute: uptime
+                name: Towel heat
+                suffix: "%"
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Day
+            card:
+              type: history-graph
+              hours_to_show: 24
+              entities:
+                - entity: binary_sensor.guest_thermostat_online
+                  name: Thermostat
+                - entity: binary_sensor.guest_towel_heat_online
+                  name: Towel heat
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Week
+            card:
+              type: history-graph
+              hours_to_show: 168
+              entities:
+                - entity: binary_sensor.guest_thermostat_online
+                  name: Thermostat
+                - entity: binary_sensor.guest_towel_heat_online
+                  name: Towel heat
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Month
+            card:
+              type: history-graph
+              hours_to_show: 744
+              entities:
+                - entity: binary_sensor.guest_thermostat_online
+                  name: Thermostat
+                - entity: binary_sensor.guest_towel_heat_online
+                  name: Towel heat
+
+      - type: vertical-stack
+        cards:
+          - type: entities
+            title: Master bathroom
+            show_header_toggle: false
+            entities:
+              - type: attribute
+                entity: binary_sensor.master_thermostat_online
+                attribute: uptime
+                name: Thermostat
+                suffix: "%"
+              - type: attribute
+                entity: binary_sensor.master_towel_heat_relay_online
+                attribute: uptime
+                name: Towel heat relay
+                suffix: "%"
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Day
+            card:
+              type: history-graph
+              hours_to_show: 24
+              entities:
+                - entity: binary_sensor.master_thermostat_online
+                  name: Thermostat
+                - entity: binary_sensor.master_towel_heat_relay_online
+                  name: Towel heat relay
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Week
+            card:
+              type: history-graph
+              hours_to_show: 168
+              entities:
+                - entity: binary_sensor.master_thermostat_online
+                  name: Thermostat
+                - entity: binary_sensor.master_towel_heat_relay_online
+                  name: Towel heat relay
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Month
+            card:
+              type: history-graph
+              hours_to_show: 744
+              entities:
+                - entity: binary_sensor.master_thermostat_online
+                  name: Thermostat
+                - entity: binary_sensor.master_towel_heat_relay_online
+                  name: Towel heat relay
+
+      - type: vertical-stack
+        cards:
+          - type: entities
+            title: Hall
+            show_header_toggle: false
+            entities:
+              - type: attribute
+                entity: binary_sensor.router_online
+                attribute: uptime
+                name: Router
+                suffix: "%"
+              - type: attribute
+                entity: binary_sensor.zigbee_bridge_online
+                attribute: uptime
+                name: Zigbee bridge
+                suffix: "%"
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Day
+            card:
+              type: history-graph
+              hours_to_show: 24
+              entities:
+                - entity: binary_sensor.router_online
+                  name: Router
+                - entity: binary_sensor.zigbee_bridge_online
+                  name: Zigbee bridge
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Week
+            card:
+              type: history-graph
+              hours_to_show: 168
+              entities:
+                - entity: binary_sensor.router_online
+                  name: Router
+                - entity: binary_sensor.zigbee_bridge_online
+                  name: Zigbee bridge
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Month
+            card:
+              type: history-graph
+              hours_to_show: 744
+              entities:
+                - entity: binary_sensor.router_online
+                  name: Router
+                - entity: binary_sensor.zigbee_bridge_online
+                  name: Zigbee bridge
+
+      - type: vertical-stack
+        cards:
+          - type: entities
+            title: Garage
+            show_header_toggle: false
+            entities:
+              - type: attribute
+                entity: binary_sensor.audi_online
+                attribute: uptime
+                name: Audi
+                suffix: "%"
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Day
+            card:
+              type: history-graph
+              hours_to_show: 24
+              entities:
+                - entity: binary_sensor.audi_online
+                  name: Audi
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Week
+            card:
+              type: history-graph
+              hours_to_show: 168
+              entities:
+                - entity: binary_sensor.audi_online
+                  name: Audi
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Month
+            card:
+              type: history-graph
+              hours_to_show: 744
+              entities:
+                - entity: binary_sensor.audi_online
+                  name: Audi

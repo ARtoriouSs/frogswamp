@@ -1,0 +1,541 @@
+# Device uptime for the Uptime tab of the Main dashboard. A device is offline while its main entity is
+# unavailable (HA can't reach it), being off or closed still counts as online.
+# history_stats reads the source entity's recorded history, so the numbers include the days before this file.
+# The `<device> online` binary sensors draw the timelines, so their history starts when they were added
+input_select:
+  uptime_range:
+    name: Uptime range
+    icon: mdi:calendar-range
+    options:
+      - Day
+      - Week
+      - Month
+    initial: Week
+
+template:
+  - binary_sensor:
+      - name: Blinds right online
+        unique_id: repo_uptime_blinds_right
+        device_class: connectivity
+        state: "{{ not is_state('cover.living_room_blinds_right', 'unavailable') }}"
+        # The share of time online for the range picked in input_select.uptime_range
+        attributes: &uptime_attributes
+          uptime: >-
+            {% set device = this.entity_id.split('.')[1] | replace('_online', '') %}
+            {% set offline = states('sensor.' ~ device ~ '_offline_' ~ states('input_select.uptime_range') | lower) %}
+            {{ (100 - offline | float(0)) | round(1) if offline | is_number else none }}
+      - name: Blinds middle online
+        unique_id: repo_uptime_blinds_middle
+        device_class: connectivity
+        state: "{{ not is_state('cover.living_room_blinds_middle', 'unavailable') }}"
+        attributes: *uptime_attributes
+      - name: Blinds left door online
+        unique_id: repo_uptime_blinds_left_door
+        device_class: connectivity
+        state: "{{ not is_state('cover.living_room_blinds_left_door', 'unavailable') }}"
+        attributes: *uptime_attributes
+      - name: Tv online
+        unique_id: repo_uptime_tv
+        device_class: connectivity
+        state: "{{ not is_state('media_player.living_room_philips_tv', 'unavailable') }}"
+        attributes: *uptime_attributes
+      - name: Fridge online
+        unique_id: repo_uptime_fridge
+        device_class: connectivity
+        state: "{{ not is_state('sensor.living_room_refrigerator_fridge_temperature', 'unavailable') }}"
+        attributes: *uptime_attributes
+      - name: Curtains online
+        unique_id: repo_uptime_curtains
+        device_class: connectivity
+        state: "{{ not is_state('cover.bedroom_curtains', 'unavailable') }}"
+        attributes: *uptime_attributes
+      - name: Desk online
+        unique_id: repo_uptime_desk
+        device_class: connectivity
+        state: "{{ not is_state('switch.desk_child_lock', 'unavailable') }}"
+        attributes: *uptime_attributes
+      - name: Cube online
+        unique_id: repo_uptime_cube
+        device_class: connectivity
+        state: "{{ not is_state('light.cube_matrix_192_168_101_121', 'unavailable') }}"
+        attributes: *uptime_attributes
+      - name: Printer online
+        unique_id: repo_uptime_printer
+        device_class: connectivity
+        state: "{{ not is_state('sensor.office_printer', 'unavailable') }}"
+        attributes: *uptime_attributes
+      - name: Guest thermostat online
+        unique_id: repo_uptime_guest_thermostat
+        device_class: connectivity
+        state: "{{ not is_state('climate.guest_bathroom_thermostat_guest', 'unavailable') }}"
+        attributes: *uptime_attributes
+      - name: Guest towel heat online
+        unique_id: repo_uptime_guest_towel_heat
+        device_class: connectivity
+        state: "{{ not is_state('climate.guest_bathroom_towel_heat_guest', 'unavailable') }}"
+        attributes: *uptime_attributes
+      - name: Master thermostat online
+        unique_id: repo_uptime_master_thermostat
+        device_class: connectivity
+        state: "{{ not is_state('climate.master_bathroom_thermostat_master', 'unavailable') }}"
+        attributes: *uptime_attributes
+      - name: Master towel heat relay online
+        unique_id: repo_uptime_master_towel_heat_relay
+        device_class: connectivity
+        state: "{{ not is_state('switch.master_bathroom_towel_heat_relay', 'unavailable') }}"
+        attributes: *uptime_attributes
+      - name: Router online
+        unique_id: repo_uptime_router
+        device_class: connectivity
+        state: "{{ not is_state('binary_sensor.huawei_igd_wan_status', 'unavailable') }}"
+        attributes: *uptime_attributes
+      - name: Zigbee bridge online
+        unique_id: repo_uptime_zigbee_bridge
+        device_class: connectivity
+        state: "{{ states('binary_sensor.zigbee2mqtt_bridge_connection_state') not in ['off', 'unavailable'] }}"
+        attributes: *uptime_attributes
+      - name: Audi online
+        unique_id: repo_uptime_audi
+        device_class: connectivity
+        state: "{{ not is_state('sensor.garage_audi_a5_sportback_range', 'unavailable') }}"
+        attributes: *uptime_attributes
+
+sensor:
+  - platform: history_stats
+    name: Blinds right offline day
+    unique_id: repo_uptime_blinds_right_offline_day
+    entity_id: cover.living_room_blinds_right
+    state: unavailable
+    type: ratio
+    end: &uptime_end "{{ now() }}"
+    duration:
+      hours: 24
+  - platform: history_stats
+    name: Blinds right offline week
+    unique_id: repo_uptime_blinds_right_offline_week
+    entity_id: cover.living_room_blinds_right
+    state: unavailable
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 168
+  - platform: history_stats
+    name: Blinds right offline month
+    unique_id: repo_uptime_blinds_right_offline_month
+    entity_id: cover.living_room_blinds_right
+    state: unavailable
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 744
+  - platform: history_stats
+    name: Blinds middle offline day
+    unique_id: repo_uptime_blinds_middle_offline_day
+    entity_id: cover.living_room_blinds_middle
+    state: unavailable
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 24
+  - platform: history_stats
+    name: Blinds middle offline week
+    unique_id: repo_uptime_blinds_middle_offline_week
+    entity_id: cover.living_room_blinds_middle
+    state: unavailable
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 168
+  - platform: history_stats
+    name: Blinds middle offline month
+    unique_id: repo_uptime_blinds_middle_offline_month
+    entity_id: cover.living_room_blinds_middle
+    state: unavailable
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 744
+  - platform: history_stats
+    name: Blinds left door offline day
+    unique_id: repo_uptime_blinds_left_door_offline_day
+    entity_id: cover.living_room_blinds_left_door
+    state: unavailable
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 24
+  - platform: history_stats
+    name: Blinds left door offline week
+    unique_id: repo_uptime_blinds_left_door_offline_week
+    entity_id: cover.living_room_blinds_left_door
+    state: unavailable
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 168
+  - platform: history_stats
+    name: Blinds left door offline month
+    unique_id: repo_uptime_blinds_left_door_offline_month
+    entity_id: cover.living_room_blinds_left_door
+    state: unavailable
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 744
+  - platform: history_stats
+    name: Tv offline day
+    unique_id: repo_uptime_tv_offline_day
+    entity_id: media_player.living_room_philips_tv
+    state: unavailable
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 24
+  - platform: history_stats
+    name: Tv offline week
+    unique_id: repo_uptime_tv_offline_week
+    entity_id: media_player.living_room_philips_tv
+    state: unavailable
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 168
+  - platform: history_stats
+    name: Tv offline month
+    unique_id: repo_uptime_tv_offline_month
+    entity_id: media_player.living_room_philips_tv
+    state: unavailable
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 744
+  - platform: history_stats
+    name: Fridge offline day
+    unique_id: repo_uptime_fridge_offline_day
+    entity_id: sensor.living_room_refrigerator_fridge_temperature
+    state: unavailable
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 24
+  - platform: history_stats
+    name: Fridge offline week
+    unique_id: repo_uptime_fridge_offline_week
+    entity_id: sensor.living_room_refrigerator_fridge_temperature
+    state: unavailable
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 168
+  - platform: history_stats
+    name: Fridge offline month
+    unique_id: repo_uptime_fridge_offline_month
+    entity_id: sensor.living_room_refrigerator_fridge_temperature
+    state: unavailable
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 744
+  - platform: history_stats
+    name: Curtains offline day
+    unique_id: repo_uptime_curtains_offline_day
+    entity_id: cover.bedroom_curtains
+    state: unavailable
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 24
+  - platform: history_stats
+    name: Curtains offline week
+    unique_id: repo_uptime_curtains_offline_week
+    entity_id: cover.bedroom_curtains
+    state: unavailable
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 168
+  - platform: history_stats
+    name: Curtains offline month
+    unique_id: repo_uptime_curtains_offline_month
+    entity_id: cover.bedroom_curtains
+    state: unavailable
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 744
+  - platform: history_stats
+    name: Desk offline day
+    unique_id: repo_uptime_desk_offline_day
+    entity_id: switch.desk_child_lock
+    state: unavailable
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 24
+  - platform: history_stats
+    name: Desk offline week
+    unique_id: repo_uptime_desk_offline_week
+    entity_id: switch.desk_child_lock
+    state: unavailable
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 168
+  - platform: history_stats
+    name: Desk offline month
+    unique_id: repo_uptime_desk_offline_month
+    entity_id: switch.desk_child_lock
+    state: unavailable
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 744
+  - platform: history_stats
+    name: Cube offline day
+    unique_id: repo_uptime_cube_offline_day
+    entity_id: light.cube_matrix_192_168_101_121
+    state: unavailable
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 24
+  - platform: history_stats
+    name: Cube offline week
+    unique_id: repo_uptime_cube_offline_week
+    entity_id: light.cube_matrix_192_168_101_121
+    state: unavailable
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 168
+  - platform: history_stats
+    name: Cube offline month
+    unique_id: repo_uptime_cube_offline_month
+    entity_id: light.cube_matrix_192_168_101_121
+    state: unavailable
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 744
+  - platform: history_stats
+    name: Printer offline day
+    unique_id: repo_uptime_printer_offline_day
+    entity_id: sensor.office_printer
+    state: unavailable
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 24
+  - platform: history_stats
+    name: Printer offline week
+    unique_id: repo_uptime_printer_offline_week
+    entity_id: sensor.office_printer
+    state: unavailable
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 168
+  - platform: history_stats
+    name: Printer offline month
+    unique_id: repo_uptime_printer_offline_month
+    entity_id: sensor.office_printer
+    state: unavailable
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 744
+  - platform: history_stats
+    name: Guest thermostat offline day
+    unique_id: repo_uptime_guest_thermostat_offline_day
+    entity_id: climate.guest_bathroom_thermostat_guest
+    state: unavailable
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 24
+  - platform: history_stats
+    name: Guest thermostat offline week
+    unique_id: repo_uptime_guest_thermostat_offline_week
+    entity_id: climate.guest_bathroom_thermostat_guest
+    state: unavailable
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 168
+  - platform: history_stats
+    name: Guest thermostat offline month
+    unique_id: repo_uptime_guest_thermostat_offline_month
+    entity_id: climate.guest_bathroom_thermostat_guest
+    state: unavailable
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 744
+  - platform: history_stats
+    name: Guest towel heat offline day
+    unique_id: repo_uptime_guest_towel_heat_offline_day
+    entity_id: climate.guest_bathroom_towel_heat_guest
+    state: unavailable
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 24
+  - platform: history_stats
+    name: Guest towel heat offline week
+    unique_id: repo_uptime_guest_towel_heat_offline_week
+    entity_id: climate.guest_bathroom_towel_heat_guest
+    state: unavailable
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 168
+  - platform: history_stats
+    name: Guest towel heat offline month
+    unique_id: repo_uptime_guest_towel_heat_offline_month
+    entity_id: climate.guest_bathroom_towel_heat_guest
+    state: unavailable
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 744
+  - platform: history_stats
+    name: Master thermostat offline day
+    unique_id: repo_uptime_master_thermostat_offline_day
+    entity_id: climate.master_bathroom_thermostat_master
+    state: unavailable
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 24
+  - platform: history_stats
+    name: Master thermostat offline week
+    unique_id: repo_uptime_master_thermostat_offline_week
+    entity_id: climate.master_bathroom_thermostat_master
+    state: unavailable
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 168
+  - platform: history_stats
+    name: Master thermostat offline month
+    unique_id: repo_uptime_master_thermostat_offline_month
+    entity_id: climate.master_bathroom_thermostat_master
+    state: unavailable
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 744
+  - platform: history_stats
+    name: Master towel heat relay offline day
+    unique_id: repo_uptime_master_towel_heat_relay_offline_day
+    entity_id: switch.master_bathroom_towel_heat_relay
+    state: unavailable
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 24
+  - platform: history_stats
+    name: Master towel heat relay offline week
+    unique_id: repo_uptime_master_towel_heat_relay_offline_week
+    entity_id: switch.master_bathroom_towel_heat_relay
+    state: unavailable
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 168
+  - platform: history_stats
+    name: Master towel heat relay offline month
+    unique_id: repo_uptime_master_towel_heat_relay_offline_month
+    entity_id: switch.master_bathroom_towel_heat_relay
+    state: unavailable
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 744
+  - platform: history_stats
+    name: Router offline day
+    unique_id: repo_uptime_router_offline_day
+    entity_id: binary_sensor.huawei_igd_wan_status
+    state: unavailable
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 24
+  - platform: history_stats
+    name: Router offline week
+    unique_id: repo_uptime_router_offline_week
+    entity_id: binary_sensor.huawei_igd_wan_status
+    state: unavailable
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 168
+  - platform: history_stats
+    name: Router offline month
+    unique_id: repo_uptime_router_offline_month
+    entity_id: binary_sensor.huawei_igd_wan_status
+    state: unavailable
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 744
+  - platform: history_stats
+    name: Zigbee bridge offline day
+    unique_id: repo_uptime_zigbee_bridge_offline_day
+    entity_id: binary_sensor.zigbee2mqtt_bridge_connection_state
+    state:
+      - "off"
+      - "unavailable"
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 24
+  - platform: history_stats
+    name: Zigbee bridge offline week
+    unique_id: repo_uptime_zigbee_bridge_offline_week
+    entity_id: binary_sensor.zigbee2mqtt_bridge_connection_state
+    state:
+      - "off"
+      - "unavailable"
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 168
+  - platform: history_stats
+    name: Zigbee bridge offline month
+    unique_id: repo_uptime_zigbee_bridge_offline_month
+    entity_id: binary_sensor.zigbee2mqtt_bridge_connection_state
+    state:
+      - "off"
+      - "unavailable"
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 744
+  - platform: history_stats
+    name: Audi offline day
+    unique_id: repo_uptime_audi_offline_day
+    entity_id: sensor.garage_audi_a5_sportback_range
+    state: unavailable
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 24
+  - platform: history_stats
+    name: Audi offline week
+    unique_id: repo_uptime_audi_offline_week
+    entity_id: sensor.garage_audi_a5_sportback_range
+    state: unavailable
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 168
+  - platform: history_stats
+    name: Audi offline month
+    unique_id: repo_uptime_audi_offline_month
+    entity_id: sensor.garage_audi_a5_sportback_range
+    state: unavailable
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 744
