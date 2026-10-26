@@ -148,6 +148,8 @@ views:
             show_header_toggle: false
             icon: mdi:wardrobe-outline
             entities:
+              - type: section
+                label: Router
               - entity: binary_sensor.huawei_igd_wan_status
                 name: Internet
               - entity: sensor.huawei_igd_external_ip
@@ -175,7 +177,7 @@ views:
               - entity: switch.qbittorrent_alternative_speed
                 name: Slow mode
               - type: section
-                label: Server
+                label: Health
               - entity: sensor.backup_last_successful_automatic_backup
                 name: Last backup
               - entity: sensor.failed_integrations
