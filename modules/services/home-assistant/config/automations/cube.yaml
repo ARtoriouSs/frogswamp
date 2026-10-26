@@ -1,37 +1,7 @@
-# Yeelight Cube Matrix in the office: a random animated frog on workday working hours,
-# plus short animations when the desk, blinds or modes change. The short ones play even
-# when the cube is off (wake) and then go back to what was there before
-- id: repo_cube_on_weekdays
-  alias: "Cube: on at work start on workdays"
-  description: Not on Day off or Vacation, the short animations still play then
-  triggers:
-    - trigger: time
-      at: input_datetime.work_start
-  conditions:
-    - condition: state
-      entity_id:
-        - input_boolean.day_off
-        - input_boolean.vacation
-      state: "off"
-    # Workday integration: weekdays without holidays
-    - condition: state
-      entity_id: binary_sensor.workday_sensor_pl
-      state: "on"
-  actions:
-    - action: cubematrix.set_background
-      target:
-        entity_id: light.cube_matrix_192_168_101_121
-      data:
-        preset: "{{ frogs | random }}"
-    - action: light.turn_on
-      target:
-        entity_id: light.cube_matrix_192_168_101_121
-  variables:
-    frogs: &frogs
-      - frog_jump
-      - frog_sway
-      - frog_blink
-      - frog_croak
+# Yeelight Cube Matrix in the office. It stays on all the time (the lamp turns itself back on
+# when it is turned off, so there is no off schedule) and shows a random animated frog, plus
+# short animations when the desk, blinds or modes change. The short ones play even when the
+# cube is off (wake) and then go back to what was there before
 
 # Another frog every hour while the cube is on, never the same one twice in a row
 - id: repo_cube_next_frog
@@ -44,7 +14,11 @@
       entity_id: light.cube_matrix_192_168_101_121
       state: "on"
   variables:
-    frogs: *frogs
+    frogs: &frogs
+      - frog_jump
+      - frog_sway
+      - frog_blink
+      - frog_croak
   actions:
     - action: cubematrix.set_background
       target:
@@ -77,49 +51,6 @@
         preset: >-
           {% set i = frogs.index(current) if current in frogs else -1 %}
           {{ frogs[(i + 1) % frogs | length] }}
-
-- id: repo_cube_off_evening
-  alias: "Cube: off at work end"
-  triggers:
-    - trigger: time
-      at: input_datetime.work_end
-  actions:
-    - action: light.turn_off
-      target:
-        entity_id: light.cube_matrix_192_168_101_121
-
-# Backup for a cube turned on by hand in the evening: off at bedtime, so it never stays on overnight.
-# Bedtime goes by the next day (packages/schedule.yaml): the workday one before a workday, the weekend
-# one before a weekend day or a holiday (Workday integration). Day off on counts as a weekend day
-- id: repo_cube_off_bedtime
-  alias: "Cube: off at bedtime"
-  triggers:
-    - trigger: time
-      id: workday
-      at: input_datetime.bedtime_workday
-    - trigger: time
-      id: weekend
-      at: input_datetime.bedtime_weekend
-  conditions:
-    - condition: state
-      entity_id: light.cube_matrix_192_168_101_121
-      state: "on"
-  actions:
-    # The day after this night (12 h back from any time between noon and the next noon is the
-    # night's start day)
-    - action: workday.check_date
-      target:
-        entity_id: binary_sensor.workday_sensor_pl
-      data:
-        check_date: "{{ (now() - timedelta(hours=12)).date() + timedelta(days=1) }}"
-      response_variable: workday
-    - condition: template
-      value_template: >-
-        {{ (workday['binary_sensor.workday_sensor_pl'].workday and is_state('input_boolean.day_off', 'off'))
-           == (trigger.id == 'workday') }}
-    - action: light.turn_off
-      target:
-        entity_id: light.cube_matrix_192_168_101_121
 
 # A scene's state is the time it was last run from HA, so a new value means it just ran.
 # Desk and blinds moved from the Tuya app or by hand are not seen here
