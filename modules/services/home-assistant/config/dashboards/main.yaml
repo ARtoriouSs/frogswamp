@@ -3,6 +3,10 @@ views:
   - title: Overview
     # No title toggles on the cards: one tap there switches every row of the card at once
     cards:
+      - type: weather-forecast
+        entity: weather.forecast_home_assistant
+        forecast_type: daily
+
       # Modes for the whole flat, no area
       - type: entities
         title: General actions
@@ -24,6 +28,22 @@ views:
           - script.desk_up
           - script.desk_down
           - type: section
+            label: Cube
+          - entity: light.cube_matrix_192_168_101_121
+            name: Cube
+          - entity: select.cube_matrix_192_168_101_121_background
+            name: Background
+          - entity: automation.cube_on_at_11_00_on_weekdays
+            name: On at work start (workdays)
+          - entity: automation.cube_off_at_19_00
+            name: Off at work end
+          - entity: automation.cube_off_at_bedtime
+            name: Off at bedtime
+          - entity: automation.cube_another_frog_every_hour
+            name: Another frog every hour
+          - entity: automation.cube_animations_for_desk_blinds_and_modes
+            name: Animations for desk, blinds and modes
+          - type: section
             label: Printer
           - sensor.office_printer
           - sensor.office_hp_tango_black_cartridge
@@ -41,6 +61,18 @@ views:
               - entity: script.tv_mode
                 name: TV mode
                 icon: mdi:youtube-tv
+          - type: section
+            label: Fridge
+          - entity: sensor.living_room_refrigerator_fridge_temperature
+            name: Fridge
+          - entity: sensor.living_room_refrigerator_freezer_temperature
+            name: Freezer
+          - entity: binary_sensor.living_room_refrigerator_fridge_door
+            name: Fridge door
+          - entity: binary_sensor.living_room_refrigerator_freezer_door
+            name: Freezer door
+          - entity: switch.living_room_refrigerator_cubed_ice
+            name: Ice cubes
           - type: section
             label: Blinds
           - cover.living_room_blinds_left_door
@@ -87,6 +119,8 @@ views:
         icon: mdi:shower
         entities:
           - climate.guest_bathroom_thermostat_guest
+          - entity: binary_sensor.guest_bathroom_thermostat_guest_valve
+            name: Floor heating now
           - climate.guest_bathroom_towel_heat_guest
           - entity: automation.floor_warming_guest
             name: Floor warming schedule
@@ -97,8 +131,14 @@ views:
         icon: mdi:shower-head
         entities:
           - climate.master_bathroom_thermostat_master
+          - entity: binary_sensor.master_bathroom_thermostat_master_valve
+            name: Floor heating now
           - entity: automation.floor_warming_master
             name: Floor warming schedule
+          - entity: switch.master_bathroom_towel_heat_relay
+            name: Towel heat
+          - entity: automation.towel_heat_master
+            name: Towel heat schedule
 
       - type: entities
         title: Hall
@@ -109,3 +149,109 @@ views:
             name: Internet
           - entity: sensor.huawei_igd_external_ip
             name: External IP
+          - entity: sensor.hall_router_donwload_speed
+            name: Download speed
+          - entity: sensor.hall_router_upload_speed
+            name: Upload speed
+          - type: section
+            label: Zigbee
+          - entity: switch.zigbee2mqtt_bridge_permit_join
+            name: Allow new devices to join
+          - entity: button.zigbee2mqtt_bridge_restart
+            name: Restart the bridge
+
+      - type: entities
+        title: Garage
+        show_header_toggle: false
+        icon: mdi:car
+        entities:
+          - entity: sensor.garage_audi_a5_sportback_range
+            name: Range
+          - entity: sensor.garage_audi_a5_sportback_fuel_level
+            name: Fuel
+          - entity: binary_sensor.garage_audi_a5_sportback_doors_locked
+            name: Locked
+          - entity: binary_sensor.garage_audi_a5_sportback_doors_open
+            name: Doors
+          - entity: binary_sensor.garage_audi_a5_sportback_windows_open
+            name: Windows
+          - entity: binary_sensor.garage_audi_a5_sportback_trunk_open
+            name: Trunk
+          - entity: sensor.garage_audi_a5_sportback_next_service
+            name: Next service
+          - entity: sensor.garage_audi_a5_sportback_odometer
+            name: Odometer
+          - entity: button.garage_audi_a5_sportback_refresh_data
+            name: Refresh data
+
+      - type: entities
+        title: Server
+        show_header_toggle: false
+        icon: mdi:server
+        entities:
+          - type: section
+            label: Downloads
+          - entity: sensor.qbittorrent_status
+            name: qBittorrent
+          - entity: sensor.qbittorrent_download_speed
+            name: Download speed
+          - entity: sensor.qbittorrent_upload_speed
+            name: Upload speed
+          - entity: sensor.qbittorrent_active_torrents
+            name: Active torrents
+          - entity: switch.qbittorrent_alternative_speed
+            name: Slow mode
+          - type: section
+            label: Health
+          - entity: sensor.backup_last_successful_automatic_backup
+            name: Last backup
+          - entity: sensor.failed_integrations
+            name: Failed integrations
+
+  - title: Schedule
+    path: schedule
+    icon: mdi:calendar-clock
+    cards:
+      # Shown read-only: a change in the UI is reset on the next HA restart, change packages/schedule.yaml
+      - type: entities
+        title: Schedule
+        show_header_toggle: false
+        icon: mdi:calendar-clock
+        entities:
+          - entity: binary_sensor.workday_sensor_pl
+            name: Today is a workday
+          - entity: input_boolean.day_off
+          - entity: sensor.pixel_7_next_alarm
+            name: Next phone alarm
+            format: datetime
+          - type: section
+            label: Wakeup
+          - type: simple-entity
+            entity: input_datetime.wakeup_workday
+            name: Workday
+          - type: simple-entity
+            entity: input_datetime.wakeup_weekend
+            name: Weekend or holiday
+          - type: section
+            label: Bedtime
+          - type: simple-entity
+            entity: input_datetime.bedtime_workday
+            name: Before a workday
+          - type: simple-entity
+            entity: input_datetime.bedtime_weekend
+            name: Before a weekend day or holiday
+          - type: section
+            label: Work
+          - type: simple-entity
+            entity: input_datetime.work_start
+            name: Start
+          - type: simple-entity
+            entity: input_datetime.work_end
+            name: End
+
+      - type: calendar
+        # Workday's calendar has an event on each workday, so a weekday without one is a holiday
+        title: Workdays
+        initial_view: dayGridMonth
+        entities:
+          - calendar.workday_sensor_pl_calendar
