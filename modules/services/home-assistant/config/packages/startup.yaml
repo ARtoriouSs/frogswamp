@@ -1,0 +1,5 @@
+counter:
+  restarts_unread:
+    name: Restarts since the startup notice was closed
+    icon: mdi:restart
+    restore: true

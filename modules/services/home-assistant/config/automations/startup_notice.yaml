@@ -1,11 +1,32 @@
+# The notice has a fixed ID, so each restart replaces it instead of adding one more.
+# HA drops notifications on restart without a "removed" event, so only closing it by hand resets the count
 - id: repo_startup_notice
   alias: "Repo: startup notice"
-  description: Restart notification
+  description: Restart notification with the number of restarts since it was last closed
   triggers:
     - trigger: homeassistant
       event: start
   actions:
+    - action: counter.increment
+      target:
+        entity_id: counter.restarts_unread
     - action: persistent_notification.create
       data:
+        notification_id: repo_startup
         title: Home Assistant [re]started
-        message: Static config loaded from the frogswamp repo
+        message: >-
+          Static config loaded from the frogswamp repo.
+          Restarts since you last closed this: {{ states('counter.restarts_unread') }}
+
+- id: repo_startup_notice_read
+  alias: "Repo: startup notice read"
+  description: Resets the restart count when the startup notice is closed
+  triggers:
+    - trigger: persistent_notification
+      notification_id: repo_startup
+      update_type:
+        - removed
+  actions:
+    - action: counter.reset
+      target:
+        entity_id: counter.restarts_unread
