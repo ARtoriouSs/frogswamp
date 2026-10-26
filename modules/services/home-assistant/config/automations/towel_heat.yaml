@@ -1,7 +1,8 @@
 # Master bathroom towel heat, through its Zigbee relay (the heater itself stays on, the relay gives it power).
 # Nights only: from 1 h before bedtime, like the floor warming, to 1 h after bedtime (packages/schedule.yaml).
 # Workday or weekend bedtime is picked by the Workday integration for the next day.
-# Vacation on turns it off, Vacation off turns it on. Tuya rule mode doesn't stop it, the relay isn't a Tuya device
+# Vacation on turns it off. Vacation off doesn't turn it on, the next night does. Tuya rule mode doesn't stop it,
+# the relay isn't a Tuya device
 - id: repo_towel_heat_master
   alias: "Towel heat: master"
   description: Master bathroom towel heat relay, bedtime ± 1 h, off during Vacation
@@ -32,18 +33,11 @@
       entity_id: input_boolean.vacation
       from: "off"
       to: "on"
-    - trigger: state
-      id: on_vacation_end
-      entity_id: input_boolean.vacation
-      from: "on"
-      to: "off"
   conditions:
     - condition: or
       conditions:
         - condition: trigger
-          id:
-            - off_vacation_start
-            - on_vacation_end
+          id: off_vacation_start
         - condition: state
           entity_id: input_boolean.vacation
           state: "off"

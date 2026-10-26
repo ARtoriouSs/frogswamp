@@ -73,7 +73,7 @@ Switches in `config/packages/modes.yaml`. Automations check them in their condit
 | Mode | Stops | When turned on, also runs the Tuya scene |
 |---|---|---|
 | Day off | desk schedule, cube turning on. Also counts the day as a weekend day for the schedule (late wakeup and bedtime) | `Days off - on` |
-| Vacation | desk, floor warming, blinds, curtains, cube. Also turns off both floors, guest towel heat, the cube and the master towel heat relay (the relay turns on again when Vacation ends) | `Vacation - on` |
+| Vacation | desk, floor warming, blinds, curtains, cube. Also turns off both floors, guest towel heat, the cube and the master towel heat relay. Nothing turns on again when Vacation ends, everything waits for its next scheduled time | `Vacation - on` |
 | Guests in the living room | blinds opening in the morning | `Guests in the living room - on` |
 | Tuya rule mode | every HA automation that moves Tuya devices (alerts keep running) | none |
 
