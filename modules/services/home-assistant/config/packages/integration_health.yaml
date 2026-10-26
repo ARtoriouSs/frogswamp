@@ -1,5 +1,6 @@
 # Integrations that failed to start or keep failing (e.g. Tuya when its cloud didn't answer at startup).
-# Only integrations with entities are seen: the list is built from the entities' config entries
+# Only integrations with entities are seen: the list is built from the entities' config entries.
+# Android TV Remote is skipped: the TV drops off Wi-Fi in deep standby, so the entry is often in setup_retry
 template:
   - sensor:
       - name: Failed integrations
@@ -8,7 +9,8 @@ template:
         state: >-
           {% set ns = namespace(count=0) %}
           {% for id in states | map(attribute='entity_id') | map('config_entry_id') | reject('none') | unique %}
-            {% if config_entry_attr(id, 'state') | string in ['setup_error', 'setup_retry', 'migration_error', 'failed_unload'] %}
+            {% if config_entry_attr(id, 'state') | string in ['setup_error', 'setup_retry', 'migration_error', 'failed_unload']
+                  and config_entry_attr(id, 'domain') != 'androidtv_remote' %}
               {% set ns.count = ns.count + 1 %}
             {% endif %}
           {% endfor %}
@@ -18,7 +20,8 @@ template:
             {% set ns = namespace(entries=[]) %}
             {% for id in states | map(attribute='entity_id') | map('config_entry_id') | reject('none') | unique %}
               {% set state = config_entry_attr(id, 'state') | string %}
-              {% if state in ['setup_error', 'setup_retry', 'migration_error', 'failed_unload'] %}
+              {% if state in ['setup_error', 'setup_retry', 'migration_error', 'failed_unload']
+                    and config_entry_attr(id, 'domain') != 'androidtv_remote' %}
                 {% set ns.entries = ns.entries + [{'id': id, 'domain': config_entry_attr(id, 'domain'), 'state': state}] %}
               {% endif %}
             {% endfor %}
