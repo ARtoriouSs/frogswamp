@@ -134,25 +134,52 @@ views:
           - entity: automation.towel_heat_master
             name: Towel heat schedule
 
-      - type: entities
-        title: Hall
-        show_header_toggle: false
-        icon: mdi:wardrobe-outline
-        entities:
-          - entity: binary_sensor.huawei_igd_wan_status
-            name: Internet
-          - entity: sensor.huawei_igd_external_ip
-            name: External IP
-          - entity: sensor.hall_router_donwload_speed
-            name: Download speed
-          - entity: sensor.hall_router_upload_speed
-            name: Upload speed
-          - type: section
-            label: Zigbee
-          - entity: switch.zigbee2mqtt_bridge_permit_join
-            name: Allow new devices to join
-          - entity: button.zigbee2mqtt_bridge_restart
-            name: Restart the bridge
+      # A stack keeps Server right under Hall, masonry could put it in another column
+      - type: vertical-stack
+        cards:
+          - type: entities
+            title: Hall
+            show_header_toggle: false
+            icon: mdi:wardrobe-outline
+            entities:
+              - entity: binary_sensor.huawei_igd_wan_status
+                name: Internet
+              - entity: sensor.huawei_igd_external_ip
+                name: External IP
+              - entity: sensor.hall_router_donwload_speed
+                name: Download speed
+              - entity: sensor.hall_router_upload_speed
+                name: Upload speed
+              - type: section
+                label: Zigbee
+              - entity: switch.zigbee2mqtt_bridge_permit_join
+                name: Allow new devices to join
+              - entity: button.zigbee2mqtt_bridge_restart
+                name: Restart the bridge
+
+          - type: entities
+            title: Server
+            show_header_toggle: false
+            icon: mdi:server
+            entities:
+              - type: section
+                label: Downloads
+              - entity: sensor.qbittorrent_status
+                name: qBittorrent
+              - entity: sensor.qbittorrent_download_speed
+                name: Download speed
+              - entity: sensor.qbittorrent_upload_speed
+                name: Upload speed
+              - entity: sensor.qbittorrent_active_torrents
+                name: Active torrents
+              - entity: switch.qbittorrent_alternative_speed
+                name: Slow mode
+              - type: section
+                label: Health
+              - entity: sensor.backup_last_successful_automatic_backup
+                name: Last backup
+              - entity: sensor.failed_integrations
+                name: Failed integrations
 
       - type: entities
         title: Garage
@@ -178,30 +205,6 @@ views:
           - entity: button.garage_audi_a5_sportback_refresh_data
             name: Refresh data
 
-      - type: entities
-        title: Server
-        show_header_toggle: false
-        icon: mdi:server
-        entities:
-          - type: section
-            label: Downloads
-          - entity: sensor.qbittorrent_status
-            name: qBittorrent
-          - entity: sensor.qbittorrent_download_speed
-            name: Download speed
-          - entity: sensor.qbittorrent_upload_speed
-            name: Upload speed
-          - entity: sensor.qbittorrent_active_torrents
-            name: Active torrents
-          - entity: switch.qbittorrent_alternative_speed
-            name: Slow mode
-          - type: section
-            label: Health
-          - entity: sensor.backup_last_successful_automatic_backup
-            name: Last backup
-          - entity: sensor.failed_integrations
-            name: Failed integrations
-
   - title: Schedule
     path: schedule
     icon: mdi:calendar-clock
@@ -215,6 +218,7 @@ views:
           - entity: binary_sensor.workday_sensor_pl
             name: Today is a workday
           - entity: input_boolean.day_off
+          - entity: input_boolean.vacation
           - entity: sensor.pixel_7_next_alarm
             name: Next phone alarm
             format: datetime
