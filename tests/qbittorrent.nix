@@ -44,5 +44,13 @@ pkgs.testers.runNixOSTest {
         server.succeed(f"test \"$(stat -c '%U:%G %a' /srv/media/{d})\" = 'root:media 2775'")
     server.succeed("id -nG qbittorrent | grep -qw media")
     assert server.succeed("systemctl show qbittorrent -P UMask").strip() == "0002"
+
+    # A lockfile left by a power cut, its PID now used by a process the sandbox hides (here PID 1).
+    # qBittorrent must not take it for another running instance and quit
+    server.succeed("systemctl stop qbittorrent")
+    server.succeed("printf '1\\n\\nserver\\n\\n\\n' > /var/lib/qBittorrent/qBittorrent/config/lockfile")
+    server.succeed("systemctl start qbittorrent")
+    server.wait_for_open_port(8090, timeout=60)
+    server.succeed("sleep 5; systemctl is-active qbittorrent")
   '';
 }

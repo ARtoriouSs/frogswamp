@@ -123,6 +123,9 @@ in
           '')
           (pkgs.writeShellScript "qbittorrent-config" ''
             set -eu
+            # Left by an unclean stop, its PID may now belong to another process. The sandbox hides which one,
+            # so qBittorrent takes it for a running instance and quits. systemd already runs only one
+            rm -f ${confDir}/lockfile
             install -d -m 700 ${confDir}
             install -m 600 ${baseConf} ${confDir}/qBittorrent.conf
             # read first: a failing $(cat) inside printf would not stop the script and leave an empty password
