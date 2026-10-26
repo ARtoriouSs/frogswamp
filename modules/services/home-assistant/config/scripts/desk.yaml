@@ -1,8 +1,12 @@
-# The desk panel locks itself after about a minute of idle time and ignores commands while locked.
-# The lock is the child lock switch, so turn it off first, then move. The panel locks itself again
+# The desk panel has two locks. The child lock ("---" on the display) still takes the "move to memory
+# position" command that the Tuya scenes send. After a few idle minutes the display sleeps, and then the
+# first command only wakes it up. So the scene is sent twice, 20 s apart: a sleeping desk wakes on the first
+# and moves on the second, an awake one moves on the first and ignores the second (it's already there).
+# Then the child lock goes off, so the height can be changed on the pad right away. The panel locks itself again
 desk_move:
   alias: "Desk: move"
-  mode: single
+  # A new press stops the move in progress, e.g. down while up is still waiting
+  mode: restart
   fields:
     direction:
       description: up or down
@@ -13,17 +17,17 @@ desk_move:
             - up
             - down
   sequence:
-    - if: "{{ not is_state('switch.desk_child_lock', 'off') }}"
-      then:
-        - action: switch.turn_off
-          continue_on_error: true
-          target:
-            entity_id: switch.desk_child_lock
-        - wait_template: "{{ is_state('switch.desk_child_lock', 'off') }}"
-          timeout: "00:00:15"
     - action: scene.turn_on
       target:
         entity_id: "scene.office_desk_{{ direction }}"
+    - delay: "00:00:20"
+    - action: scene.turn_on
+      target:
+        entity_id: "scene.office_desk_{{ direction }}"
+    - action: switch.turn_off
+      continue_on_error: true
+      target:
+        entity_id: switch.desk_child_lock
 
 desk_up:
   alias: "Desk: up"
