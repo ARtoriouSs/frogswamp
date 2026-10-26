@@ -35,8 +35,8 @@ The cleanup (`media-janitor`) runs every 5 minutes:
 
 - A **finished torrent** is removed from qBittorrent as soon as Radarr/Sonarr has imported it, together with its download copy. The library copy is a hardlink (same data on disk), so the title stays. Your watched mark and resume position move over to the library copy.
 - A movie, or a **single episode**, is deleted once it's **watched** (Jellyfin *Played*, ~90%) **and** it was last played **more than 48 h** ago. Each episode counts on its own, so a season goes away episode by episode. That covers the file and the entry in Radarr/unmonitoring in Sonarr.
-- **Unwatched titles are never deleted.** After **5 days** they're counted on the dashboard (*Home Assistant → stale downloads*, HA entity `sensor.stale_downloads`).
-- A torrent with videos that Radarr/Sonarr **didn't import** (for example a full-series pack while you follow one season) is **kept**, because removing it would delete those videos. It's counted as a stale download right away; the log says which files. Remove it in qBittorrent when you don't need them. Sample files don't count.
+- **Unwatched titles are never deleted.**
+- A torrent with videos that Radarr/Sonarr **didn't import** (for example a full-series pack while you follow one season) is **kept**, because removing it would delete those videos. The log says which files. Remove it in qBittorrent when you don't need them. Sample files don't count.
 - Nothing is removed while someone is watching it.
 - Check what it did: `just ssh journalctl -u media-janitor -n 20`. For a test mode that only logs, set `mediaJanitor.dryRun = true;` in `hosts/frogswamp/default.nix` and `just deploy`.
 

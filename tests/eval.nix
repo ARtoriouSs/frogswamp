@@ -212,9 +212,7 @@ let
       && cfg.services.networkd-dispatcher.rules.qbittorrent-restart.onState == [ "routable" ];
     "janitor runs every 5 minutes" = cfg.systemd.timers.media-janitor.timerConfig.OnCalendar == "*:0/5";
     "janitor deletes for real" = !cfg.frogswamp.mediaJanitor.dryRun;
-    "janitor waits 48h and warns after 5 days" =
-      cfg.frogswamp.mediaJanitor.watchedAfterHours == 48
-      && cfg.frogswamp.mediaJanitor.staleAfterDays == 5;
+    "janitor waits 48h" = cfg.frogswamp.mediaJanitor.watchedAfterHours == 48;
     "backups off in vm" = !(cfg.virtualisation.vmVariant.services.restic.backups ? local);
     "mosquitto localhost only" = lib.all (l: l.address == "127.0.0.1") cfg.services.mosquitto.listeners;
   };

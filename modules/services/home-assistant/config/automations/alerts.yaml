@@ -44,21 +44,6 @@
         data:
           tag: backup-disk
 
-- id: repo_alert_stale_downloads
-  alias: "Alert: stale downloads"
-  description: Downloads nobody watched for 5 days
-  triggers:
-    - trigger: numeric_state
-      entity_id: sensor.stale_downloads
-      above: 0
-  actions:
-    - action: notify.mobile_app_pixel_7
-      data:
-        title: "Stale downloads: {{ trigger.to_state.state }}"
-        message: "{{ (state_attr('sensor.stale_downloads', 'titles') or []) | join(', ') }}"
-        data:
-          tag: stale-downloads
-
 # The state trigger fires once when the 1 h is reached, not again while the device stays offline.
 # Add new devices here (one entity per device is enough)
 - id: repo_alert_device_offline

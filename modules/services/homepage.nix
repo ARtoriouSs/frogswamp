@@ -265,10 +265,6 @@ in
                           template = "{{ states.automation | selectattr('state', 'equalto', 'on') | list | length }}";
                           label = "automations";
                         }
-                        {
-                          state = "sensor.stale_downloads";
-                          label = "stale downloads";
-                        }
                       ];
                     };
                   };

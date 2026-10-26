@@ -52,7 +52,6 @@ pkgs.testers.runNixOSTest {
     # the frog wallpaper is embedded in the stylesheet, on the box that covers the page
     assert 'html body #__next { background:' in css and 'url("data:image/png;base64,iVBOR' in css, css[:2000]
     # widget settings are not exposed by the API, so check the generated config
-    server.succeed("grep -q 'sensor.stale_downloads' /etc/homepage-dashboard/services.yaml")
     server.succeed("grep -q 'sensor.backup_disk' /etc/homepage-dashboard/services.yaml")
     server.succeed("grep -q ':8093' /etc/homepage-dashboard/services.yaml")
     bookmarks = server.succeed("curl -sf http://localhost:8082/api/bookmarks")

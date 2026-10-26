@@ -10,7 +10,6 @@ let
   settings = pkgs.writeText "media-janitor.json" (
     builtins.toJSON {
       watched_after_h = cfg.watchedAfterHours;
-      stale_after_d = cfg.staleAfterDays;
       qbittorrent = {
         url = "http://127.0.0.1:8090";
         username = config.frogswamp.adminUser;
@@ -28,10 +27,6 @@ let
         url = "http://127.0.0.1:${toString arr.ports.sonarr}/api/v3";
         key_file = arr.apiKeyFiles.sonarr;
       };
-      home_assistant = {
-        url = "http://127.0.0.1:8123";
-        token_file = cfg.haTokenFile;
-      };
     }
   );
 in
@@ -47,18 +42,13 @@ in
       type = lib.types.int;
       default = 48;
     };
-    staleAfterDays = lib.mkOption {
-      type = lib.types.int;
-      default = 5;
-    };
     qbittorrentPasswordFile = lib.mkOption { type = lib.types.str; };
     jellyfinApiKeyFile = lib.mkOption { type = lib.types.str; };
-    haTokenFile = lib.mkOption { type = lib.types.str; };
   };
 
   config = lib.mkIf cfg.enable {
     systemd.services.media-janitor = {
-      description = "Remove finished torrents, delete watched titles, report stale ones";
+      description = "Remove finished torrents, delete watched titles";
       after = [
         "qbittorrent.service"
         "jellyfin.service"

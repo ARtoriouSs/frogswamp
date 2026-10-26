@@ -145,7 +145,6 @@
     mediaJanitor = {
       qbittorrentPasswordFile = lib.mkDefault config.sops.secrets."arr/ui_password".path;
       jellyfinApiKeyFile = lib.mkDefault config.sops.secrets."jellyfin/api_key".path;
-      haTokenFile = lib.mkDefault config.sops.secrets."home_assistant/api_token".path;
     };
     # Later tasks add their secret file options here.
   };

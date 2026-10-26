@@ -87,7 +87,6 @@ def test_unimported_episode_blocks_release():
     s.torrents[0].files.append(video("/srv/media/downloads/sonarr/Show.S01E02.mkv", 9))
     p = janitor.plan(s, NOW)
     assert p.remove_torrents == []
-    assert "Title" in p.stale
     assert any("not imported" in reason for _, reason in p.kept)
 
 
@@ -187,19 +186,6 @@ def test_season_partly_watched():
     eps.append(LibFile("sonarr", "/srv/media/shows/S/e4.mkv", 4, NOW - 60 * H, "S", (3, 4)))
     items = [item(e.path, e.inode, played=e.inode != 4, last_h=10 if e.inode == 3 else 60) for e in eps]
     assert janitor.plan(state(library=eps, items=items), NOW).delete == eps[:2]
-
-
-# ---------- stale ----------
-
-def test_stale_unwatched_5_days():
-    s = state(library=[movie(1, age_h=121), movie(2, age_h=200, path="/x", ref=8)], items=[])
-    assert janitor.plan(s, NOW).stale == ["M"]
-    assert janitor.plan(state(library=[movie(1, age_h=119)]), NOW).stale == []
-
-
-def test_stale_ignores_watched():
-    s = state(library=[movie(1, age_h=121)], items=[item(LIB, 1, played=True)])
-    assert janitor.plan(s, NOW).stale == []
 
 
 # ---------- I/O safety ----------
