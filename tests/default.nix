@@ -20,6 +20,7 @@ in
   test-media-provision = call ./media-provision.nix;
   test-media-janitor = call ./media-janitor.nix;
   test-football-unit = call ./football-unit.nix;
+  test-voice-bridge-unit = call ./voice-bridge-unit.nix;
   test-football = call ./football.nix;
   test-mode-switch = call ./mode-switch.nix;
   test-samba = call ./samba.nix;
