@@ -245,3 +245,14 @@ voice-ask text lang="ru":
     body="$(jq -nc --arg t '{{text}}' --arg l '{{lang}}' '{text: $t, language: $l, conversation_id: null, earlier: []}')"
     ssh pupsich@{{host}} "curl -s 127.0.0.1:8099/converse -d $(printf '%q' "$body")"
     echo
+
+# Pin the Music Assistant image (default: current stable) by version + digest
+ma-bump version="stable":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    info="$(skopeo inspect --override-os linux --override-arch amd64 "docker://ghcr.io/music-assistant/server:{{version}}")"
+    digest="$(jq -r .Digest <<<"$info")"
+    ver="$(jq -r '.Labels["org.opencontainers.image.version"] // empty' <<<"$info")"
+    [ -n "$ver" ] || ver="{{version}}"
+    printf '{\n  # Updated by `just ma-bump`\n  image = "ghcr.io/music-assistant/server:%s@%s";\n}\n' "$ver" "$digest" > modules/services/music-assistant/image.nix
+    echo "Pinned Music Assistant $ver ($digest)"

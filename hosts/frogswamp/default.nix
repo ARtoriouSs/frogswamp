@@ -52,6 +52,8 @@
     matterServer.enable = true;
     # Voice assistant: local STT/TTS for HA Assist, free-form requests to Claude Code
     voice.enable = true;
+    # Spotify on the Voice PE; the Spotify login is made in its web UI (:8095)
+    musicAssistant.enable = true;
     jellyfin.enable = true;
     samba.enable = true;
     homepage.enable = true;

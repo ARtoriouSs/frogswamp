@@ -1,0 +1,29 @@
+play_music:
+  alias: "Play music"
+  description: >-
+    Plays music from Spotify through Music Assistant. `query` is an artist, album, track or
+    playlist name in its original spelling (Metallica, not металлика). `player` is the media
+    player to play on
+  icon: mdi:music
+  mode: parallel
+  fields:
+    query:
+      name: Query
+      description: Artist, album, track or playlist name in its original spelling
+      required: true
+      selector:
+        text:
+    player:
+      name: Player
+      description: Media player to play on
+      required: true
+      selector:
+        entity:
+          domain: media_player
+  sequence:
+    - action: music_assistant.play_media
+      target:
+        entity_id: "{{ player }}"
+      data:
+        media_id: "{{ query }}"
+        enqueue: replace
