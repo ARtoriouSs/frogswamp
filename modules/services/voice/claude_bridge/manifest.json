@@ -1,0 +1,12 @@
+{
+  "domain": "claude_bridge",
+  "name": "Claude bridge",
+  "codeowners": [],
+  "config_flow": true,
+  "dependencies": ["conversation"],
+  "documentation": "https://github.com/ARtoriouSs/frogswamp/tree/master/modules/services/voice",
+  "integration_type": "service",
+  "iot_class": "local_polling",
+  "requirements": [],
+  "version": "0.1.0"
+}

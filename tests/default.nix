@@ -22,6 +22,7 @@ in
   test-football-unit = call ./football-unit.nix;
   test-voice-bridge-unit = call ./voice-bridge-unit.nix;
   test-voice = call ./voice.nix;
+  test-voice-integration = call ./voice-integration.nix;
   test-football = call ./football.nix;
   test-mode-switch = call ./mode-switch.nix;
   test-samba = call ./samba.nix;

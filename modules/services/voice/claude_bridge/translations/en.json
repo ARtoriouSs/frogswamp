@@ -1,0 +1,16 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Claude bridge",
+        "description": "Address of the voice bridge service on this server",
+        "data": {
+          "url": "Bridge URL"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "The Claude bridge is already set up"
+    }
+  }
+}

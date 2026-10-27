@@ -56,6 +56,10 @@ let
       };
     }
   );
+  integration = lib.fileset.toSource {
+    root = ./claude_bridge;
+    fileset = lib.fileset.difference ./claude_bridge ./claude_bridge/test_history.py;
+  };
   languages = {
     ru = {
       sttPort = 10300;
@@ -133,6 +137,11 @@ in
       uri = "tcp://127.0.0.1:${toString l.ttsPort}";
       zeroconf.enable = false;
     }) languages;
+
+    # the conversation agent HA uses to reach the bridge
+    virtualisation.oci-containers.containers = lib.mkIf config.frogswamp.homeAssistant.enable {
+      home-assistant.volumes = [ "${integration}:/config/custom_components/claude_bridge:ro" ];
+    };
 
     systemd.services.voice-bridge = {
       description = "Voice bridge: HA voice requests to Claude Code";
