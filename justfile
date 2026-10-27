@@ -237,3 +237,11 @@ rebuild-from-scratch target:
       exit "$rc"
     fi
     echo "Rebuild complete. Check HA, Z2M, Jellyfin and Homepage in the browser."
+
+# Ask the voice bridge on the server like HA would, e.g. `just voice-ask "Сколько будет 2+2?"`
+voice-ask text lang="ru":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    body="$(jq -nc --arg t '{{text}}' --arg l '{{lang}}' '{text: $t, language: $l, conversation_id: null, earlier: []}')"
+    ssh pupsich@{{host}} "curl -s 127.0.0.1:8099/converse -d $(printf '%q' "$body")"
+    echo

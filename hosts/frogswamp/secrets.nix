@@ -93,6 +93,10 @@
       (lib.mkIf config.frogswamp.football.enable {
         "kodi/password" = { };
       })
+      (lib.mkIf config.frogswamp.voice.enable {
+        "voice/claude_oauth_token".restartUnits = [ "voice-bridge.service" ];
+        "voice/ha_token".restartUnits = [ "voice-bridge.service" ];
+      })
       # Later tasks append blocks here, one per module:
       # (lib.mkIf config.frogswamp.<module>.enable { ... })
     ];
@@ -145,6 +149,10 @@
     mediaJanitor = {
       qbittorrentPasswordFile = lib.mkDefault config.sops.secrets."arr/ui_password".path;
       jellyfinApiKeyFile = lib.mkDefault config.sops.secrets."jellyfin/api_key".path;
+    };
+    voice = {
+      claudeTokenFile = lib.mkDefault config.sops.secrets."voice/claude_oauth_token".path;
+      haTokenFile = lib.mkDefault config.sops.secrets."voice/ha_token".path;
     };
     # Later tasks add their secret file options here.
   };

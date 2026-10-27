@@ -45,6 +45,10 @@
       haPasswordFile = lib.mkForce "/etc/vm-dummy-secret";
       z2mPasswordFile = lib.mkForce "/etc/vm-dummy-secret";
     };
+    voice = {
+      claudeTokenFile = lib.mkForce "/etc/vm-dummy-secret";
+      haTokenFile = lib.mkForce "/etc/vm-dummy-secret";
+    };
     # Later tasks add service overrides here.
   };
 }
