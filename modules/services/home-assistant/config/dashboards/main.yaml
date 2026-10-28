@@ -320,15 +320,15 @@ views:
               hours_to_show: 24
               entities:
                 - entity: binary_sensor.blinds_right_online
-                  name: Blinds right
+                  name: "Blinds right\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A"
                 - entity: binary_sensor.blinds_middle_online
-                  name: Blinds middle
+                  name: "Blinds middle\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A"
                 - entity: binary_sensor.blinds_left_door_online
-                  name: Blinds left / door
+                  name: "Blinds left / door\u200A"
                 - entity: binary_sensor.tv_online
-                  name: TV
+                  name: "TV\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
                 - entity: binary_sensor.fridge_online
-                  name: Fridge
+                  name: "Fridge\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A"
           - type: conditional
             conditions:
               - condition: state
@@ -340,15 +340,15 @@ views:
               hours_to_show: 168
               entities:
                 - entity: binary_sensor.blinds_right_online
-                  name: Blinds right
+                  name: "Blinds right\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A"
                 - entity: binary_sensor.blinds_middle_online
-                  name: Blinds middle
+                  name: "Blinds middle\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A"
                 - entity: binary_sensor.blinds_left_door_online
-                  name: Blinds left / door
+                  name: "Blinds left / door\u200A"
                 - entity: binary_sensor.tv_online
-                  name: TV
+                  name: "TV\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
                 - entity: binary_sensor.fridge_online
-                  name: Fridge
+                  name: "Fridge\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A"
           - type: conditional
             conditions:
               - condition: state
@@ -360,15 +360,15 @@ views:
               hours_to_show: 744
               entities:
                 - entity: binary_sensor.blinds_right_online
-                  name: Blinds right
+                  name: "Blinds right\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A"
                 - entity: binary_sensor.blinds_middle_online
-                  name: Blinds middle
+                  name: "Blinds middle\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A"
                 - entity: binary_sensor.blinds_left_door_online
-                  name: Blinds left / door
+                  name: "Blinds left / door\u200A"
                 - entity: binary_sensor.tv_online
-                  name: TV
+                  name: "TV\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
                 - entity: binary_sensor.fridge_online
-                  name: Fridge
+                  name: "Fridge\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A"
           - type: conditional
             conditions:
               - condition: state
@@ -380,7 +380,7 @@ views:
               hours_to_show: 24
               entities:
                 - entity: binary_sensor.curtains_online
-                  name: Curtains
+                  name: "Curtains\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
           - type: conditional
             conditions:
               - condition: state
@@ -392,7 +392,7 @@ views:
               hours_to_show: 168
               entities:
                 - entity: binary_sensor.curtains_online
-                  name: Curtains
+                  name: "Curtains\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
           - type: conditional
             conditions:
               - condition: state
@@ -404,7 +404,7 @@ views:
               hours_to_show: 744
               entities:
                 - entity: binary_sensor.curtains_online
-                  name: Curtains
+                  name: "Curtains\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
           - type: conditional
             conditions:
               - condition: state
@@ -416,11 +416,11 @@ views:
               hours_to_show: 24
               entities:
                 - entity: binary_sensor.desk_online
-                  name: Desk
+                  name: "Desk\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
                 - entity: binary_sensor.cube_online
-                  name: Cube
+                  name: "Cube\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A"
                 - entity: binary_sensor.printer_online
-                  name: Printer
+                  name: "Printer\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A"
           - type: conditional
             conditions:
               - condition: state
@@ -432,11 +432,11 @@ views:
               hours_to_show: 168
               entities:
                 - entity: binary_sensor.desk_online
-                  name: Desk
+                  name: "Desk\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
                 - entity: binary_sensor.cube_online
-                  name: Cube
+                  name: "Cube\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A"
                 - entity: binary_sensor.printer_online
-                  name: Printer
+                  name: "Printer\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A"
           - type: conditional
             conditions:
               - condition: state
@@ -448,11 +448,11 @@ views:
               hours_to_show: 744
               entities:
                 - entity: binary_sensor.desk_online
-                  name: Desk
+                  name: "Desk\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
                 - entity: binary_sensor.cube_online
-                  name: Cube
+                  name: "Cube\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A"
                 - entity: binary_sensor.printer_online
-                  name: Printer
+                  name: "Printer\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A"
           - type: conditional
             conditions:
               - condition: state
@@ -464,9 +464,9 @@ views:
               hours_to_show: 24
               entities:
                 - entity: binary_sensor.guest_thermostat_online
-                  name: Thermostat
+                  name: "Thermostat\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
                 - entity: binary_sensor.guest_towel_heat_online
-                  name: Towel heat
+                  name: "Towel heat\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
           - type: conditional
             conditions:
               - condition: state
@@ -478,9 +478,9 @@ views:
               hours_to_show: 168
               entities:
                 - entity: binary_sensor.guest_thermostat_online
-                  name: Thermostat
+                  name: "Thermostat\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
                 - entity: binary_sensor.guest_towel_heat_online
-                  name: Towel heat
+                  name: "Towel heat\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
           - type: conditional
             conditions:
               - condition: state
@@ -492,9 +492,9 @@ views:
               hours_to_show: 744
               entities:
                 - entity: binary_sensor.guest_thermostat_online
-                  name: Thermostat
+                  name: "Thermostat\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
                 - entity: binary_sensor.guest_towel_heat_online
-                  name: Towel heat
+                  name: "Towel heat\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
           - type: conditional
             conditions:
               - condition: state
@@ -506,9 +506,9 @@ views:
               hours_to_show: 24
               entities:
                 - entity: binary_sensor.master_thermostat_online
-                  name: Thermostat
+                  name: "Thermostat\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
                 - entity: binary_sensor.master_towel_heat_relay_online
-                  name: Towel heat relay
+                  name: "Towel heat relay\u00A0\u200A"
           - type: conditional
             conditions:
               - condition: state
@@ -520,9 +520,9 @@ views:
               hours_to_show: 168
               entities:
                 - entity: binary_sensor.master_thermostat_online
-                  name: Thermostat
+                  name: "Thermostat\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
                 - entity: binary_sensor.master_towel_heat_relay_online
-                  name: Towel heat relay
+                  name: "Towel heat relay\u00A0\u200A"
           - type: conditional
             conditions:
               - condition: state
@@ -534,9 +534,9 @@ views:
               hours_to_show: 744
               entities:
                 - entity: binary_sensor.master_thermostat_online
-                  name: Thermostat
+                  name: "Thermostat\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
                 - entity: binary_sensor.master_towel_heat_relay_online
-                  name: Towel heat relay
+                  name: "Towel heat relay\u00A0\u200A"
           - type: conditional
             conditions:
               - condition: state
@@ -548,9 +548,9 @@ views:
               hours_to_show: 24
               entities:
                 - entity: binary_sensor.router_online
-                  name: Router
+                  name: "Router\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
                 - entity: binary_sensor.zigbee_bridge_online
-                  name: Zigbee bridge
+                  name: "Zigbee bridge\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
           - type: conditional
             conditions:
               - condition: state
@@ -562,9 +562,9 @@ views:
               hours_to_show: 168
               entities:
                 - entity: binary_sensor.router_online
-                  name: Router
+                  name: "Router\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
                 - entity: binary_sensor.zigbee_bridge_online
-                  name: Zigbee bridge
+                  name: "Zigbee bridge\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
           - type: conditional
             conditions:
               - condition: state
@@ -576,9 +576,9 @@ views:
               hours_to_show: 744
               entities:
                 - entity: binary_sensor.router_online
-                  name: Router
+                  name: "Router\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
                 - entity: binary_sensor.zigbee_bridge_online
-                  name: Zigbee bridge
+                  name: "Zigbee bridge\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
           - type: conditional
             conditions:
               - condition: state
@@ -590,7 +590,7 @@ views:
               hours_to_show: 24
               entities:
                 - entity: binary_sensor.audi_online
-                  name: Audi
+                  name: "Audi\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
           - type: conditional
             conditions:
               - condition: state
@@ -602,7 +602,7 @@ views:
               hours_to_show: 168
               entities:
                 - entity: binary_sensor.audi_online
-                  name: Audi
+                  name: "Audi\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
           - type: conditional
             conditions:
               - condition: state
@@ -614,7 +614,7 @@ views:
               hours_to_show: 744
               entities:
                 - entity: binary_sensor.audi_online
-                  name: Audi
+                  name: "Audi\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
 
       - type: grid
         cards:
@@ -737,3 +737,40 @@ views:
         path: /local/floor3d-card/sample/
         objfile: home.glb
         header: "no"
+        # a tap on a window opens its blind's controls
+        click: "yes"
+        # The demo has no blinds in it, so the window glass shows the blind's state.
+        # Its windows stand in for the living room ones: the French window is the door
+        object_groups:
+          - object_group: door_glass
+            objects:
+              - object_id: Double_French_window_8
+              - object_id: Double_French_window_13
+          - object_group: middle_glass
+            objects:
+              - object_id: Double_small_window_8
+              - object_id: Double_small_window_13
+        entities:
+          - entity: cover.living_room_blinds_left_door
+            type3d: color
+            object_id: <door_glass>
+            action: more-info
+            colorcondition: &blind_colors
+              - state: open
+                color: "#9fd8ff"
+              - state: closed
+                color: "#2f2f2f"
+              - state: opening
+                color: "#ffb300"
+              - state: closing
+                color: "#ffb300"
+          - entity: cover.living_room_blinds_middle
+            type3d: color
+            object_id: <middle_glass>
+            action: more-info
+            colorcondition: *blind_colors
+          - entity: cover.living_room_blinds_right
+            type3d: color
+            object_id: Window_7
+            action: more-info
+            colorcondition: *blind_colors
