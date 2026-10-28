@@ -259,50 +259,55 @@ views:
   - title: Uptime
     path: uptime
     icon: mdi:lan-connect
-    # Three cards, one per column: the range, the timelines and the uptime %. Rooms in the same order in both
-    cards:
-      - type: entities
-        title: Range
-        show_header_toggle: false
-        icon: mdi:calendar-range
-        entities:
-          - entity: input_select.uptime_range
-            name: Showing
-          - type: buttons
+    # Sections, not masonry: masonry puts a short card and the next one in the same column.
+    # Each section is a column: the range, the timelines and the uptime %. Rooms in the same order in both
+    type: sections
+    max_columns: 3
+    sections:
+      - type: grid
+        cards:
+          - type: entities
+            title: Range
+            show_header_toggle: false
+            icon: mdi:calendar-range
             entities:
               - entity: input_select.uptime_range
-                name: Day
-                icon: mdi:calendar-today
-                tap_action:
-                  action: perform-action
-                  perform_action: input_select.select_option
-                  target:
-                    entity_id: input_select.uptime_range
-                  data:
-                    option: Day
-              - entity: input_select.uptime_range
-                name: Week
-                icon: mdi:calendar-week
-                tap_action:
-                  action: perform-action
-                  perform_action: input_select.select_option
-                  target:
-                    entity_id: input_select.uptime_range
-                  data:
-                    option: Week
-              - entity: input_select.uptime_range
-                name: Month
-                icon: mdi:calendar-month
-                tap_action:
-                  action: perform-action
-                  perform_action: input_select.select_option
-                  target:
-                    entity_id: input_select.uptime_range
-                  data:
-                    option: Month
+                name: Showing
+              - type: buttons
+                entities:
+                  - entity: input_select.uptime_range
+                    name: Day
+                    icon: mdi:calendar-today
+                    tap_action:
+                      action: perform-action
+                      perform_action: input_select.select_option
+                      target:
+                        entity_id: input_select.uptime_range
+                      data:
+                        option: Day
+                  - entity: input_select.uptime_range
+                    name: Week
+                    icon: mdi:calendar-week
+                    tap_action:
+                      action: perform-action
+                      perform_action: input_select.select_option
+                      target:
+                        entity_id: input_select.uptime_range
+                      data:
+                        option: Week
+                  - entity: input_select.uptime_range
+                    name: Month
+                    icon: mdi:calendar-month
+                    tap_action:
+                      action: perform-action
+                      perform_action: input_select.select_option
+                      target:
+                        entity_id: input_select.uptime_range
+                      data:
+                        option: Month
 
-      # Timelines of every room, one under another, so devices can be compared
-      - type: vertical-stack
+
+      - type: grid
         cards:
           - type: conditional
             conditions:
@@ -611,7 +616,7 @@ views:
                 - entity: binary_sensor.audi_online
                   name: Audi
 
-      - type: vertical-stack
+      - type: grid
         cards:
           - type: entities
             title: Living room
