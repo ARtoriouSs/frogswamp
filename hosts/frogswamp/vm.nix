@@ -25,6 +25,7 @@
     mediaJanitor.enable = lib.mkForce false;
     acestream.enable = lib.mkForce false; # needs the internet for its image
     matterServer.enable = lib.mkForce false; # same
+    musicAssistant.enable = lib.mkForce false; # same
     football = {
       kodi.passwordFile = lib.mkForce "/etc/vm-dummy-secret";
       haTokenFile = lib.mkForce "/etc/vm-dummy-secret";
@@ -44,6 +45,10 @@
       zigbee2mqtt.enable = lib.mkForce false;
       haPasswordFile = lib.mkForce "/etc/vm-dummy-secret";
       z2mPasswordFile = lib.mkForce "/etc/vm-dummy-secret";
+    };
+    voice = {
+      claudeTokenFile = lib.mkForce "/etc/vm-dummy-secret";
+      haTokenFile = lib.mkForce "/etc/vm-dummy-secret";
     };
     # Later tasks add service overrides here.
   };

@@ -172,6 +172,22 @@ let
     # the fabric holds the keys of every paired device; losing it means pairing everything again
     "matter fabric is backed up" =
       lib.hasInfix "/var/lib/matter-server" cfg.services.restic.backups.local.dynamicFilesFrom;
+    "music assistant image pinned by digest" =
+      lib.hasInfix "@sha256:" cfg.virtualisation.oci-containers.containers.music-assistant.image;
+    # finds and streams to players (Voice PE, Cast) on the LAN
+    "music assistant on the host network" =
+      lib.elem "--network=host" cfg.virtualisation.oci-containers.containers.music-assistant.extraOptions;
+    "music assistant UI and streams open on the LAN" =
+      lib.all (p: lib.elem p cfg.networking.firewall.allowedTCPPorts)
+        [
+          8095
+          8097
+        ];
+    # the Spotify login and player settings
+    "music assistant state is backed up" =
+      lib.hasInfix "/var/lib/music-assistant" cfg.services.restic.backups.local.dynamicFilesFrom;
+    "play_music script in the repo" =
+      builtins.pathExists ../modules/services/home-assistant/config/scripts/play_music.yaml;
     "backup disk mounts when plugged in later" =
       lib.hasInfix ''ENV{ID_FS_LABEL}=="frogbackup"'' cfg.services.udev.extraRules
       && lib.hasInfix ''ENV{SYSTEMD_WANTS}+="mnt-backup.mount"'' cfg.services.udev.extraRules;

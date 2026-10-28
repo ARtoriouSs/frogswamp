@@ -30,6 +30,8 @@
   # instead of depending on a screen being attached during install (needed for Jellyfin QSV)
   hardware.facter.detected.graphics.enable = true;
 
+  nixpkgs.config.allowUnfreePredicate = pkg: lib.getName pkg == "claude-code";
+
   frogswamp = {
     adminUser = "pupsich";
     adminSshKeys = [ (lib.fileContents ../../keys/admin.pub) ];
@@ -48,6 +50,10 @@
     };
     # Matter devices in HA (Matter integration → ws://localhost:5580/ws)
     matterServer.enable = true;
+    # Voice assistant: local STT/TTS for HA Assist, free-form requests to Claude Code
+    voice.enable = true;
+    # Spotify on the Voice PE; the Spotify login is made in its web UI (:8095)
+    musicAssistant.enable = true;
     jellyfin.enable = true;
     samba.enable = true;
     homepage.enable = true;
