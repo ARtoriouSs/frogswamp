@@ -10,7 +10,7 @@ input_select:
       - Day
       - Week
       - Month
-    initial: Week
+    initial: Day
 
 template:
   - binary_sensor:
