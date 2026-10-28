@@ -61,6 +61,11 @@ pkgs.testers.runNixOSTest {
     assert mcp["mcpServers"]["homeassistant"]["headers"]["Authorization"] == "Bearer ''${HA_TOKEN}", mcp
     assert mcp["mcpServers"]["homeassistant"]["url"] == "http://127.0.0.1:8123/api/mcp", mcp
 
+    # car tools that VW Group Connect injects into the Assist API are blocked
+    settings = json.loads(server.succeed("cat $(grep -o '/nix/store/[^\"]*claude-settings.json' $(systemctl cat voice-bridge | grep -o '/nix/store/[^ ]*voice-bridge.json'))"))
+    for tool in ("skoda_ask_assistant", "skoda_send_destination", "skoda_set_location_target_soc"):
+        assert f"mcp__homeassistant__vag_connect__{tool}" in settings["permissions"]["deny"], settings
+
     # only localhost, no text or tokens in the journal, token files only for the service
     server.fail("ss -ltn | grep -E '0.0.0.0:8099|\\*:8099|\\[::\\]:8099'")
     server.fail("journalctl -u voice-bridge | grep -E 'claude-secret|ha-secret|привет|Готово'")

@@ -22,6 +22,12 @@ let
           "Write"
           "NotebookEdit"
           "WebFetch"
+        ]
+        # VW Group Connect adds these to HA's Assist API by itself, past the exposure settings
+        ++ map (tool: "mcp__homeassistant__vag_connect__${tool}") [
+          "skoda_ask_assistant"
+          "skoda_send_destination"
+          "skoda_set_location_target_soc"
         ];
       };
     }
