@@ -21,6 +21,60 @@ views:
               - input_boolean.vacation
               - input_boolean.tuya_mode
 
+          # Shortcuts to the room cards' buttons, so they are near the top on a phone
+          - type: entities
+            title: Quick access
+            show_header_toggle: false
+            entities:
+              - type: section
+                label: Living room
+              - type: buttons
+                entities:
+                  - entity: scene.living_room_blinds_full_close
+                    name: Full close
+                    icon: mdi:roller-shade-closed
+                  - entity: scene.living_room_blinds_open
+                    name: Open
+                    icon: mdi:roller-shade
+              - type: buttons
+                entities:
+                  - entity: scene.living_room_blinds_full_close_open
+                    name: Full close + open
+                    icon: mdi:roller-shade
+                  - entity: scene.living_room_blinds_full_open_door
+                    name: Open door
+                    icon: mdi:door-open
+              - type: section
+                label: Bedroom
+              - type: buttons
+                entities:
+                  - entity: scene.bedroom_curtains_close
+                    name: Curtains close
+                    icon: mdi:curtains-closed
+                  - entity: scene.bedroom_curtains_open
+                    name: Curtains open
+                    icon: mdi:curtains
+              - type: section
+                label: Master bathroom
+              - type: buttons
+                entities:
+                  - entity: switch.master_bathroom_towel_heat_relay
+                    name: Towel heat on
+                    icon: mdi:heat-wave
+                    tap_action:
+                      action: perform-action
+                      perform_action: switch.turn_on
+                      target:
+                        entity_id: switch.master_bathroom_towel_heat_relay
+                  - entity: switch.master_bathroom_towel_heat_relay
+                    name: Towel heat off
+                    icon: mdi:radiator-off
+                    tap_action:
+                      action: perform-action
+                      perform_action: switch.turn_off
+                      target:
+                        entity_id: switch.master_bathroom_towel_heat_relay
+
       - type: grid
         cards:
           - type: entities
