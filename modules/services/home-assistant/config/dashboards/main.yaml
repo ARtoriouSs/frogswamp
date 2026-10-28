@@ -781,7 +781,7 @@ views:
                 name: Audi
                 suffix: "%"
 
-  # Demo plan to check the card, the real flat plan replaces it (config/floorplan/)
+  # Flat plan traced from the designer's drawing, no devices on it yet
   - title: Plan
     path: plan
     icon: mdi:floor-plan
@@ -790,20 +790,6 @@ views:
       - type: custom:floorplan-card
         full_height: true
         config:
-          image: /local/floorplan/demo.svg
-          stylesheet: /local/floorplan/demo.css
-          defaults:
-            tap_action: more-info
-          rules:
-            # element defaults to the entity id, which is the SVG element's id
-            - entities:
-                - cover.living_room_blinds_left_door
-                - cover.living_room_blinds_middle
-                - cover.living_room_blinds_right
-                - cover.bedroom_curtains
-              state_action:
-                action: call-service
-                service: floorplan.class_set
-                service_data:
-                  # class_set replaces all classes, so keep the base one
-                  class: "blind blind-${entity.state}"
+          image: /local/floorplan/flat.svg
+          stylesheet: /local/floorplan/flat.css
+          rules: []
