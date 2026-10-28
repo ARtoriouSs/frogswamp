@@ -34,7 +34,7 @@ if [ ! -f "$repo_root/flake.nix" ]; then
   exit 1
 fi
 
-say "1/7 Nix"
+say "1/8 Nix"
 if command -v nix >/dev/null 2>&1 || [ -x /nix/var/nix/profiles/default/bin/nix ]; then
   skip "Nix is installed"
 else
@@ -48,7 +48,7 @@ if ! command -v nix >/dev/null 2>&1; then
   . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
 fi
 
-say "2/7 Flakes"
+say "2/8 Flakes"
 if grep -qs '^experimental-features.*flakes' "$nix_conf"; then
   skip "flakes enabled in $nix_conf"
 else
@@ -57,7 +57,7 @@ else
   skip "enabled flakes in $nix_conf"
 fi
 
-say "3/7 direnv + nix-direnv, shell setup"
+say "3/8 direnv + nix-direnv, shell setup"
 if nix profile list 2>/dev/null | grep -q 'nix-direnv'; then
   skip "direnv and nix-direnv installed"
 else
@@ -106,7 +106,7 @@ else
   fi
 fi
 
-say "4/7 Admin age key (decrypts repo secrets)"
+say "4/8 Admin age key (decrypts repo secrets)"
 if [ -s "$age_key" ]; then
   skip "age key exists at $age_key"
 else
@@ -117,7 +117,7 @@ else
   warn "STORE ITS CONTENT IN YOUR PASSWORD MANAGER NOW. Without it (and the server) all secrets are lost."
 fi
 
-say "5/7 Admin SSH key"
+say "5/8 Admin SSH key"
 if [ -s "$ssh_key" ]; then
   skip "SSH key exists at $ssh_key"
 else
@@ -156,7 +156,7 @@ else
   skip "wrote frogswamp block to ~/.ssh/config"
 fi
 
-say "6/7 Tailscale (off until ts-up)"
+say "6/8 Tailscale (off until ts-up)"
 if command -v tailscale >/dev/null 2>&1; then
   skip "Tailscale is installed"
 else
@@ -180,7 +180,18 @@ else
   skip "tailscaled is off"
 fi
 
-say "7/7 Done. Next steps:"
+say "7/8 Sweet Home 3D (builds the flat model for the 3D dashboard)"
+# the apt package works badly, Flathub has a newer build
+if flatpak info com.sweethome3d.Sweethome3d >/dev/null 2>&1; then
+  skip "Sweet Home 3D is installed"
+else
+  # Mint comes with Flatpak and Flathub, plain Ubuntu doesn't
+  command -v flatpak >/dev/null 2>&1 || sudo apt-get install -y -qq flatpak
+  sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+  sudo flatpak install -y --noninteractive flathub com.sweethome3d.Sweethome3d
+fi
+
+say "8/8 Done. Next steps:"
 cat <<'EOF'
   1. Open a new terminal (loads Nix, direnv, ts-up/ts-down).
   2. cd into the frogswamp repo and run:  direnv allow
