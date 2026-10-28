@@ -14,6 +14,12 @@ let
     inherit (hacsPin) hash;
     stripRoot = false;
   };
+  floorplanPin = import ./floorplan.nix;
+  # served as /local/floorplan-card/floorplan.js, configuration.yaml loads it from there
+  floorplanCard = pkgs.fetchurl {
+    url = "https://github.com/ExperienceLovelace/ha-floorplan/releases/download/${floorplanPin.version}/floorplan.js";
+    inherit (floorplanPin) hash;
+  };
   # Mounted as /dev/bus/usb in the container, see the Bluetooth recovery below
   usbWatchDir = "/run/home-assistant/usb-watch";
   repoOwned = [
@@ -92,6 +98,9 @@ in
           "${stateDir}:/config"
           "/run/dbus:/run/dbus:ro"
           "${cfg.secretsFile}:/config/secrets.yaml:ro"
+          "${floorplanCard}:/config/www/floorplan-card/floorplan.js:ro"
+          # SVG plans and their CSS, served as /local/floorplan/
+          "${configDir}/floorplan:/config/www/floorplan:ro"
         ]
         ++ map (name: "${configDir}/${name}:/config/${name}:ro") repoOwned
         ++ lib.optional cfg.hacs "${hacs}:/config/custom_components/hacs:ro"

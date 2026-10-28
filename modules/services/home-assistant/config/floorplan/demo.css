@@ -1,0 +1,7 @@
+.floor { fill: #f4f1ea; }
+.wall { fill: none; stroke: #444; stroke-width: 12; }
+.label { font: 28px sans-serif; fill: #666; text-anchor: middle; }
+.blind { fill: #bbb; stroke: #444; stroke-width: 2; cursor: pointer; }
+.blind-open { fill: #9fd8ff; }
+.blind-closed { fill: #2f2f2f; }
+.blind-opening, .blind-closing { fill: #ffb300; }
