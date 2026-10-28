@@ -39,8 +39,8 @@
     <path class="detail" d="M323,431 l6,35"/>
     <path class="detail" d="M334,431 l6,35"/>
     <rect class="furniture" x="447" y="146" width="28" height="151"/>
-    <path class="furniture" d="M545,92 H652 V226 H597 V145 H545 Z"/>
-    <rect class="furniture" x="530" y="163" width="46" height="46" rx="8"/>
+    <rect class="furniture" x="545" y="92" width="107" height="53"/>
+    <rect class="furniture" x="575" y="152" width="46" height="46" rx="8"/>
     <rect class="dashed" x="565" y="236" width="85" height="24"/><path class="detail" d="M565,236 L650,260 M650,236 L565,260"/>
     <rect class="furniture" x="557" y="267" width="92" height="153" rx="6"/>
     <rect class="detail" x="621" y="271" width="26" height="145" rx="4"/>

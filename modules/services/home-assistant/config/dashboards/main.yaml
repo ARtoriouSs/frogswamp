@@ -785,11 +785,17 @@ views:
   - title: Plan
     path: plan
     icon: mdi:floor-plan
-    type: panel
-    cards:
-      - type: custom:floorplan-card
-        full_height: true
-        config:
-          image: /local/floorplan/flat.svg
-          stylesheet: /local/floorplan/flat.css
-          rules: []
+    # sections, not panel: a panel stretches the plan to the full screen width
+    type: sections
+    max_columns: 2
+    sections:
+      - type: grid
+        column_span: 2
+        cards:
+          - type: custom:floorplan-card
+            grid_options:
+              columns: full
+            config:
+              image: /local/floorplan/flat.svg
+              stylesheet: /local/floorplan/flat.css
+              rules: []
