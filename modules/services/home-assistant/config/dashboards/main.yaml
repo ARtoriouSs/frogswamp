@@ -721,3 +721,14 @@ views:
                 attribute: uptime
                 name: Audi
                 suffix: "%"
+  # Demo house from the floor3d-card release, to check the card works. Replaced by the real flat model
+  - title: 3D
+    path: 3d
+    icon: mdi:home-floor-3
+    type: panel
+    cards:
+      - type: custom:floor3d-card
+        name: Flat
+        path: /local/floor3d-card/sample/
+        objfile: home.glb
+        header: "no"

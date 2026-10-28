@@ -14,6 +14,24 @@ let
     inherit (hacsPin) hash;
     stripRoot = false;
   };
+  floor3dPin = import ./floor3d.nix;
+  floor3dRelease = "https://github.com/adizanni/floor3d-card/releases/download/${floor3dPin.version}";
+  # served as /local/floor3d-card/, configuration.yaml loads the card from there
+  floor3d = pkgs.runCommand "floor3d-card-${floor3dPin.version}" { } ''
+    mkdir -p $out/sample
+    cp ${
+      pkgs.fetchurl {
+        url = "${floor3dRelease}/floor3d-card.js";
+        inherit (floor3dPin) hash;
+      }
+    } $out/floor3d-card.js
+    cp ${
+      pkgs.fetchurl {
+        url = "${floor3dRelease}/home.glb";
+        hash = floor3dPin.sampleHash;
+      }
+    } $out/sample/home.glb
+  '';
   # Mounted as /dev/bus/usb in the container, see the Bluetooth recovery below
   usbWatchDir = "/run/home-assistant/usb-watch";
   repoOwned = [
@@ -92,6 +110,7 @@ in
           "${stateDir}:/config"
           "/run/dbus:/run/dbus:ro"
           "${cfg.secretsFile}:/config/secrets.yaml:ro"
+          "${floor3d}:/config/www/floor3d-card:ro"
         ]
         ++ map (name: "${configDir}/${name}:/config/${name}:ro") repoOwned
         ++ lib.optional cfg.hacs "${hacs}:/config/custom_components/hacs:ro"

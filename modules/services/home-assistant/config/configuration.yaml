@@ -19,6 +19,11 @@ scene ui: !include scenes.yaml
 recorder:
   purge_keep_days: 31
 
+# Custom cards mounted from the repo. ?v= makes browsers fetch the file again after an update
+frontend:
+  extra_module_url:
+    - /local/floor3d-card/floor3d-card.js?v=1.5.3
+
 lovelace:
   mode: storage
   dashboards:
