@@ -1,5 +1,19 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="140 25 1170 815">
   <!-- Traced from the designer's plan. Rooms have ids for later rules (room.*), devices come later -->
+  <!-- Styles live here so Inkscape shows the same colors as HA. flat.css is for device state classes -->
+  <style>
+    .room { fill: #f6f3ec; }
+    .wall { fill: #555; }
+    .window { fill: #d6ecfa; stroke: #555; stroke-width: 1.5; }
+    .balcony { fill: none; stroke: #777; stroke-width: 2; }
+    .furniture, .appliance, .dashed { fill: #fff; stroke: #777; stroke-width: 1.5; }
+    .appliance { fill: #eef3f8; }
+    .dashed { fill: none; stroke-dasharray: 5 4; }
+    .detail { fill: none; stroke: #999; stroke-width: 1; }
+    .tv { fill: #333; }
+    .curtain { fill: none; stroke: #999; stroke-width: 1.5; }
+    .label { font-family: sans-serif; fill: #666; text-anchor: middle; pointer-events: none; }
+  </style>
   <g id="rooms">
     <path id="room.bedroom" class="room" d="M170,80 H440 V360 H170 Z"/>
     <path id="room.wardrobe" class="room" d="M170,360 H345 V475 H170 Z"/>
