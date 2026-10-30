@@ -1,0 +1,11 @@
+# Stand-ins for NeonPlan 3D lamps that have no smart light yet.
+# A tap on the lamp in 3D toggles them; `initial` puts them back on every HA restart
+input_boolean:
+  neonplan_always_on:
+    name: NeonPlan always on
+    icon: mdi:lightbulb-on
+    initial: true
+  neonplan_always_off:
+    name: NeonPlan always off
+    icon: mdi:lightbulb-off
+    initial: false
