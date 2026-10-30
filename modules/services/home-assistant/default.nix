@@ -14,6 +14,24 @@ let
     inherit (hacsPin) hash;
     stripRoot = false;
   };
+  floor3dPin = import ./floor3d.nix;
+  floor3dRelease = "https://github.com/adizanni/floor3d-card/releases/download/${floor3dPin.version}";
+  # served as /local/floor3d-card/, configuration.yaml loads the card from there
+  floor3d = pkgs.runCommand "floor3d-card-${floor3dPin.version}" { } ''
+    mkdir -p $out/sample
+    cp ${
+      pkgs.fetchurl {
+        url = "${floor3dRelease}/floor3d-card.js";
+        inherit (floor3dPin) hash;
+      }
+    } $out/floor3d-card.js
+    cp ${
+      pkgs.fetchurl {
+        url = "${floor3dRelease}/home.glb";
+        hash = floor3dPin.sampleHash;
+      }
+    } $out/sample/home.glb
+  '';
   floorplanPin = import ./floorplan.nix;
   # served as /local/floorplan-card/floorplan.js, configuration.yaml loads it from there
   floorplanCard = pkgs.fetchurl {
@@ -99,6 +117,7 @@ in
           "/run/dbus:/run/dbus:ro"
           "${cfg.secretsFile}:/config/secrets.yaml:ro"
           "${floorplanCard}:/config/www/floorplan-card/floorplan.js:ro"
+          "${floor3d}:/config/www/floor3d-card:ro"
           # SVG plans and their CSS, served as /local/floorplan/
           "${configDir}/floorplan:/config/www/floorplan:ro"
         ]

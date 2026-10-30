@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600">
+  <!-- Demo plan to check the card: ids are entity ids, the card colors them by state -->
+  <rect class="floor" x="40" y="60" width="560" height="500"/>
+  <rect class="floor" x="620" y="60" width="340" height="500"/>
+  <path class="wall" d="M40 60 H960 V560 H40 Z M610 60 V560"/>
+  <text class="label" x="320" y="320">Living room</text>
+  <text class="label" x="790" y="320">Bedroom</text>
+  <rect id="cover.living_room_blinds_left_door" class="blind" x="80" y="50" width="140" height="20"/>
+  <rect id="cover.living_room_blinds_middle" class="blind" x="250" y="50" width="140" height="20"/>
+  <rect id="cover.living_room_blinds_right" class="blind" x="420" y="50" width="140" height="20"/>
+  <rect id="cover.bedroom_curtains" class="blind" x="700" y="50" width="180" height="20"/>
+</svg>

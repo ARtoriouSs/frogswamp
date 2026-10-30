@@ -799,3 +799,84 @@ views:
               image: /local/floorplan/flat.svg
               stylesheet: /local/floorplan/flat.css
               rules: []
+
+  # 2D demo plan, for trying things out before they go on the real plan
+  - title: Plan demo
+    path: plan-demo
+    icon: mdi:floor-plan
+    type: sections
+    max_columns: 2
+    sections:
+      - type: grid
+        column_span: 2
+        cards:
+          - type: custom:floorplan-card
+            grid_options:
+              columns: full
+            config:
+              image: /local/floorplan/demo.svg
+              stylesheet: /local/floorplan/demo.css
+              defaults:
+                tap_action: more-info
+              rules:
+                # element defaults to the entity id, which is the SVG element's id
+                - entities:
+                    - cover.living_room_blinds_left_door
+                    - cover.living_room_blinds_middle
+                    - cover.living_room_blinds_right
+                    - cover.bedroom_curtains
+                  state_action:
+                    action: call-service
+                    service: floorplan.class_set
+                    service_data:
+                      # class_set replaces all classes, so keep the base one
+                      class: "blind blind-${entity.state}"
+
+  # Demo house from the floor3d-card release, to check the card works. Replaced by the real flat model
+  - title: 3D
+    path: 3d
+    icon: mdi:home-floor-3
+    type: panel
+    cards:
+      - type: custom:floor3d-card
+        name: Flat
+        path: /local/floor3d-card/sample/
+        objfile: home.glb
+        header: "no"
+        # a tap on a window opens its blind's controls
+        click: "yes"
+        # The demo has no blinds in it, so the window glass shows the blind's state.
+        # Its windows stand in for the living room ones: the French window is the door
+        object_groups:
+          - object_group: door_glass
+            objects:
+              - object_id: Double_French_window_8
+              - object_id: Double_French_window_13
+          - object_group: middle_glass
+            objects:
+              - object_id: Double_small_window_8
+              - object_id: Double_small_window_13
+        entities:
+          - entity: cover.living_room_blinds_left_door
+            type3d: color
+            object_id: <door_glass>
+            action: more-info
+            colorcondition: &blind_colors
+              - state: open
+                color: "#9fd8ff"
+              - state: closed
+                color: "#2f2f2f"
+              - state: opening
+                color: "#ffb300"
+              - state: closing
+                color: "#ffb300"
+          - entity: cover.living_room_blinds_middle
+            type3d: color
+            object_id: <middle_glass>
+            action: more-info
+            colorcondition: *blind_colors
+          - entity: cover.living_room_blinds_right
+            type3d: color
+            object_id: Window_7
+            action: more-info
+            colorcondition: *blind_colors

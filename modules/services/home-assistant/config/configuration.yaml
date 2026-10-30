@@ -23,6 +23,7 @@ recorder:
 frontend:
   extra_module_url:
     - /local/floorplan-card/floorplan.js?v=1.1.5
+    - /local/floor3d-card/floor3d-card.js?v=1.5.3
 
 lovelace:
   mode: storage
