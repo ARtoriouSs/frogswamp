@@ -78,7 +78,7 @@
       enable = true;
       kodi.host = "192.168.101.20"; # the TV; static IP set on the TV (Wi-Fi settings)
       tvRemoteEntity = "remote.living_room_philips_tv";
-      tvCastEntity = "media_player.philips_tv";
+      tvCastEntity = "media_player.philips_tv_google_cast";
     };
     # Homepage tiles that flip the General actions modes
     modeSwitch = {

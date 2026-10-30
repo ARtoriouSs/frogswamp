@@ -47,7 +47,7 @@ in
     tvCastEntity = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
       default = null;
-      example = "media_player.philips_tv";
+      example = "media_player.philips_tv_google_cast";
       description = "Google Cast entity of the TV; \"Chromecast to TV\" casts the HLS stream to it";
     };
     settings = lib.mkOption {

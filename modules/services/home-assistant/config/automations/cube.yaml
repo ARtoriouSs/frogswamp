@@ -143,7 +143,7 @@
   mode: restart
   triggers:
     - trigger: state
-      entity_id: media_player.philips_tv
+      entity_id: media_player.philips_tv_google_cast
       to: playing
       not_from:
         - unavailable

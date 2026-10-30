@@ -108,7 +108,7 @@ let
     "football tells Kodi the LAN engine URL" =
       cfg.frogswamp.football.settings.public_engine_url == "http://192.168.101.10:6878";
     "football casts to the living room TV" =
-      cfg.frogswamp.football.settings.ha.cast_entity == "media_player.philips_tv";
+      cfg.frogswamp.football.settings.ha.cast_entity == "media_player.philips_tv_google_cast";
     "football wakes the living room TV" =
       cfg.frogswamp.football.settings.ha.remote_entity == "remote.living_room_philips_tv";
     "mode switch sends the browser back to Homepage on the LAN" =
