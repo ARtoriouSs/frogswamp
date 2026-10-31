@@ -12,7 +12,7 @@ input_boolean:
     initial: false
 
 # Scenes as switches, so they can be placed as pins on the NeonPlan plan (scenes can't be placed there).
-# A tap on a pin toggles its switch
+# A tap on a pin toggles its switch. The ones the Overview page uses too are in toggles.yaml
 template:
   - switch:
       # For lamps that go dark on Vacation. A tap does nothing, Vacation is turned on and off on its own card
@@ -22,20 +22,6 @@ template:
         state: "{{ is_state('input_boolean.vacation', 'off') }}"
         turn_on: []
         turn_off: []
-
-      - name: Bedroom curtains closed
-        unique_id: repo_neonplan_bedroom_curtains_toggle
-        default_entity_id: switch.bedroom_curtains_toggle
-        icon: mdi:curtains-closed
-        state: "{{ is_state('cover.bedroom_curtains', 'closed') }}"
-        turn_on:
-          - action: scene.turn_on
-            target:
-              entity_id: scene.bedroom_curtains_close
-        turn_off:
-          - action: scene.turn_on
-            target:
-              entity_id: scene.bedroom_curtains_open
 
       # The blinds don't report their slats, so "closed" means Full close ran after every other blinds scene
       - name: Living room blinds closed
@@ -90,33 +76,7 @@ template:
               entity_id: scene.living_room_blinds_full_close_open
         turn_off: []
 
-      # Heaters as on/off pins (a climate pin opens its settings, a switch pin toggles)
-      - name: Guest floor warming
-        unique_id: repo_neonplan_guest_floor_warming
-        icon: mdi:heating-coil
-        state: "{{ states('climate.guest_bathroom_thermostat_guest') not in ['off', 'unavailable', 'unknown'] }}"
-        turn_on:
-          - action: climate.turn_on
-            target:
-              entity_id: climate.guest_bathroom_thermostat_guest
-        turn_off:
-          - action: climate.turn_off
-            target:
-              entity_id: climate.guest_bathroom_thermostat_guest
-
-      - name: Master floor warming
-        unique_id: repo_neonplan_master_floor_warming
-        icon: mdi:heating-coil
-        state: "{{ states('climate.master_bathroom_thermostat_master') not in ['off', 'unavailable', 'unknown'] }}"
-        turn_on:
-          - action: climate.turn_on
-            target:
-              entity_id: climate.master_bathroom_thermostat_master
-        turn_off:
-          - action: climate.turn_off
-            target:
-              entity_id: climate.master_bathroom_thermostat_master
-
+      # A heater as an on/off pin (a climate pin opens its settings, a switch pin toggles)
       - name: Guest towel heat
         unique_id: repo_neonplan_guest_towel_heat
         icon: mdi:radiator
@@ -129,18 +89,6 @@ template:
           - action: climate.turn_off
             target:
               entity_id: climate.guest_bathroom_towel_heat_guest
-
-      # On = standing. The desk doesn't report its height, so the last desk scene tells
-      - name: Desk standing
-        unique_id: repo_neonplan_desk_position
-        default_entity_id: switch.desk_position
-        icon: mdi:desk
-        state: >-
-          {{ as_timestamp(states('scene.office_desk_up'), 0) > as_timestamp(states('scene.office_desk_down'), 0) }}
-        turn_on:
-          - action: script.desk_up
-        turn_off:
-          - action: script.desk_down
 
       # On = the TV is on. A tap runs TV mode (TV on, then YouTube), the next one turns the TV off
       - name: TV mode

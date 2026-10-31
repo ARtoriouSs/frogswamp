@@ -1,0 +1,60 @@
+# Pairs of scenes or scripts as one on/off switch, for the Overview page and NeonPlan pins
+template:
+  - switch:
+      - name: Bedroom curtains closed
+        unique_id: repo_neonplan_bedroom_curtains_toggle
+        default_entity_id: switch.bedroom_curtains_toggle
+        icon: mdi:curtains-closed
+        state: "{{ is_state('cover.bedroom_curtains', 'closed') }}"
+        turn_on:
+          - action: scene.turn_on
+            target:
+              entity_id: scene.bedroom_curtains_close
+        turn_off:
+          - action: scene.turn_on
+            target:
+              entity_id: scene.bedroom_curtains_open
+
+      # On = standing. The desk doesn't report its height, so the last desk scene tells
+      - name: Desk standing
+        unique_id: repo_neonplan_desk_position
+        default_entity_id: switch.desk_position
+        icon: mdi:desk
+        state: >-
+          {{ as_timestamp(states('scene.office_desk_up'), 0) > as_timestamp(states('scene.office_desk_down'), 0) }}
+        turn_on:
+          - action: script.desk_up
+        turn_off:
+          - action: script.desk_down
+
+      # Through the Tuya floor warming scenes, like the schedule. The thermostat stays in its own mode
+      # either way, so the last scene run from HA tells the state
+      - name: Guest floor warming
+        unique_id: repo_neonplan_guest_floor_warming
+        icon: mdi:heating-coil
+        state: >-
+          {{ as_timestamp(states('scene.guest_bathroom_floor_warming_guest_on'), 0)
+             > as_timestamp(states('scene.guest_bathroom_floor_warming_guest_off'), 0) }}
+        turn_on:
+          - action: scene.turn_on
+            target:
+              entity_id: scene.guest_bathroom_floor_warming_guest_on
+        turn_off:
+          - action: scene.turn_on
+            target:
+              entity_id: scene.guest_bathroom_floor_warming_guest_off
+
+      - name: Master floor warming
+        unique_id: repo_neonplan_master_floor_warming
+        icon: mdi:heating-coil
+        state: >-
+          {{ as_timestamp(states('scene.master_bathroom_floor_warming_master_on'), 0)
+             > as_timestamp(states('scene.master_bathroom_floor_warming_master_off'), 0) }}
+        turn_on:
+          - action: scene.turn_on
+            target:
+              entity_id: scene.master_bathroom_floor_warming_master_on
+        turn_off:
+          - action: scene.turn_on
+            target:
+              entity_id: scene.master_bathroom_floor_warming_master_off
