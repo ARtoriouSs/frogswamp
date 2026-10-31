@@ -154,29 +154,19 @@ views:
             entity: light.cube_matrix_192_168_101_121
             name: Cube Matrix
             grid_options:
-              columns: 8
+              columns: 9
+              rows: 2
             features_position: bottom
             features:
               - type: light-brightness
+          # 0% / 100% in one tap, next to the slider
           - type: tile
-            entity: script.cube_brightness_off
-            name: Off
+            entity: switch.cube_bright
+            name: Bright
             vertical: true
             hide_state: true
             grid_options:
-              columns: 2
-              rows: 2
-            tap_action:
-              action: toggle
-            icon_tap_action:
-              action: toggle
-          - type: tile
-            entity: script.cube_brightness_on
-            name: On
-            vertical: true
-            hide_state: true
-            grid_options:
-              columns: 2
+              columns: 3
               rows: 2
             tap_action:
               action: toggle
@@ -208,11 +198,11 @@ views:
               - climate.master_bathroom_thermostat_master
               - entity: binary_sensor.master_bathroom_thermostat_master_valve
                 name: Floor heating now
-              - entity: automation.floor_warming_master
+              - entity: automation.floor_warming_master_schedule
                 name: Floor warming schedule
               - entity: switch.master_bathroom_towel_heat_relay
                 name: Towel heat
-              - entity: automation.towel_heat_master
+              - entity: automation.towel_heat_master_schedule
                 name: Towel heat schedule
 
           - type: entities
@@ -224,7 +214,7 @@ views:
               - entity: binary_sensor.guest_bathroom_thermostat_guest_valve
                 name: Floor heating now
               - climate.guest_bathroom_towel_heat_guest
-              - entity: automation.floor_warming_guest
+              - entity: automation.floor_warming_guest_schedule
                 name: Floor warming schedule
 
       - type: grid

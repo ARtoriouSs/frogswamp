@@ -5,19 +5,14 @@ input_boolean:
     name: Cube night
     icon: mdi:weather-night
 
-# The cube for NeonPlan: on while it shows frogs and the rest, off while it is the dot at 0%
-# (an event animation at night shows it on for that time). A light, because NeonPlan lamps
-# take lights, switches and helpers. A tap in the plan puts the dot on or brings the frogs back
 template:
-  - light:
-      - name: Cube Matrix visible
-        unique_id: repo_cube_visible
-        icon: mdi:cube-outline
-        state: >-
-          {{ is_state('light.cube_matrix_192_168_101_121', 'on')
-             and not (is_state('select.cube_matrix_192_168_101_121_background', 'dot')
-                      and state_attr('light.cube_matrix_192_168_101_121', 'brightness') | int(0) <= 1) }}
+  # The Overview toggle: on at 100%, off at 0% (brightness 1, see scripts/cube.yaml)
+  - switch:
+      - name: Cube bright
+        unique_id: repo_cube_bright
+        icon: mdi:brightness-7
+        state: "{{ state_attr('light.cube_matrix_192_168_101_121', 'brightness') | int(0) > 1 }}"
         turn_on:
-          - action: script.cube_wake
+          - action: script.cube_brightness_on
         turn_off:
-          - action: script.cube_sleep
+          - action: script.cube_brightness_off

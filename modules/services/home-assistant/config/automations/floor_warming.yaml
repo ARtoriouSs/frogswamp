@@ -3,8 +3,8 @@
 # Workday or weekend timings are picked by the Workday integration, so holidays get the weekend ones.
 # Vacation and Tuya rule mode stop it. One automation per bathroom (each has its own area),
 # the second one reuses the first one's schedule
-- id: repo_floor_warming_guest
-  alias: "Floor warming: guest"
+- id: repo_floor_warming_guest_schedule
+  alias: "Floor warming: guest schedule"
   description: Guest bathroom floor
   mode: queued
   triggers: &floor_warming_triggers
@@ -73,8 +73,8 @@
       target:
         entity_id: "{{ scene }}_{{ 'on' if trigger.id.startswith('on') else 'off' }}"
 
-- id: repo_floor_warming_master
-  alias: "Floor warming: master"
+- id: repo_floor_warming_master_schedule
+  alias: "Floor warming: master schedule"
   description: Master bathroom floor
   mode: queued
   triggers: *floor_warming_triggers

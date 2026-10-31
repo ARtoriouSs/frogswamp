@@ -1,7 +1,7 @@
 # Turning a mode on also runs its Tuya "on" scene, which turns off the Tuya app's own automations.
 # Turning it off runs nothing in Tuya, so the Tuya automations stay off while HA is in charge
-- id: repo_modes_tuya_scene
-  alias: "Modes: Tuya scene on mode on"
+- id: repo_modes_tuya_mode_mirror
+  alias: "Modes: Tuya mode mirror"
   mode: queued
   triggers:
     - trigger: state

@@ -3,7 +3,7 @@
 # first command only wakes it up. So the scene is sent twice, 20 s apart: a sleeping desk wakes on the first
 # and moves on the second, an awake one moves on the first and ignores the second (it's already there).
 # Then the child lock goes off, so the height can be changed on the pad right away. The panel locks itself again
-desk_move:
+desk_move_with_unlock:
   alias: "Desk: move"
   # A new press stops the move in progress, e.g. down while up is still waiting
   mode: restart
@@ -33,7 +33,7 @@ desk_up:
   alias: "Desk: up"
   icon: mdi:arrow-up-bold
   sequence:
-    - action: script.desk_move
+    - action: script.desk_move_with_unlock
       data:
         direction: up
 
@@ -41,6 +41,6 @@ desk_down:
   alias: "Desk: down"
   icon: mdi:arrow-down-bold
   sequence:
-    - action: script.desk_move
+    - action: script.desk_move_with_unlock
       data:
         direction: down

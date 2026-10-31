@@ -18,8 +18,8 @@
           Static config loaded from the frogswamp repo.
           Restarts since you last closed this: {{ states('counter.restarts_unread') }}
 
-- id: repo_startup_notice_read
-  alias: "Repo: startup notice read"
+- id: repo_startup_notice_counter_reset_on_read
+  alias: "Repo: startup notice counter reset on read"
   description: Resets the restart count when the startup notice is closed
   triggers:
     - trigger: persistent_notification
