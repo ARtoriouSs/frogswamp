@@ -9,3 +9,61 @@ input_boolean:
     name: NeonPlan always off
     icon: mdi:lightbulb-off
     initial: false
+
+# Scenes as switches, so they can be placed as pins on the NeonPlan plan (scenes can't be placed there).
+# A tap on a pin toggles its switch
+template:
+  - switch:
+      - name: Bedroom curtains closed
+        unique_id: repo_neonplan_bedroom_curtains_closed
+        icon: mdi:curtains-closed
+        state: "{{ is_state('cover.bedroom_curtains', 'closed') }}"
+        turn_on:
+          - action: scene.turn_on
+            target:
+              entity_id: scene.bedroom_curtains_close
+        turn_off:
+          - action: scene.turn_on
+            target:
+              entity_id: scene.bedroom_curtains_open
+
+      # The blinds don't report their slats, so "closed" means Full close ran after every other blinds scene
+      - name: Living room blinds closed
+        unique_id: repo_neonplan_living_room_blinds_closed
+        icon: mdi:blinds
+        state: >-
+          {% set closed = as_timestamp(states('scene.living_room_blinds_full_close'), 0) %}
+          {{ closed > 0 and closed > [
+               as_timestamp(states('scene.living_room_blinds_open'), 0),
+               as_timestamp(states('scene.living_room_blinds_full_close_open'), 0),
+               as_timestamp(states('scene.living_room_blinds_full_open_door'), 0)
+             ] | max }}
+        turn_on:
+          - action: scene.turn_on
+            target:
+              entity_id: scene.living_room_blinds_full_close
+        turn_off:
+          - action: scene.turn_on
+            target:
+              entity_id: scene.living_room_blinds_open
+
+      # Push buttons: always off, so every tap runs the scene
+      - name: Living room blinds open door
+        unique_id: repo_neonplan_living_room_blinds_open_door
+        icon: mdi:door-open
+        state: "{{ false }}"
+        turn_on:
+          - action: scene.turn_on
+            target:
+              entity_id: scene.living_room_blinds_full_open_door
+        turn_off: []
+
+      - name: Living room blinds reset
+        unique_id: repo_neonplan_living_room_blinds_reset
+        icon: mdi:restore
+        state: "{{ false }}"
+        turn_on:
+          - action: scene.turn_on
+            target:
+              entity_id: scene.living_room_blinds_full_close_open
+        turn_off: []
