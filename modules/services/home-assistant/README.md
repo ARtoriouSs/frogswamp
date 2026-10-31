@@ -59,9 +59,9 @@ Workdays come from the **Workday** integration (`binary_sensor.workday_sensor_pl
 
 | Timing | Value | Used by |
 |---|---|---|
-| Wakeup | workdays 09:30, weekends and holidays 11:00 | floor warming: from 1 h before to 1 h after |
-| Bedtime | before a workday 00:00, before a weekend day or holiday 01:00 | floor warming: from 1 h before to bedtime. Master towel heat relay: from 1 h before to 1 h after |
-| Work | workdays 10:00–19:00 | desk schedule runs on workdays |
+| Wakeup | workdays 09:30, weekends and holidays 11:00 | floor warming: from 1 h before to 1 h after. Cube night ends |
+| Bedtime | before a workday 00:00, before a weekend day or holiday 01:00 | floor warming: from 1 h before to bedtime. Master towel heat relay: from 1 h before to 1 h after. Cube night starts |
+| Work | workdays 10:00–19:00 | desk schedule runs on workdays. Cube: coffee at the start, moon at the end |
 
 Workday can only be added in the UI (once, it is kept in HA's state dir): **Settings → Devices & services → Add integration → Workday**. Country Poland (the entity becomes `binary_sensor.workday_sensor_pl`), workdays Monday–Friday, excludes Saturday, Sunday and Holidays, offset 0. Without it the floors, the towel heat nights and the desk don't run (Vacation still works).
 
@@ -72,7 +72,7 @@ Switches in `config/packages/modes.yaml`. Automations check them in their condit
 | Mode | Stops | When turned on, also runs the Tuya scene |
 |---|---|---|
 | Day off | desk schedule. Also counts the day as a weekend day for the schedule (late wakeup and bedtime) | `Days off - on` |
-| Vacation | desk, floor warming, blinds, curtains. Also turns off both floors, guest towel heat and the master towel heat relay. Nothing turns on again when Vacation ends, everything waits for its next scheduled time | `Vacation - on` |
+| Vacation | desk, floor warming, blinds, curtains. Also turns off both floors, guest towel heat and the master towel heat relay, and puts the cube in quiet mode. Nothing turns on again when Vacation ends, everything waits for its next scheduled time (the cube comes back at once, unless it is night) | `Vacation - on` |
 | Guests in the living room | blinds opening in the morning | `Guests in the living room - on` |
 | Tuya rule mode | every HA automation that moves Tuya devices (alerts keep running) | none |
 
@@ -85,6 +85,8 @@ If the Bluetooth chip hangs, the kernel resets it and it comes back under a new 
 ## Yeelight Cube Matrix
 
 The integration lives in its own repo, [yeelight-cubematrix-ha](https://github.com/ARtoriouSs/yeelight-cubematrix-ha). `cubematrix.nix` pins a commit (update it with `just cubematrix-bump`), and it is mounted read-only at `/config/custom_components/cubematrix`; its tests run in that repo. Repo presets are in `config/cubematrix/*.yaml`, mounted at `/config/cubematrix`; `tests/cubematrix-presets.nix` checks that each one parses. The integration draws over the lamp's UDP session (outgoing to port 55444, replies on the same socket), so the firewall needs no extra rule.
+
+**Quiet mode.** From bedtime to wakeup (`input_boolean.cube_night`, set by the schedule) and during Vacation, the cube shows only the `dot` preset (one green pixel) at brightness 1, which is in fact off. Frogs (hourly and button tap), coffee/moon and problem signs stop. Event animations (desk arrows, blinds, modes, TV play) still play through `script.cube_event` at the day brightness, and the brightness goes down again after them while the cube is still quiet. The day brightness is saved to `input_number.cube_day_brightness` when quiet mode starts and set back when it ends, with a random frog. A wakeup missed while HA was down is not caught up: the cube stays dimmed until the next wakeup, or turn **Cube night** off by hand (Settings → Helpers).
 
 ## Update Home Assistant
 

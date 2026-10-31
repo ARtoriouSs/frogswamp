@@ -1,7 +1,122 @@
 # Yeelight Cube Matrix in the office. It stays on all the time (the lamp turns itself back on
 # when it is turned off, so there is no off schedule) and shows a random animated frog, plus
 # short animations when the desk, blinds or modes change. The short ones play even when the
-# cube is off (wake) and then go back to what was there before
+# cube is off (wake) and then go back to what was there before.
+# Quiet mode, from bedtime to wakeup and during Vacation: only a green dot at the lowest brightness.
+# Frogs, coffee/moon and problem signs stop, event animations still play at the day brightness
+
+# Bedtime and wakeup turn Cube night on and off with the same workday logic as the floor warming
+# (packages/schedule.yaml). The background tells if the cube is dimmed now: the dot means it is.
+# A wakeup missed while HA was down is not caught up, the cube stays dimmed until the next one or until
+# Cube night is turned off by hand
+- id: repo_cube_quiet
+  alias: "Cube: green dot at night and on Vacation"
+  mode: queued
+  triggers:
+    - trigger: time
+      id: night_start_workday
+      at: input_datetime.bedtime_workday
+    - trigger: time
+      id: night_start_weekend
+      at: input_datetime.bedtime_weekend
+    - trigger: time
+      id: night_end_workday
+      at: input_datetime.wakeup_workday
+    - trigger: time
+      id: night_end_weekend
+      at: input_datetime.wakeup_weekend
+    # Cube night also by hand, e.g. after a missed wakeup
+    - trigger: state
+      id: mode
+      entity_id:
+        - input_boolean.vacation
+        - input_boolean.cube_night
+      from:
+        - "on"
+        - "off"
+      to:
+        - "on"
+        - "off"
+    # Puts the brightness down again if HA restarted in the middle of an event animation
+    - trigger: homeassistant
+      id: start
+      event: start
+  variables:
+    cube: light.cube_matrix_192_168_101_121
+    frogs: &frogs
+      - frog_jump
+      - frog_sway
+      - frog_blink
+      - frog_croak
+  actions:
+    - if: "{{ trigger.id.startswith('night') }}"
+      then:
+        # A night start goes by the next day, its end by the day itself
+        # (12 h back from any time between noon and the next noon is the day the night started)
+        - action: workday.check_date
+          target:
+            entity_id: binary_sensor.workday_sensor_pl
+          data:
+            check_date: >-
+              {% if trigger.id.startswith('night_start') %}{{ (now() - timedelta(hours=12)).date() + timedelta(days=1) }}
+              {%- else %}{{ now().date() }}{% endif %}
+          response_variable: workday
+        # Day off on counts as a weekend day
+        - if:
+            - condition: template
+              value_template: >-
+                {{ (workday['binary_sensor.workday_sensor_pl'].workday and is_state('input_boolean.day_off', 'off'))
+                   != trigger.id.endswith('workday') }}
+          then:
+            - stop: Not this day's timing
+        - action: "input_boolean.turn_{{ 'on' if trigger.id.startswith('night_start') else 'off' }}"
+          target:
+            entity_id: input_boolean.cube_night
+    - variables:
+        quiet: "{{ is_state('input_boolean.vacation', 'on') or is_state('input_boolean.cube_night', 'on') }}"
+        dimmed: "{{ is_state('select.cube_matrix_192_168_101_121_background', 'dot') }}"
+    - choose:
+        - conditions: "{{ quiet and not dimmed }}"
+          sequence:
+            - if: "{{ state_attr(cube, 'brightness') | int(0) > 1 }}"
+              then:
+                - action: input_number.set_value
+                  target:
+                    entity_id: input_number.cube_day_brightness
+                  data:
+                    value: "{{ state_attr(cube, 'brightness') }}"
+            - action: light.turn_on
+              target:
+                entity_id: "{{ cube }}"
+              data:
+                brightness: 1
+            - action: cubematrix.set_background
+              target:
+                entity_id: "{{ cube }}"
+              data:
+                preset: dot
+        - conditions: "{{ quiet }}"
+          sequence:
+            - action: light.turn_on
+              target:
+                entity_id: "{{ cube }}"
+              data:
+                brightness: 1
+        - conditions: "{{ dimmed }}"
+          sequence:
+            - action: cubematrix.set_background
+              target:
+                entity_id: "{{ cube }}"
+              data:
+                preset: "{{ frogs | random }}"
+            - action: light.turn_on
+              target:
+                entity_id: "{{ cube }}"
+              data:
+                # 1 means it was never saved yet
+                brightness: >-
+                  {% set saved = states('input_number.cube_day_brightness') | int(0) %}
+                  {{ saved if saved > 1 else 255 }}
 
 # Another frog every hour while the cube is on, never the same one twice in a row
 - id: repo_cube_next_frog
@@ -13,12 +128,14 @@
     - condition: state
       entity_id: light.cube_matrix_192_168_101_121
       state: "on"
+    - &not_quiet
+      condition: state
+      entity_id:
+        - input_boolean.vacation
+        - input_boolean.cube_night
+      state: "off"
   variables:
-    frogs: &frogs
-      - frog_jump
-      - frog_sway
-      - frog_blink
-      - frog_croak
+    frogs: *frogs
   actions:
     - action: cubematrix.set_background
       target:
@@ -39,6 +156,7 @@
   conditions:
     - condition: template
       value_template: "{{ trigger.to_state.attributes.event_type == 'tap' }}"
+    - *not_quiet
   variables:
     frogs: *frogs
     current: "{{ states('select.cube_matrix_192_168_101_121_background') }}"
@@ -95,9 +213,7 @@
            and trigger.from_state.state not in ['unavailable', 'unknown']
            and trigger.to_state.state not in ['unavailable', 'unknown'] }}
   actions:
-    - action: cubematrix.show
-      target:
-        entity_id: light.cube_matrix_192_168_101_121
+    - action: script.cube_event
       data:
         # A mode turned on shows the green check, turned off the red one
         preset: >-
@@ -105,7 +221,6 @@
         # The checks are still pictures, the rest are animations looped for the time
         repeat: forever
         duration: "{{ 10 if trigger.id == 'mode' else 5 }}"
-        wake: true
 
 # Coffee at work start, moon at work end, on workdays that aren't a day off or vacation
 - id: repo_cube_work_start_end
@@ -125,6 +240,7 @@
       entity_id:
         - input_boolean.day_off
         - input_boolean.vacation
+        - input_boolean.cube_night
       state: "off"
   actions:
     - action: cubematrix.show
@@ -149,13 +265,10 @@
         - unavailable
         - unknown
   actions:
-    - action: cubematrix.show
-      target:
-        entity_id: light.cube_matrix_192_168_101_121
+    - action: script.cube_event
       data:
         preset: play
         duration: 5
-        wake: true
 
 # The same problems as in alerts.yaml, shown when they start and again every hour (at :30, between
 # the frog changes) while they last. A failed integration is amber, a server problem pulses red
@@ -188,6 +301,7 @@
       minutes: 30
   conditions:
     - "{{ integration_down or server_problem }}"
+    - *not_quiet
   actions:
     - if: "{{ integration_down }}"
       then:

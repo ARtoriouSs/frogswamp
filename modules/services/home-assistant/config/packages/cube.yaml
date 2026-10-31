@@ -1,0 +1,15 @@
+# Cube quiet mode (automations/cube.yaml): the green dot at the lowest brightness from bedtime to wakeup
+# and during Vacation. Both keep their state over HA restarts
+input_boolean:
+  cube_night:
+    name: Cube night
+    icon: mdi:weather-night
+input_number:
+  # Brightness before the quiet mode started, set back when it ends
+  cube_day_brightness:
+    name: Cube day brightness
+    icon: mdi:brightness-6
+    min: 1
+    max: 255
+    step: 1
+    mode: box
