@@ -154,10 +154,22 @@ views:
             entity: light.cube_matrix_192_168_101_121
             name: Cube Matrix
             grid_options:
-              columns: full
+              columns: 9
             features_position: bottom
             features:
               - type: light-brightness
+          - type: tile
+            entity: script.cube_min_brightness
+            name: Min
+            vertical: true
+            hide_state: true
+            grid_options:
+              columns: 3
+              rows: 2
+            tap_action:
+              action: toggle
+            icon_tap_action:
+              action: toggle
 
           - type: entities
             title: Bedroom

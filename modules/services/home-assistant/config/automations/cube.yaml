@@ -41,13 +41,6 @@
     - trigger: homeassistant
       id: start
       event: start
-  variables:
-    cube: light.cube_matrix_192_168_101_121
-    frogs: &frogs
-      - frog_jump
-      - frog_sway
-      - frog_blink
-      - frog_croak
   actions:
     - if: "{{ trigger.id.startswith('night') }}"
       then:
@@ -78,45 +71,13 @@
     - choose:
         - conditions: "{{ quiet and not dimmed }}"
           sequence:
-            - if: "{{ state_attr(cube, 'brightness') | int(0) > 1 }}"
-              then:
-                - action: input_number.set_value
-                  target:
-                    entity_id: input_number.cube_day_brightness
-                  data:
-                    value: "{{ state_attr(cube, 'brightness') }}"
-            - action: light.turn_on
-              target:
-                entity_id: "{{ cube }}"
-              data:
-                brightness: 1
-            - action: cubematrix.set_background
-              target:
-                entity_id: "{{ cube }}"
-              data:
-                preset: dot
+            - action: script.cube_sleep
         - conditions: "{{ quiet }}"
           sequence:
-            - action: light.turn_on
-              target:
-                entity_id: "{{ cube }}"
-              data:
-                brightness: 1
+            - action: script.cube_min_brightness
         - conditions: "{{ dimmed }}"
           sequence:
-            - action: cubematrix.set_background
-              target:
-                entity_id: "{{ cube }}"
-              data:
-                preset: "{{ frogs | random }}"
-            - action: light.turn_on
-              target:
-                entity_id: "{{ cube }}"
-              data:
-                # 1 means it was never saved yet
-                brightness: >-
-                  {% set saved = states('input_number.cube_day_brightness') | int(0) %}
-                  {{ saved if saved > 1 else 255 }}
+            - action: script.cube_wake
 
 # Another frog every hour while the cube is on, never the same one twice in a row
 - id: repo_cube_next_frog
@@ -135,7 +96,11 @@
         - input_boolean.cube_night
       state: "off"
   variables:
-    frogs: *frogs
+    frogs: &frogs
+      - frog_jump
+      - frog_sway
+      - frog_blink
+      - frog_croak
   actions:
     - action: cubematrix.set_background
       target:

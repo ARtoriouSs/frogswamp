@@ -13,3 +13,20 @@ input_number:
     max: 255
     step: 1
     mode: box
+
+# The cube for NeonPlan: on while it shows frogs and the rest, off while it is the dot at the minimum
+# brightness (an event animation at night shows it on for that time). A light, because NeonPlan lamps
+# take lights, switches and helpers. A tap in the plan puts the dot on or brings the frogs back
+template:
+  - light:
+      - name: Cube Matrix visible
+        unique_id: repo_cube_visible
+        icon: mdi:cube-outline
+        state: >-
+          {{ is_state('light.cube_matrix_192_168_101_121', 'on')
+             and not (is_state('select.cube_matrix_192_168_101_121_background', 'dot')
+                      and state_attr('light.cube_matrix_192_168_101_121', 'brightness') | int(0) <= 1) }}
+        turn_on:
+          - action: script.cube_wake
+        turn_off:
+          - action: script.cube_sleep
