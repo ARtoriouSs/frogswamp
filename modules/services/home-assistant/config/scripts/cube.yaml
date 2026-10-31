@@ -1,5 +1,5 @@
-# An event animation on the cube. In the quiet mode (night or Vacation) it plays at the day brightness,
-# then the brightness goes down again, only if the cube is still in the quiet mode at the end.
+# An event animation on the cube. In the quiet mode (night or Vacation) it plays at 100%,
+# then the brightness goes down to 0% again, only if the cube is still in the quiet mode at the end.
 # A new event stops the one in progress
 cube_event:
   alias: "Cube: event animation"
@@ -27,7 +27,7 @@ cube_event:
         quiet: "{{ is_state('input_boolean.vacation', 'on') or is_state('input_boolean.cube_night', 'on') }}"
     - if: "{{ quiet }}"
       then:
-        - action: script.cube_day_brightness
+        - action: script.cube_brightness_on
     - action: cubematrix.show
       target:
         entity_id: "{{ cube }}"
@@ -41,16 +41,17 @@ cube_event:
         then: "{{ 'hold' if quiet else 'restore' }}"
     - if: "{{ is_state('input_boolean.vacation', 'on') or is_state('input_boolean.cube_night', 'on') }}"
       then:
-        - action: script.cube_min_brightness
+        - action: script.cube_brightness_off
     - if: "{{ quiet }}"
       then:
         - action: cubematrix.stop
           target:
             entity_id: "{{ cube }}"
 
-# Brightness 1: the lamp can't be turned off for good, so this is its "off"
-cube_min_brightness:
-  alias: "Cube: minimum brightness"
+# 0% in HA. The raw value is 1 of 255: 0 would turn the light off, and the lamp can't stay off,
+# so this is its "off"
+cube_brightness_off:
+  alias: "Cube: brightness 0%"
   icon: mdi:brightness-1
   mode: queued
   sequence:
@@ -60,8 +61,8 @@ cube_min_brightness:
       data:
         brightness: 1
 
-cube_day_brightness:
-  alias: "Cube: day brightness"
+cube_brightness_on:
+  alias: "Cube: brightness 100%"
   icon: mdi:brightness-7
   mode: queued
   sequence:
@@ -69,34 +70,22 @@ cube_day_brightness:
       target:
         entity_id: light.cube_matrix_192_168_101_121
       data:
-        # 1 means it was never saved yet
-        brightness: >-
-          {% set saved = states('input_number.cube_day_brightness') | int(0) %}
-          {{ saved if saved > 1 else 255 }}
+        brightness: 255
 
-# The green dot at the minimum brightness. The brightness before it is saved for cube_wake
+# The green dot at 0%
 cube_sleep:
   alias: "Cube: green dot"
   icon: mdi:circle-small
   mode: queued
   sequence:
-    - variables:
-        brightness: "{{ state_attr('light.cube_matrix_192_168_101_121', 'brightness') | int(0) }}"
-    - if: "{{ brightness > 1 and not is_state('select.cube_matrix_192_168_101_121_background', 'dot') }}"
-      then:
-        - action: input_number.set_value
-          target:
-            entity_id: input_number.cube_day_brightness
-          data:
-            value: "{{ brightness }}"
-    - action: script.cube_min_brightness
+    - action: script.cube_brightness_off
     - action: cubematrix.set_background
       target:
         entity_id: light.cube_matrix_192_168_101_121
       data:
         preset: dot
 
-# A random frog at the saved brightness
+# A random frog at 100%
 cube_wake:
   alias: "Cube: frogs"
   icon: mdi:frog
@@ -109,4 +98,4 @@ cube_wake:
         preset: >-
           {{ state_attr('select.cube_matrix_192_168_101_121_background', 'options')
              | select('match', '^frog_') | list | random }}
-    - action: script.cube_day_brightness
+    - action: script.cube_brightness_on

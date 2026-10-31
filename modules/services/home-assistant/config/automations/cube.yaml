@@ -2,8 +2,8 @@
 # when it is turned off, so there is no off schedule) and shows a random animated frog, plus
 # short animations when the desk, blinds or modes change. The short ones play even when the
 # cube is off (wake) and then go back to what was there before.
-# Quiet mode, from bedtime to wakeup and during Vacation: only a green dot at the lowest brightness.
-# Frogs, coffee/moon and problem signs stop, event animations still play at the day brightness
+# Quiet mode, from bedtime to wakeup and during Vacation: only a green dot at 0%.
+# Frogs, coffee/moon and problem signs stop, event animations still play at 100%
 
 # Bedtime and wakeup turn Cube night on and off with the same workday logic as the floor warming
 # (packages/schedule.yaml). The background tells if the cube is dimmed now: the dot means it is.
@@ -74,7 +74,7 @@
             - action: script.cube_sleep
         - conditions: "{{ quiet }}"
           sequence:
-            - action: script.cube_min_brightness
+            - action: script.cube_brightness_off
         - conditions: "{{ dimmed }}"
           sequence:
             - action: script.cube_wake

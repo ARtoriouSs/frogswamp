@@ -154,17 +154,29 @@ views:
             entity: light.cube_matrix_192_168_101_121
             name: Cube Matrix
             grid_options:
-              columns: 9
+              columns: 8
             features_position: bottom
             features:
               - type: light-brightness
           - type: tile
-            entity: script.cube_min_brightness
-            name: Min
+            entity: script.cube_brightness_off
+            name: Off
             vertical: true
             hide_state: true
             grid_options:
-              columns: 3
+              columns: 2
+              rows: 2
+            tap_action:
+              action: toggle
+            icon_tap_action:
+              action: toggle
+          - type: tile
+            entity: script.cube_brightness_on
+            name: On
+            vertical: true
+            hide_state: true
+            grid_options:
+              columns: 2
               rows: 2
             tap_action:
               action: toggle
