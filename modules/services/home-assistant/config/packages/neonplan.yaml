@@ -76,19 +76,22 @@ template:
               entity_id: scene.living_room_blinds_full_close_open
         turn_off: []
 
-      # A heater as an on/off pin (a climate pin opens its settings, a switch pin toggles)
-      - name: Guest towel heat
-        unique_id: repo_neonplan_guest_towel_heat
-        icon: mdi:radiator
-        state: "{{ states('climate.guest_bathroom_towel_heat_guest') not in ['off', 'unavailable', 'unknown'] }}"
+      # Push buttons: always off, so every tap moves the desk
+      - name: Desk up
+        unique_id: repo_neonplan_desk_up
+        icon: mdi:arrow-up-bold
+        state: "{{ false }}"
         turn_on:
-          - action: climate.turn_on
-            target:
-              entity_id: climate.guest_bathroom_towel_heat_guest
-        turn_off:
-          - action: climate.turn_off
-            target:
-              entity_id: climate.guest_bathroom_towel_heat_guest
+          - action: script.desk_up
+        turn_off: []
+
+      - name: Desk down
+        unique_id: repo_neonplan_desk_down
+        icon: mdi:arrow-down-bold
+        state: "{{ false }}"
+        turn_on:
+          - action: script.desk_down
+        turn_off: []
 
       # On = the TV is on. A tap runs TV mode (TV on, then YouTube), the next one turns the TV off
       - name: TV mode

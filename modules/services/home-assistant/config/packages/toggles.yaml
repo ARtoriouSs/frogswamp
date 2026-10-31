@@ -15,18 +15,6 @@ template:
             target:
               entity_id: scene.bedroom_curtains_open
 
-      # On = standing. The desk doesn't report its height, so the last desk scene tells
-      - name: Desk standing
-        unique_id: repo_neonplan_desk_position
-        default_entity_id: switch.desk_position
-        icon: mdi:desk
-        state: >-
-          {{ as_timestamp(states('scene.office_desk_up'), 0) > as_timestamp(states('scene.office_desk_down'), 0) }}
-        turn_on:
-          - action: script.desk_up
-        turn_off:
-          - action: script.desk_down
-
       # Through the Tuya floor warming scenes, like the schedule. The thermostat stays in its own mode
       # either way, so the last scene run from HA tells the state
       - name: Guest floor warming
@@ -58,3 +46,17 @@ template:
           - action: scene.turn_on
             target:
               entity_id: scene.master_bathroom_floor_warming_master_off
+
+      # The heater itself, on/off. A climate pin in NeonPlan opens its settings, a switch toggles
+      - name: Guest towel heat
+        unique_id: repo_neonplan_guest_towel_heat
+        icon: mdi:radiator
+        state: "{{ states('climate.guest_bathroom_towel_heat_guest') not in ['off', 'unavailable', 'unknown'] }}"
+        turn_on:
+          - action: climate.turn_on
+            target:
+              entity_id: climate.guest_bathroom_towel_heat_guest
+        turn_off:
+          - action: climate.turn_off
+            target:
+              entity_id: climate.guest_bathroom_towel_heat_guest

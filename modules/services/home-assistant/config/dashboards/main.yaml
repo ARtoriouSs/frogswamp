@@ -118,8 +118,8 @@ views:
                 label: Desk
               - entity: automation.desk_schedule
                 name: Schedule (paused by Day off)
-              - entity: switch.desk_position
-                name: Desk standing
+              - script.desk_up
+              - script.desk_down
               - type: section
                 label: Cube Matrix
               - entity: select.cube_matrix_192_168_101_121_background
@@ -201,6 +201,8 @@ views:
               - entity: automation.floor_warming_guest_schedule
                 name: Floor warming schedule
               - climate.guest_bathroom_towel_heat_guest
+              - entity: switch.guest_towel_heat
+                name: Towel heat
 
       - type: grid
         cards:
