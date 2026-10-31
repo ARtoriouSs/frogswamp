@@ -184,12 +184,12 @@ template:
         state: "{{ states('sensor.qbittorrent_upload_speed') | float | round(1) }}"
         availability: "{{ has_value('sensor.qbittorrent_upload_speed') }}"
 
-      # A pin shows numbers only, so the alarm time is a number: 8.30 = 08:30 (local time).
+      # A pin shows a text state as it is, so the alarm time reads 09:30. NeonPlan doesn't list text sensors
+      # for placing, so to place it again: put a number in for a moment (with a unit), place it, then put this back.
       # Without a set alarm it is unknown
       - name: Next alarm
         unique_id: repo_neonplan_next_alarm
         icon: mdi:alarm
-        unit_of_measurement: "⏰"
         state: >-
           {% set alarm = states('sensor.pixel_7_next_alarm') | as_datetime %}
-          {{ alarm | as_local | as_timestamp | timestamp_custom('%H.%M') if alarm else none }}
+          {{ alarm | as_local | as_timestamp | timestamp_custom('%H:%M') if alarm else none }}
