@@ -1,12 +1,13 @@
 # Stand-ins for NeonPlan 3D lamps that have no smart light yet.
 # A tap on the lamp in 3D toggles them; `initial` puts them back on every HA restart
+# (input_boolean.true and input_boolean.false; the keys are quoted, or YAML reads them as booleans)
 input_boolean:
-  neonplan_always_on:
-    name: NeonPlan always on
+  "true":
+    name: "True"
     icon: mdi:lightbulb-on
     initial: true
-  neonplan_always_off:
-    name: NeonPlan always off
+  "false":
+    name: "False"
     icon: mdi:lightbulb-off
     initial: false
 
@@ -14,6 +15,14 @@ input_boolean:
 # A tap on a pin toggles its switch
 template:
   - switch:
+      # For lamps that go dark on Vacation. A tap does nothing, Vacation is turned on and off on its own card
+      - name: Vacation mode inverted
+        unique_id: repo_neonplan_vacation_mode_inverted
+        icon: mdi:airplane-off
+        state: "{{ is_state('input_boolean.vacation', 'off') }}"
+        turn_on: []
+        turn_off: []
+
       - name: Bedroom curtains closed
         unique_id: repo_neonplan_bedroom_curtains_closed
         icon: mdi:curtains-closed
