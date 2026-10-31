@@ -138,6 +138,18 @@ template:
         turn_off:
           - action: script.desk_down
 
+      # On = the TV is on. A tap runs TV mode (TV on, then YouTube), the next one turns the TV off
+      - name: TV mode
+        unique_id: repo_neonplan_tv_mode
+        icon: mdi:youtube-tv
+        state: "{{ is_state('remote.living_room_philips_tv', 'on') }}"
+        turn_on:
+          - action: script.tv_mode
+        turn_off:
+          - action: remote.turn_off
+            target:
+              entity_id: remote.living_room_philips_tv
+
   # Copies of sensors NeonPlan doesn't list (it shows only some sensor types in a room).
   # They have no area, and NeonPlan lists any number sensor with a unit under "No area"
   - sensor:
