@@ -78,6 +78,10 @@ Switches in `config/packages/modes.yaml`. Automations check them in their condit
 
 Turning a mode off runs no Tuya scene, so the Tuya app's own automations stay off. **TV mode** (`script.tv_mode`) turns the TV on and opens YouTube by its link.
 
+## Room temperatures
+
+The bathroom thermostats' air sensors hang outside, by the doors, so they measure the bedroom (master) and the hall (guest). Tuya gives this only as the `current_temperature` attribute of the thermostat, so `config/packages/room_temperature.yaml` makes `sensor.bedroom_temperature` and `sensor.hall_temperature` from it. The thermostats stay in the bathrooms. A template sensor's area can only be set in the UI (it is kept in HA's state dir): **Settings → Entities → the sensor → ⚙ → Area**.
+
 ## Bluetooth recovery
 
 If the Bluetooth chip hangs, the kernel resets it and it comes back under a new name (`hci0` → `hci1`). HA would keep scanning on the old one. A udev rule then reloads **only HA's Bluetooth integration** through the HA API (`home-assistant-bluetooth-recover.service`), so the rest of HA keeps running. HA finds the adapter again by its MAC address. It does nothing during boot or in HA's first 2 minutes. Check it with `just ssh journalctl -u home-assistant-bluetooth-recover`.

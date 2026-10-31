@@ -1,0 +1,19 @@
+# Room temperatures from the bathroom thermostats. Their sensors hang outside, by the bathroom doors,
+# and are set to show the air there, not the floor. The thermostats stay in the bathrooms, these
+# sensors go to the rooms (areas can only be set in the UI, see README)
+template:
+  - sensor:
+      - name: Bedroom temperature
+        unique_id: repo_bedroom_temperature
+        device_class: temperature
+        state_class: measurement
+        unit_of_measurement: "°C"
+        state: "{{ state_attr('climate.master_bathroom_thermostat_master', 'current_temperature') }}"
+        availability: "{{ state_attr('climate.master_bathroom_thermostat_master', 'current_temperature') is number }}"
+      - name: Hall temperature
+        unique_id: repo_hall_temperature
+        device_class: temperature
+        state_class: measurement
+        unit_of_measurement: "°C"
+        state: "{{ state_attr('climate.guest_bathroom_thermostat_guest', 'current_temperature') }}"
+        availability: "{{ state_attr('climate.guest_bathroom_thermostat_guest', 'current_temperature') is number }}"
