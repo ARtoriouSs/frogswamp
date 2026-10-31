@@ -47,17 +47,27 @@ template:
             target:
               entity_id: scene.living_room_blinds_open
 
-      # Push buttons: always off, so every tap runs the scene
+      # On while Open door is the last blinds scene. Reset closes the door again: full close, then the slats open
       - name: Living room blinds open door
         unique_id: repo_neonplan_living_room_blinds_open_door
         icon: mdi:door-open
-        state: "{{ false }}"
+        state: >-
+          {% set door = as_timestamp(states('scene.living_room_blinds_full_open_door'), 0) %}
+          {{ door > 0 and door > [
+               as_timestamp(states('scene.living_room_blinds_open'), 0),
+               as_timestamp(states('scene.living_room_blinds_full_close'), 0),
+               as_timestamp(states('scene.living_room_blinds_full_close_open'), 0)
+             ] | max }}
         turn_on:
           - action: scene.turn_on
             target:
               entity_id: scene.living_room_blinds_full_open_door
-        turn_off: []
+        turn_off:
+          - action: scene.turn_on
+            target:
+              entity_id: scene.living_room_blinds_full_close_open
 
+      # Push button: always off, so every tap runs the scene
       - name: Living room blinds reset
         unique_id: repo_neonplan_living_room_blinds_reset
         icon: mdi:restore
