@@ -23,6 +23,7 @@ let
     "scripts"
     "scenes"
     "dashboards"
+    "custom_sentences"
   ];
 in
 {

@@ -1,0 +1,48 @@
+# Voice phrases HA handles itself, before anything goes to Claude.
+# The blinds and curtains run their Tuya scene for the whole action; one named device ("открой левые жалюзи")
+# is left to HA's built-in phrases. Actions: packages/voice_intents.yaml
+language: ru
+intents:
+  FrogBlindsOpen:
+    data:
+      - sentences:
+          - "(открой|подними) жалюзи [в гостиной]"
+  FrogBlindsClose:
+    data:
+      - sentences:
+          - "(закрой|опусти) жалюзи [в гостиной] [полностью]"
+  FrogBalconyDoorOpen:
+    data:
+      - sentences:
+          - "открой (дверь|проход|выход) на балкон"
+  FrogCurtainsOpen:
+    data:
+      - sentences:
+          - "открой шторы [в спальне]"
+  FrogCurtainsClose:
+    data:
+      - sentences:
+          - "закрой шторы [в спальне]"
+  FrogFloorHeatingOn:
+    data:
+      - sentences:
+          - "включи (тёплый|теплый) пол в {bathroom}"
+  FrogFloorHeatingOff:
+    data:
+      - sentences:
+          - "выключи (тёплый|теплый) пол в {bathroom}"
+  FrogTowelHeatOn:
+    data:
+      - sentences:
+          - "включи полотенцесушитель в {bathroom}"
+  FrogTowelHeatOff:
+    data:
+      - sentences:
+          - "выключи полотенцесушитель в {bathroom}"
+lists:
+  bathroom:
+    values:
+      - in: "(гостевом санузле|гостевой ванной)"
+        out: guest
+      - in: "(мастер санузле|мастер ванной|большой ванной)"
+        out: master
