@@ -77,3 +77,110 @@ template:
             target:
               entity_id: scene.living_room_blinds_full_close_open
         turn_off: []
+
+      # Heaters as on/off pins (a climate pin opens its settings, a switch pin toggles)
+      - name: Guest floor warming
+        unique_id: repo_neonplan_guest_floor_warming
+        icon: mdi:heating-coil
+        state: "{{ states('climate.guest_bathroom_thermostat_guest') not in ['off', 'unavailable', 'unknown'] }}"
+        turn_on:
+          - action: climate.turn_on
+            target:
+              entity_id: climate.guest_bathroom_thermostat_guest
+        turn_off:
+          - action: climate.turn_off
+            target:
+              entity_id: climate.guest_bathroom_thermostat_guest
+
+      - name: Master floor warming
+        unique_id: repo_neonplan_master_floor_warming
+        icon: mdi:heating-coil
+        state: "{{ states('climate.master_bathroom_thermostat_master') not in ['off', 'unavailable', 'unknown'] }}"
+        turn_on:
+          - action: climate.turn_on
+            target:
+              entity_id: climate.master_bathroom_thermostat_master
+        turn_off:
+          - action: climate.turn_off
+            target:
+              entity_id: climate.master_bathroom_thermostat_master
+
+      - name: Guest towel heat
+        unique_id: repo_neonplan_guest_towel_heat
+        icon: mdi:radiator
+        state: "{{ states('climate.guest_bathroom_towel_heat_guest') not in ['off', 'unavailable', 'unknown'] }}"
+        turn_on:
+          - action: climate.turn_on
+            target:
+              entity_id: climate.guest_bathroom_towel_heat_guest
+        turn_off:
+          - action: climate.turn_off
+            target:
+              entity_id: climate.guest_bathroom_towel_heat_guest
+
+      # On = standing. The desk doesn't report its height, so the last desk scene tells
+      - name: Desk standing
+        unique_id: repo_neonplan_desk_standing
+        icon: mdi:desk
+        state: >-
+          {{ as_timestamp(states('scene.office_desk_up'), 0) > as_timestamp(states('scene.office_desk_down'), 0) }}
+        turn_on:
+          - action: script.desk_up
+        turn_off:
+          - action: script.desk_down
+
+  # Copies of sensors NeonPlan doesn't list (it shows only some sensor types in a room).
+  # They have no area, and NeonPlan lists any number sensor with a unit under "No area"
+  - sensor:
+      - name: Printer black ink
+        unique_id: repo_neonplan_printer_black_ink
+        icon: mdi:printer
+        unit_of_measurement: "%"
+        state: "{{ states('sensor.office_hp_tango_black_cartridge') }}"
+        availability: "{{ has_value('sensor.office_hp_tango_black_cartridge') }}"
+
+      - name: Printer color ink
+        unique_id: repo_neonplan_printer_color_ink
+        icon: mdi:printer
+        unit_of_measurement: "%"
+        state: "{{ states('sensor.office_printer_tri_color_cartridge') }}"
+        availability: "{{ has_value('sensor.office_printer_tri_color_cartridge') }}"
+
+      # The router reports KiB/s, Mbit/s reads better
+      - name: Internet download
+        unique_id: repo_neonplan_internet_download
+        icon: mdi:download-network-outline
+        unit_of_measurement: Mbit/s
+        state: "{{ (states('sensor.hall_router_donwload_speed') | float * 8 * 1024 / 1000000) | round(2) }}"
+        availability: "{{ has_value('sensor.hall_router_donwload_speed') }}"
+
+      - name: Internet upload
+        unique_id: repo_neonplan_internet_upload
+        icon: mdi:upload-network-outline
+        unit_of_measurement: Mbit/s
+        state: "{{ (states('sensor.hall_router_upload_speed') | float * 8 * 1024 / 1000000) | round(2) }}"
+        availability: "{{ has_value('sensor.hall_router_upload_speed') }}"
+
+      - name: Torrent download
+        unique_id: repo_neonplan_torrent_download
+        icon: mdi:download
+        unit_of_measurement: MB/s
+        state: "{{ states('sensor.qbittorrent_download_speed') | float | round(1) }}"
+        availability: "{{ has_value('sensor.qbittorrent_download_speed') }}"
+
+      - name: Torrent upload
+        unique_id: repo_neonplan_torrent_upload
+        icon: mdi:upload
+        unit_of_measurement: MB/s
+        state: "{{ states('sensor.qbittorrent_upload_speed') | float | round(1) }}"
+        availability: "{{ has_value('sensor.qbittorrent_upload_speed') }}"
+
+      # A pin shows numbers only, so the alarm time is a number: 8.30 = 08:30 (local time).
+      # Without a set alarm it is unknown
+      - name: Next alarm
+        unique_id: repo_neonplan_next_alarm
+        icon: mdi:alarm
+        unit_of_measurement: "⏰"
+        state: >-
+          {% set alarm = states('sensor.pixel_7_next_alarm') | as_datetime %}
+          {{ alarm | as_local | as_timestamp | timestamp_custom('%H.%M') if alarm else none }}
