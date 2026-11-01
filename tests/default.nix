@@ -25,7 +25,6 @@ in
   test-voice = call ./voice.nix;
   test-voice-integration = call ./voice-integration.nix;
   test-football = call ./football.nix;
-  test-mode-switch = call ./mode-switch.nix;
   test-samba = call ./samba.nix;
   test-homepage = call ./homepage.nix;
   test-backup = call ./backup.nix;

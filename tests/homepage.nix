@@ -16,11 +16,6 @@ pkgs.testers.runNixOSTest {
             ''
           );
         };
-        modeSwitch = {
-          enable = true;
-          haTokenFile = toString (pkgs.writeText "ha-token" "dummy");
-          modes.vacation = "input_boolean.vacation";
-        };
       };
     };
   testScript = ''
@@ -35,20 +30,18 @@ pkgs.testers.runNixOSTest {
     assert "{{HOMEPAGE_VAR" not in widgets, widgets
     for name in ["qBittorrent", "Radarr", "Sonarr", "Prowlarr", "Bazarr"]:
         assert name in services, f"{name} missing: {services}"
-    # Home and Media are made of untitled subgroups shown side by side as columns
+    # Media is made of untitled subgroups shown side by side as columns
     import json
     groups = json.loads(services)
     assert [g["name"] for g in groups] == ["Home", "Media", "Infrastructure"], [g["name"] for g in groups]
     rows = lambda name: {r["name"]: [t["name"] for t in r["services"]] for r in next(g for g in groups if g["name"] == name)["groups"]}
-    assert rows("Home")["Modes"] == ["Vacation"], rows("Home")
     assert rows("Media")["Stream"] == ["Jellyfin", "Ace Stream"], rows("Media")
     # the subgroups have no titles and list their tiles top to bottom
-    server.succeed("grep -A3 'Modes:' /etc/homepage-dashboard/settings.yaml | grep -q 'header: false'")
+    server.succeed("grep -A3 'Stream:' /etc/homepage-dashboard/settings.yaml | grep -q 'header: false'")
     server.succeed("grep -A3 'Stream:' /etc/homepage-dashboard/settings.yaml | grep -q 'style: column'")
-    # mode tiles: on/off highlight rules, and the stylesheet that colours them
-    server.succeed("grep -q 'level: mode-off' /etc/homepage-dashboard/services.yaml")
+    # the mode toggles are gone: anyone on the LAN could flip them without a login
+    assert "Modes" not in services, services
     css = server.succeed("curl -sf http://localhost:8082/api/config/custom.css")
-    assert 'data-highlight-level="mode-on"' in css and 'data-highlight-level="mode-off"' in css, css[:2000]
     # the frog wallpaper is embedded in the stylesheet, on the box that covers the page
     assert 'html body #__next { background:' in css and 'url("data:image/png;base64,iVBOR' in css, css[:2000]
     # widget settings are not exposed by the API, so check the generated config

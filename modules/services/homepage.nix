@@ -9,59 +9,9 @@ let
   addr = config.frogswamp.lan.publicAddress;
   link = port: "http://${addr}:${toString port}";
   local = port: "http://127.0.0.1:${toString port}";
-  modes = config.frogswamp.modeSwitch;
   # Homepage only serves custom.css/custom.js from its config folder, so the wallpaper goes
   # into the stylesheet as a data URL, behind a dark veil that keeps the tiles readable
   wallpaper = ./homepage_frog.png;
-  modeTitles = {
-    vacation = "Vacation";
-    day_off = "Day off";
-    guests = "Guests";
-  };
-  modeIcons = {
-    vacation = "mdi-airplane";
-    day_off = "mdi-beach";
-    guests = "mdi-account-multiple";
-  };
-  # one tile per mode: it shows the state; a click flips it and comes back here
-  modeTiles = lib.mapAttrsToList (name: entity: {
-    ${modeTitles.${name} or name} = {
-      href = "${link modes.port}/toggle/${name}";
-      target = "_self";
-      icon = modeIcons.${name} or "mdi-toggle-switch";
-      description = "Click to switch";
-      widget = {
-        type = "homeassistant";
-        url = local 8123;
-        key = "{{HOMEPAGE_VAR_HA_TOKEN}}";
-        custom = [
-          {
-            state = entity;
-            label = "now";
-          }
-        ];
-        # marks the value box as mode-on / mode-off; customCSS colours the whole tile from it
-        highlight = {
-          levels = {
-            mode-on = "mode-on";
-            mode-off = "mode-off";
-          };
-          now.string = [
-            {
-              when = "equals";
-              value = "on";
-              level = "mode-on";
-            }
-            {
-              when = "equals";
-              value = "off";
-              level = "mode-off";
-            }
-          ];
-        };
-      };
-    };
-  }) modes.modes;
   # newest backup time as "20.10 03:41", with a warning sign when older than 36 h
   lastBackup = repo: ''
     {% set t = as_timestamp(states('sensor.backup_last_${repo}'), none) %}
@@ -102,8 +52,6 @@ in
         "localhost:8082"
       ];
 
-      # Modes tiles: green when on, light red when off. The value box carries the level of the
-      # tiles' highlight rules in data-highlight-level
       customCSS = ''
         /* dark, mostly solid tiles with the wallpaper blurred behind them, so the light text stays readable */
         .service-card { background-color: rgb(23 23 23 / 0.82); backdrop-filter: blur(6px); }
@@ -112,10 +60,6 @@ in
         #information-widgets { background-color: rgb(23 23 23 / 0.82); backdrop-filter: blur(6px); border-radius: 0.375rem; padding: 0.5rem 0.75rem; }
         .bookmark a { background-color: rgb(23 23 23 / 0.82); backdrop-filter: blur(6px); }
         .bookmark a:hover { background-color: rgb(38 38 38 / 0.9); }
-        .service:has([data-highlight-level="mode-on"]) .service-card { background-color: rgb(21 128 61 / 0.85); }
-        .service:has([data-highlight-level="mode-off"]) .service-card { background-color: rgb(185 64 64 / 0.85); }
-        [data-highlight-level="mode-on"] { background-color: rgb(34 197 94 / 0.35); }
-        [data-highlight-level="mode-off"] { background-color: rgb(248 113 113 / 0.35); }
       '';
 
       settings = {
@@ -135,14 +79,6 @@ in
             Home = {
               style = "row";
               columns = 2;
-              Apps = {
-                style = "column";
-                header = false;
-              };
-              Modes = {
-                style = "column";
-                header = false;
-              };
             };
           }
           {
@@ -238,49 +174,43 @@ in
 
       services = [
         {
-          # untitled columns: the apps, the modes
           Home = [
             {
-              Apps = [
-                {
-                  "Home Assistant" = {
-                    href = link 8123;
-                    icon = "home-assistant.png";
-                    description = "Automations, devices, energy";
-                    siteMonitor = local 8123;
-                    widget = {
-                      type = "homeassistant";
-                      url = local 8123;
-                      key = "{{HOMEPAGE_VAR_HA_TOKEN}}";
-                      custom = [
-                        {
-                          template = "{{ states.light | selectattr('state', 'equalto', 'on') | list | length }}";
-                          label = "lights on";
-                        }
-                        {
-                          template = "{{ states.switch | selectattr('state', 'equalto', 'on') | list | length }}";
-                          label = "switches on";
-                        }
-                        {
-                          template = "{{ states.automation | selectattr('state', 'equalto', 'on') | list | length }}";
-                          label = "automations";
-                        }
-                      ];
-                    };
-                  };
-                }
-                {
-                  Zigbee2MQTT = {
-                    href = link 8080;
-                    icon = "zigbee2mqtt.png";
-                    description = "Zigbee devices and pairing";
-                    siteMonitor = local 8080;
-                  };
-                }
-              ];
+              "Home Assistant" = {
+                href = link 8123;
+                icon = "home-assistant.png";
+                description = "Automations, devices, energy";
+                siteMonitor = local 8123;
+                widget = {
+                  type = "homeassistant";
+                  url = local 8123;
+                  key = "{{HOMEPAGE_VAR_HA_TOKEN}}";
+                  custom = [
+                    {
+                      template = "{{ states.light | selectattr('state', 'equalto', 'on') | list | length }}";
+                      label = "lights on";
+                    }
+                    {
+                      template = "{{ states.switch | selectattr('state', 'equalto', 'on') | list | length }}";
+                      label = "switches on";
+                    }
+                    {
+                      template = "{{ states.automation | selectattr('state', 'equalto', 'on') | list | length }}";
+                      label = "automations";
+                    }
+                  ];
+                };
+              };
             }
-          ]
-          ++ lib.optional modes.enable { Modes = modeTiles; };
+            {
+              Zigbee2MQTT = {
+                href = link 8080;
+                icon = "zigbee2mqtt.png";
+                description = "Zigbee devices and pairing";
+                siteMonitor = local 8080;
+              };
+            }
+          ];
         }
         {
           # untitled columns: downloads + share, the Arr apps, streaming

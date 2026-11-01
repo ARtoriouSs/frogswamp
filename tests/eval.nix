@@ -111,26 +111,16 @@ let
       cfg.frogswamp.football.settings.ha.cast_entity == "media_player.philips_tv_google_cast";
     "football wakes the living room TV" =
       cfg.frogswamp.football.settings.ha.remote_entity == "remote.living_room_philips_tv";
-    "mode switch sends the browser back to Homepage on the LAN" =
-      cfg.frogswamp.modeSwitch.settings.back_url == "http://192.168.101.10:8082/";
-    "mode switch flips the General actions modes" =
-      cfg.frogswamp.modeSwitch.modes.guests == "input_boolean.guests_in_living_room";
-    "homepage rows: Home (apps, modes), Media (downloads, Arr, watching)" =
+    "mode switch port closed" = !(lib.elem 8094 cfg.networking.firewall.allowedTCPPorts);
+    "homepage rows: Home (apps), Media (downloads, Arr, watching)" =
       let
         names = l: map (x: lib.head (lib.attrNames x)) l;
         group = n: (lib.head (lib.filter (g: g ? ${n}) cfg.services.homepage-dashboard.services)).${n};
         rows = n: map (r: names (lib.head (lib.attrValues r))) (group n);
       in
-      rows "Home" == [
-        [
-          "Home Assistant"
-          "Zigbee2MQTT"
-        ]
-        [
-          "Day off"
-          "Guests"
-          "Vacation"
-        ]
+      names (group "Home") == [
+        "Home Assistant"
+        "Zigbee2MQTT"
       ]
       &&
         rows "Media" == [
@@ -149,12 +139,6 @@ let
             "Ace Stream"
           ]
         ];
-    "homepage mode tiles stay in the same tab" =
-      let
-        home = (lib.head (lib.filter (g: g ? Home) cfg.services.homepage-dashboard.services)).Home;
-        modes = (lib.head (lib.filter (r: r ? Modes) home)).Modes;
-      in
-      lib.all (tile: (lib.head (lib.attrValues tile)).target == "_self") modes;
     "homepage groups in order: Home, Media, Infrastructure" =
       map (g: lib.head (lib.attrNames g)) cfg.services.homepage-dashboard.settings.layout == [
         "Home"
