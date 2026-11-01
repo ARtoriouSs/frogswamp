@@ -12,6 +12,30 @@ views:
             entity: weather.forecast_home_assistant
             forecast_type: daily
 
+          # Opens the Assist dialog with a pipeline that talks to conversation.claude
+          - type: button
+            name: Claude RU
+            icon: mdi:robot-outline
+            show_state: false
+            grid_options:
+              columns: 6
+              rows: 1
+            tap_action:
+              action: assist
+              pipeline_id: 01m5zm9azpze6aa3t4z44wmh41
+              start_listening: false
+          - type: button
+            name: Claude EN
+            icon: mdi:robot-outline
+            show_state: false
+            grid_options:
+              columns: 6
+              rows: 1
+            tap_action:
+              action: assist
+              pipeline_id: 01m5zme405yy9kmsr49dbazjpq
+              start_listening: false
+
           # Modes for the whole flat, no area
           - type: entities
             title: General actions

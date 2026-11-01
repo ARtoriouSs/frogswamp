@@ -24,7 +24,8 @@ async def async_setup_entry(
 
 class ClaudeBridgeEntity(conversation.ConversationEntity, conversation.AbstractConversationAgent):
     _attr_has_entity_name = True
-    _attr_name = None
+    # No device, so the name gives the entity ID: conversation.claude
+    _attr_name = "Claude"
 
     def __init__(self, entry: ConfigEntry) -> None:
         self.entry = entry
