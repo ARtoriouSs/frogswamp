@@ -863,6 +863,48 @@ views:
             color: deep-orange
 
           - type: heading
+            heading: Air · GIOŚ Grochowska
+            heading_style: subtitle
+          # Colours follow the GIOŚ index, from very good (green) to very bad (brown)
+          - type: custom:mushroom-template-card
+            entity: sensor.air_quality_air_quality_index
+            primary: Air quality
+            secondary: "{{ 'Unavailable' if states(entity) in ['unavailable', 'unknown'] else states(entity) | replace('_', ' ') | capitalize }}"
+            icon: mdi:air-filter
+            color: >-
+              {{ {'very_good': 'green', 'good': 'light-green', 'moderate': 'yellow', 'sufficient': 'orange', 'bad': 'red', 'very_bad': 'brown'}
+                 .get(states(entity), 'disabled') }}
+            grid_options:
+              columns: 12
+              rows: 1
+            tap_action:
+              action: more-info
+          # Each pollutant has its own index sensor with the same name and _index at the end
+          - &pollutant
+            type: custom:mushroom-template-card
+            entity: sensor.air_quality_pm2_5
+            primary: PM2.5
+            secondary: "{{ 'Unavailable' if states(entity) in ['unavailable', 'unknown'] else states(entity) ~ ' µg/m³' }}"
+            icon: mdi:blur
+            color: >-
+              {{ {'very_good': 'green', 'good': 'light-green', 'moderate': 'yellow', 'sufficient': 'orange', 'bad': 'red', 'very_bad': 'brown'}
+                 .get(states(entity ~ '_index'), 'disabled') }}
+            vertical: true
+            grid_options:
+              columns: 4
+              rows: 2
+            tap_action:
+              action: more-info
+          - <<: *pollutant
+            entity: sensor.air_quality_pm10
+            primary: PM10
+            icon: mdi:blur-radial
+          - <<: *pollutant
+            entity: sensor.air_quality_nitrogen_dioxide
+            primary: NO₂
+            icon: mdi:car-side
+
+          - type: heading
             heading: Fridge
             heading_style: subtitle
           - *fridge
