@@ -106,7 +106,8 @@ template:
               entity_id: remote.living_room_philips_tv
 
   # Copies of sensors NeonPlan doesn't list (it shows only some sensor types in a room).
-  # They have no area, and NeonPlan lists any number sensor with a unit under "No area"
+  # NeonPlan lists any number sensor with a unit under "No area". They have areas now (set in the UI),
+  # so to place one again, clear its area for a moment
   - sensor:
       - name: Printer black ink
         unique_id: repo_neonplan_printer_black_ink
