@@ -15,13 +15,13 @@ let
         allow = [
           "mcp__homeassistant"
           "WebSearch"
+          "WebFetch"
         ];
         deny = [
           "Bash"
           "Edit"
           "Write"
           "NotebookEdit"
-          "WebFetch"
         ]
         # VW Group Connect adds these to HA's Assist API by itself, past the exposure settings
         ++ map (tool: "mcp__homeassistant__vag_connect__${tool}") [
@@ -30,6 +30,18 @@ let
           "skoda_set_location_target_soc"
         ];
       };
+      # web pages are read only from Claude's own search results, so no link can carry home data
+      hooks.PreToolUse = [
+        {
+          matcher = "WebFetch";
+          hooks = [
+            {
+              type = "command";
+              command = "${pkgs.python3}/bin/python3 ${./web_guard.py}";
+            }
+          ];
+        }
+      ];
     }
   );
   # ${HA_TOKEN} is filled in by Claude Code from the environment, so no token is in the store
@@ -47,7 +59,9 @@ let
       listen = "127.0.0.1:${toString cfg.port}";
       backend = "claude-code";
       timeout = 20;
-      session_ttl = 300;
+      # one Claude session for the whole home, forgotten after 6 hours of silence
+      shared_session = true;
+      session_ttl = 6 * 3600;
       debug_log = cfg.debugLog;
       system_prompt_file = "${./system-prompt.md}";
       claude-code = {

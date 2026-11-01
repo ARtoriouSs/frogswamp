@@ -27,6 +27,7 @@ ERROR_SPEECH = {
 URL_RE = re.compile(r"https?://\S+")
 LIST_MARK_RE = re.compile(r"^\s*(?:[-•]|\d+\.)\s+", re.MULTILINE)
 MARKDOWN_RE = re.compile(r"[*_#`>]")
+SHARED_SESSION = "shared"
 
 
 class Reply(NamedTuple):
@@ -180,9 +181,10 @@ def make_backend(cfg):
     return BACKENDS[name](cfg[name])
 
 
-def converse(backend, store, req, system_prompt, timeout, debug_log=False):
+def converse(backend, store, req, system_prompt, timeout, debug_log=False, shared=False):
     language = normalize_language(req.get("language"))
-    conv_id = req.get("conversation_id")
+    # shared: one backend session for the whole home, whatever HA conversation the request is in
+    conv_id = SHARED_SESSION if shared else req.get("conversation_id")
     prompt = build_prompt(req["text"], language, req.get("earlier") or [])
     started = time.monotonic()
     with store.lock(conv_id):
@@ -239,7 +241,9 @@ def make_handler(cfg, backend, system_prompt):
                 return self.reply(400)
             if not valid_request(req):
                 return self.reply(400)
-            self.reply(200, converse(backend, store, req, system_prompt, cfg["timeout"], cfg["debug_log"]))
+            self.reply(200, converse(
+                backend, store, req, system_prompt, cfg["timeout"], cfg["debug_log"], cfg.get("shared_session", False)
+            ))
 
         def log_message(self, *args):
             pass

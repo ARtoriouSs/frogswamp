@@ -252,6 +252,14 @@ def test_same_conversation_serialized():
     assert backend.max_active == 2
 
 
+def test_shared_session_spans_conversations():
+    backend = FakeBackend()
+    store = bridge.SessionStore(300)
+    for conv in ("a", "b", None):
+        bridge.converse(backend, store, request(conversation_id=conv), "Be short.", 20, shared=True)
+    assert [c[1] for c in backend.calls] == [None, "sess-1", "sess-2"]
+
+
 # ---------- HTTP ----------
 
 @pytest.fixture

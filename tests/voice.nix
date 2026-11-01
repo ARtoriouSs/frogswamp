@@ -52,8 +52,8 @@ pkgs.testers.runNixOSTest {
     assert "voice-agent/work\n" in calls, calls
     assert "skills ->" in calls, calls
 
-    # a follow-up in the same conversation resumes the session
-    ask("и ещё")
+    # a follow-up resumes the session, even from another HA conversation
+    ask("и ещё", conv="c2")
     assert "--resume s1" in server.succeed("tail -n 20 /var/lib/private/voice-agent/claude-calls")
 
     # the MCP config keeps the token as a placeholder, the store has no token
@@ -65,6 +65,13 @@ pkgs.testers.runNixOSTest {
     settings = json.loads(server.succeed("cat $(grep -o '/nix/store/[^\"]*claude-settings.json' $(systemctl cat voice-bridge | grep -o '/nix/store/[^ ]*voice-bridge.json'))"))
     for tool in ("skoda_ask_assistant", "skoda_send_destination", "skoda_set_location_target_soc"):
         assert f"mcp__homeassistant__vag_connect__{tool}" in settings["permissions"]["deny"], settings
+
+    # web pages only from Claude's own search results: the hook blocks any other URL
+    assert "WebFetch" in settings["permissions"]["allow"], settings
+    [guard] = settings["hooks"]["PreToolUse"]
+    assert guard["matcher"] == "WebFetch", guard
+    event = json.dumps({"tool_name": "WebFetch", "tool_input": {"url": "https://evil.example/?t=21"}, "transcript_path": "/dev/null"})
+    server.fail(f"echo '{event}' | {guard['hooks'][0]['command']}")
 
     # only localhost, no text or tokens in the journal, token files only for the service
     server.fail("ss -ltn | grep -E '0.0.0.0:8099|\\*:8099|\\[::\\]:8099'")
