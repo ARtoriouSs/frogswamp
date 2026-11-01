@@ -787,6 +787,12 @@ views:
               action: toggle
               confirmation:
                 text: "Switch Vacation mode?"
+
+      - type: grid
+        cards:
+          - type: heading
+            heading: Alarm
+            icon: mdi:alarm
           - type: custom:mushroom-template-card
             entity: sensor.pixel_7_next_alarm
             primary: Next phone alarm
@@ -800,9 +806,8 @@ views:
               rows: 1
             tap_action:
               action: more-info
-
-      - type: grid
-        cards:
+          - type: heading
+            heading: ""
           - type: heading
             heading: Wakeup
             icon: mdi:weather-sunset-up
@@ -866,12 +871,12 @@ views:
             entities:
               - calendar.workday_sensor_pl_calendar
 
-  # Uptime again, with Mushroom cards: the % per device next to the timelines (sensors in packages/uptime.yaml)
+  # Uptime again, with Mushroom cards: range, timelines (two columns wide) and the % per device (sensors in packages/uptime.yaml)
   - title: Uptime
     path: uptime-new
     icon: mdi:lan-connect
     type: sections
-    max_columns: 3
+    max_columns: 4
     sections:
       - type: grid
         cards:
@@ -923,6 +928,374 @@ views:
                 entity_id: input_select.uptime_range
               data:
                 option: Month
+      - type: grid
+        column_span: 2
+        cards:
+          - type: heading
+            heading: Living room
+            icon: mdi:sofa
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Day
+            card:
+              type: history-graph
+              hours_to_show: 24
+              entities:
+                - entity: binary_sensor.blinds_right_online
+                  name: "Blinds right\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A"
+                - entity: binary_sensor.blinds_middle_online
+                  name: "Blinds middle\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A"
+                - entity: binary_sensor.blinds_left_door_online
+                  name: "Blinds left / door\u200A"
+                - entity: binary_sensor.tv_online
+                  name: "TV\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
+                - entity: binary_sensor.fridge_online
+                  name: "Fridge\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A"
+            grid_options:
+              columns: full
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Week
+            card:
+              type: history-graph
+              hours_to_show: 168
+              entities:
+                - entity: binary_sensor.blinds_right_online
+                  name: "Blinds right\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A"
+                - entity: binary_sensor.blinds_middle_online
+                  name: "Blinds middle\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A"
+                - entity: binary_sensor.blinds_left_door_online
+                  name: "Blinds left / door\u200A"
+                - entity: binary_sensor.tv_online
+                  name: "TV\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
+                - entity: binary_sensor.fridge_online
+                  name: "Fridge\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A"
+            grid_options:
+              columns: full
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Month
+            card:
+              type: history-graph
+              hours_to_show: 744
+              entities:
+                - entity: binary_sensor.blinds_right_online
+                  name: "Blinds right\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A"
+                - entity: binary_sensor.blinds_middle_online
+                  name: "Blinds middle\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A"
+                - entity: binary_sensor.blinds_left_door_online
+                  name: "Blinds left / door\u200A"
+                - entity: binary_sensor.tv_online
+                  name: "TV\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
+                - entity: binary_sensor.fridge_online
+                  name: "Fridge\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A"
+            grid_options:
+              columns: full
+          - type: heading
+            heading: ""
+          - type: heading
+            heading: Bedroom
+            icon: mdi:bed
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Day
+            card:
+              type: history-graph
+              hours_to_show: 24
+              entities:
+                - entity: binary_sensor.curtains_online
+                  name: "Curtains\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
+            grid_options:
+              columns: full
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Week
+            card:
+              type: history-graph
+              hours_to_show: 168
+              entities:
+                - entity: binary_sensor.curtains_online
+                  name: "Curtains\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
+            grid_options:
+              columns: full
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Month
+            card:
+              type: history-graph
+              hours_to_show: 744
+              entities:
+                - entity: binary_sensor.curtains_online
+                  name: "Curtains\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
+            grid_options:
+              columns: full
+          - type: heading
+            heading: ""
+          - type: heading
+            heading: Office
+            icon: mdi:chair-rolling
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Day
+            card:
+              type: history-graph
+              hours_to_show: 24
+              entities:
+                - entity: binary_sensor.desk_online
+                  name: "Desk\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
+                - entity: binary_sensor.cube_online
+                  name: "Cube\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A"
+                - entity: binary_sensor.printer_online
+                  name: "Printer\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A"
+            grid_options:
+              columns: full
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Week
+            card:
+              type: history-graph
+              hours_to_show: 168
+              entities:
+                - entity: binary_sensor.desk_online
+                  name: "Desk\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
+                - entity: binary_sensor.cube_online
+                  name: "Cube\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A"
+                - entity: binary_sensor.printer_online
+                  name: "Printer\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A"
+            grid_options:
+              columns: full
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Month
+            card:
+              type: history-graph
+              hours_to_show: 744
+              entities:
+                - entity: binary_sensor.desk_online
+                  name: "Desk\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
+                - entity: binary_sensor.cube_online
+                  name: "Cube\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A"
+                - entity: binary_sensor.printer_online
+                  name: "Printer\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A"
+            grid_options:
+              columns: full
+          - type: heading
+            heading: ""
+          - type: heading
+            heading: Guest bathroom
+            icon: mdi:shower
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Day
+            card:
+              type: history-graph
+              hours_to_show: 24
+              entities:
+                - entity: binary_sensor.guest_thermostat_online
+                  name: "Thermostat\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
+                - entity: binary_sensor.guest_towel_heat_online
+                  name: "Towel heat\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
+            grid_options:
+              columns: full
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Week
+            card:
+              type: history-graph
+              hours_to_show: 168
+              entities:
+                - entity: binary_sensor.guest_thermostat_online
+                  name: "Thermostat\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
+                - entity: binary_sensor.guest_towel_heat_online
+                  name: "Towel heat\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
+            grid_options:
+              columns: full
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Month
+            card:
+              type: history-graph
+              hours_to_show: 744
+              entities:
+                - entity: binary_sensor.guest_thermostat_online
+                  name: "Thermostat\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
+                - entity: binary_sensor.guest_towel_heat_online
+                  name: "Towel heat\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
+            grid_options:
+              columns: full
+          - type: heading
+            heading: ""
+          - type: heading
+            heading: Master bathroom
+            icon: mdi:shower-head
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Day
+            card:
+              type: history-graph
+              hours_to_show: 24
+              entities:
+                - entity: binary_sensor.master_thermostat_online
+                  name: "Thermostat\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
+                - entity: binary_sensor.master_towel_heat_relay_online
+                  name: "Towel heat relay\u00A0\u200A"
+            grid_options:
+              columns: full
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Week
+            card:
+              type: history-graph
+              hours_to_show: 168
+              entities:
+                - entity: binary_sensor.master_thermostat_online
+                  name: "Thermostat\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
+                - entity: binary_sensor.master_towel_heat_relay_online
+                  name: "Towel heat relay\u00A0\u200A"
+            grid_options:
+              columns: full
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Month
+            card:
+              type: history-graph
+              hours_to_show: 744
+              entities:
+                - entity: binary_sensor.master_thermostat_online
+                  name: "Thermostat\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
+                - entity: binary_sensor.master_towel_heat_relay_online
+                  name: "Towel heat relay\u00A0\u200A"
+            grid_options:
+              columns: full
+          - type: heading
+            heading: ""
+          - type: heading
+            heading: Hall
+            icon: mdi:wardrobe-outline
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Day
+            card:
+              type: history-graph
+              hours_to_show: 24
+              entities:
+                - entity: binary_sensor.router_online
+                  name: "Router\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
+                - entity: binary_sensor.zigbee_bridge_online
+                  name: "Zigbee bridge\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
+            grid_options:
+              columns: full
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Week
+            card:
+              type: history-graph
+              hours_to_show: 168
+              entities:
+                - entity: binary_sensor.router_online
+                  name: "Router\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
+                - entity: binary_sensor.zigbee_bridge_online
+                  name: "Zigbee bridge\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
+            grid_options:
+              columns: full
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Month
+            card:
+              type: history-graph
+              hours_to_show: 744
+              entities:
+                - entity: binary_sensor.router_online
+                  name: "Router\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
+                - entity: binary_sensor.zigbee_bridge_online
+                  name: "Zigbee bridge\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
+            grid_options:
+              columns: full
+          - type: heading
+            heading: ""
+          - type: heading
+            heading: Garage
+            icon: mdi:car
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Day
+            card:
+              type: history-graph
+              hours_to_show: 24
+              entities:
+                - entity: binary_sensor.audi_online
+                  name: "Audi\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
+            grid_options:
+              columns: full
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Week
+            card:
+              type: history-graph
+              hours_to_show: 168
+              entities:
+                - entity: binary_sensor.audi_online
+                  name: "Audi\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
+            grid_options:
+              columns: full
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Month
+            card:
+              type: history-graph
+              hours_to_show: 744
+              entities:
+                - entity: binary_sensor.audi_online
+                  name: "Audi\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
+            grid_options:
+              columns: full
+      - type: grid
+        cards:
+          - type: heading
+            heading: Uptime
+            icon: mdi:percent
           - type: heading
             heading: Living room
             heading_style: subtitle
@@ -1120,326 +1493,6 @@ views:
               rows: 1
             tap_action:
               action: more-info
-      - type: grid
-        cards:
-          - type: heading
-            heading: Living room
-            icon: mdi:sofa
-          - type: conditional
-            conditions:
-              - condition: state
-                entity: input_select.uptime_range
-                state: Day
-            card:
-              type: history-graph
-              hours_to_show: 24
-              entities:
-                - entity: binary_sensor.blinds_right_online
-                  name: "Blinds right\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A"
-                - entity: binary_sensor.blinds_middle_online
-                  name: "Blinds middle\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A"
-                - entity: binary_sensor.blinds_left_door_online
-                  name: "Blinds left / door\u200A"
-                - entity: binary_sensor.tv_online
-                  name: "TV\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
-                - entity: binary_sensor.fridge_online
-                  name: "Fridge\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A"
-          - type: conditional
-            conditions:
-              - condition: state
-                entity: input_select.uptime_range
-                state: Week
-            card:
-              type: history-graph
-              hours_to_show: 168
-              entities:
-                - entity: binary_sensor.blinds_right_online
-                  name: "Blinds right\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A"
-                - entity: binary_sensor.blinds_middle_online
-                  name: "Blinds middle\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A"
-                - entity: binary_sensor.blinds_left_door_online
-                  name: "Blinds left / door\u200A"
-                - entity: binary_sensor.tv_online
-                  name: "TV\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
-                - entity: binary_sensor.fridge_online
-                  name: "Fridge\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A"
-          - type: conditional
-            conditions:
-              - condition: state
-                entity: input_select.uptime_range
-                state: Month
-            card:
-              type: history-graph
-              hours_to_show: 744
-              entities:
-                - entity: binary_sensor.blinds_right_online
-                  name: "Blinds right\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A"
-                - entity: binary_sensor.blinds_middle_online
-                  name: "Blinds middle\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A"
-                - entity: binary_sensor.blinds_left_door_online
-                  name: "Blinds left / door\u200A"
-                - entity: binary_sensor.tv_online
-                  name: "TV\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
-                - entity: binary_sensor.fridge_online
-                  name: "Fridge\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A"
-          - type: heading
-            heading: ""
-          - type: heading
-            heading: Bedroom
-            icon: mdi:bed
-          - type: conditional
-            conditions:
-              - condition: state
-                entity: input_select.uptime_range
-                state: Day
-            card:
-              type: history-graph
-              hours_to_show: 24
-              entities:
-                - entity: binary_sensor.curtains_online
-                  name: "Curtains\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
-          - type: conditional
-            conditions:
-              - condition: state
-                entity: input_select.uptime_range
-                state: Week
-            card:
-              type: history-graph
-              hours_to_show: 168
-              entities:
-                - entity: binary_sensor.curtains_online
-                  name: "Curtains\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
-          - type: conditional
-            conditions:
-              - condition: state
-                entity: input_select.uptime_range
-                state: Month
-            card:
-              type: history-graph
-              hours_to_show: 744
-              entities:
-                - entity: binary_sensor.curtains_online
-                  name: "Curtains\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
-          - type: heading
-            heading: ""
-          - type: heading
-            heading: Office
-            icon: mdi:chair-rolling
-          - type: conditional
-            conditions:
-              - condition: state
-                entity: input_select.uptime_range
-                state: Day
-            card:
-              type: history-graph
-              hours_to_show: 24
-              entities:
-                - entity: binary_sensor.desk_online
-                  name: "Desk\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
-                - entity: binary_sensor.cube_online
-                  name: "Cube\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A"
-                - entity: binary_sensor.printer_online
-                  name: "Printer\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A"
-          - type: conditional
-            conditions:
-              - condition: state
-                entity: input_select.uptime_range
-                state: Week
-            card:
-              type: history-graph
-              hours_to_show: 168
-              entities:
-                - entity: binary_sensor.desk_online
-                  name: "Desk\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
-                - entity: binary_sensor.cube_online
-                  name: "Cube\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A"
-                - entity: binary_sensor.printer_online
-                  name: "Printer\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A"
-          - type: conditional
-            conditions:
-              - condition: state
-                entity: input_select.uptime_range
-                state: Month
-            card:
-              type: history-graph
-              hours_to_show: 744
-              entities:
-                - entity: binary_sensor.desk_online
-                  name: "Desk\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
-                - entity: binary_sensor.cube_online
-                  name: "Cube\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A"
-                - entity: binary_sensor.printer_online
-                  name: "Printer\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A"
-      - type: grid
-        cards:
-          - type: heading
-            heading: Guest bathroom
-            icon: mdi:shower
-          - type: conditional
-            conditions:
-              - condition: state
-                entity: input_select.uptime_range
-                state: Day
-            card:
-              type: history-graph
-              hours_to_show: 24
-              entities:
-                - entity: binary_sensor.guest_thermostat_online
-                  name: "Thermostat\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
-                - entity: binary_sensor.guest_towel_heat_online
-                  name: "Towel heat\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
-          - type: conditional
-            conditions:
-              - condition: state
-                entity: input_select.uptime_range
-                state: Week
-            card:
-              type: history-graph
-              hours_to_show: 168
-              entities:
-                - entity: binary_sensor.guest_thermostat_online
-                  name: "Thermostat\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
-                - entity: binary_sensor.guest_towel_heat_online
-                  name: "Towel heat\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
-          - type: conditional
-            conditions:
-              - condition: state
-                entity: input_select.uptime_range
-                state: Month
-            card:
-              type: history-graph
-              hours_to_show: 744
-              entities:
-                - entity: binary_sensor.guest_thermostat_online
-                  name: "Thermostat\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
-                - entity: binary_sensor.guest_towel_heat_online
-                  name: "Towel heat\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
-          - type: heading
-            heading: ""
-          - type: heading
-            heading: Master bathroom
-            icon: mdi:shower-head
-          - type: conditional
-            conditions:
-              - condition: state
-                entity: input_select.uptime_range
-                state: Day
-            card:
-              type: history-graph
-              hours_to_show: 24
-              entities:
-                - entity: binary_sensor.master_thermostat_online
-                  name: "Thermostat\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
-                - entity: binary_sensor.master_towel_heat_relay_online
-                  name: "Towel heat relay\u00A0\u200A"
-          - type: conditional
-            conditions:
-              - condition: state
-                entity: input_select.uptime_range
-                state: Week
-            card:
-              type: history-graph
-              hours_to_show: 168
-              entities:
-                - entity: binary_sensor.master_thermostat_online
-                  name: "Thermostat\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
-                - entity: binary_sensor.master_towel_heat_relay_online
-                  name: "Towel heat relay\u00A0\u200A"
-          - type: conditional
-            conditions:
-              - condition: state
-                entity: input_select.uptime_range
-                state: Month
-            card:
-              type: history-graph
-              hours_to_show: 744
-              entities:
-                - entity: binary_sensor.master_thermostat_online
-                  name: "Thermostat\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
-                - entity: binary_sensor.master_towel_heat_relay_online
-                  name: "Towel heat relay\u00A0\u200A"
-          - type: heading
-            heading: ""
-          - type: heading
-            heading: Hall
-            icon: mdi:wardrobe-outline
-          - type: conditional
-            conditions:
-              - condition: state
-                entity: input_select.uptime_range
-                state: Day
-            card:
-              type: history-graph
-              hours_to_show: 24
-              entities:
-                - entity: binary_sensor.router_online
-                  name: "Router\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
-                - entity: binary_sensor.zigbee_bridge_online
-                  name: "Zigbee bridge\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
-          - type: conditional
-            conditions:
-              - condition: state
-                entity: input_select.uptime_range
-                state: Week
-            card:
-              type: history-graph
-              hours_to_show: 168
-              entities:
-                - entity: binary_sensor.router_online
-                  name: "Router\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
-                - entity: binary_sensor.zigbee_bridge_online
-                  name: "Zigbee bridge\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
-          - type: conditional
-            conditions:
-              - condition: state
-                entity: input_select.uptime_range
-                state: Month
-            card:
-              type: history-graph
-              hours_to_show: 744
-              entities:
-                - entity: binary_sensor.router_online
-                  name: "Router\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
-                - entity: binary_sensor.zigbee_bridge_online
-                  name: "Zigbee bridge\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
-          - type: heading
-            heading: ""
-          - type: heading
-            heading: Garage
-            icon: mdi:car
-          - type: conditional
-            conditions:
-              - condition: state
-                entity: input_select.uptime_range
-                state: Day
-            card:
-              type: history-graph
-              hours_to_show: 24
-              entities:
-                - entity: binary_sensor.audi_online
-                  name: "Audi\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
-          - type: conditional
-            conditions:
-              - condition: state
-                entity: input_select.uptime_range
-                state: Week
-            card:
-              type: history-graph
-              hours_to_show: 168
-              entities:
-                - entity: binary_sensor.audi_online
-                  name: "Audi\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
-          - type: conditional
-            conditions:
-              - condition: state
-                entity: input_select.uptime_range
-                state: Month
-            card:
-              type: history-graph
-              hours_to_show: 744
-              entities:
-                - entity: binary_sensor.audi_online
-                  name: "Audi\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
 
   - title: Schedule (old)
     path: schedule
