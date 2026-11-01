@@ -53,12 +53,12 @@
   triggers:
     - trigger: state
       entity_id:
-        - cover.living_room_blinds_left_door
-        - cover.living_room_blinds_middle
-        - cover.living_room_blinds_right
-        - cover.bedroom_curtains
-        - climate.guest_bathroom_thermostat_guest
-        - climate.master_bathroom_thermostat_master
+        - cover.blinds_left_door_local
+        - cover.blinds_middle_local
+        - cover.blinds_right_local
+        - cover.curtains_local
+        - climate.thermostat_guest_local
+        - climate.thermostat_master_local
         - climate.guest_bathroom_towel_heat_guest
         - switch.master_bathroom_towel_heat_relay
         - switch.desk_child_lock
