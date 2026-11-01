@@ -1,22 +1,138 @@
 title: Home
 views:
-  - title: Overview
-    # Each section is one column on a wide screen, on a phone they go one under another
+  # Phone remote: the Quick access buttons, big, one column even on a wide screen
+  - title: Remote
+    path: remote
+    icon: mdi:remote
     type: sections
-    max_columns: 3
-    # No title toggles on the cards: one tap there switches every row of the card at once
+    max_columns: 1
     sections:
       - type: grid
         cards:
+          - type: heading
+            heading: Living room
+            icon: mdi:sofa
+          # Remote is the first view, so it defines its own bases (anchors work only after their definition)
+          - &remote
+            type: custom:mushroom-template-card
+            entity: scene.living_room_blinds_full_close
+            primary: Full close
+            icon: mdi:roller-shade-closed
+            color: teal
+            vertical: true
+            grid_options:
+              columns: 6
+              rows: 2
+            tap_action:
+              action: perform-action
+              perform_action: scene.turn_on
+              target:
+                entity_id: scene.living_room_blinds_full_close
+          - <<: *remote
+            entity: scene.living_room_blinds_open
+            primary: Open
+            icon: mdi:roller-shade
+            tap_action:
+              action: perform-action
+              perform_action: scene.turn_on
+              target:
+                entity_id: scene.living_room_blinds_open
+          - <<: *remote
+            entity: scene.living_room_blinds_full_close_open
+            primary: Full close + open
+            icon: mdi:roller-shade
+            tap_action:
+              action: perform-action
+              perform_action: scene.turn_on
+              target:
+                entity_id: scene.living_room_blinds_full_close_open
+          - <<: *remote
+            entity: scene.living_room_blinds_full_open_door
+            primary: Open door
+            icon: mdi:door-open
+            tap_action:
+              action: perform-action
+              perform_action: scene.turn_on
+              target:
+                entity_id: scene.living_room_blinds_full_open_door
+          - <<: *remote
+            entity: scene.blinds
+            primary: Blinds ^
+            icon: mdi:blinds-open
+            color: cyan
+            tap_action:
+              action: perform-action
+              perform_action: scene.turn_on
+              target:
+                entity_id: scene.blinds
+          - <<: *remote
+            entity: scene.blinds_v
+            primary: Blinds v
+            icon: mdi:blinds
+            color: cyan
+            tap_action:
+              action: perform-action
+              perform_action: scene.turn_on
+              target:
+                entity_id: scene.blinds_v
+
+          - type: heading
+            heading: Master Bedroom
+            icon: mdi:bed
+          - &remote_toggle
+            type: custom:mushroom-template-card
+            vertical: true
+            tap_action:
+              action: toggle
+            hold_action:
+              action: more-info
+            entity: switch.bedroom_curtains_toggle
+            primary: Curtains
+            secondary: "{{ 'Closed' if is_state(entity, 'on') else 'Open' }}"
+            icon: "{{ 'mdi:curtains-closed' if is_state(entity, 'on') else 'mdi:curtains' }}"
+            color: "{{ 'indigo' if is_state(entity, 'on') else 'amber' }}"
+            grid_options:
+              columns: 6
+              rows: 2
+          - <<: *remote_toggle
+            entity: switch.master_bathroom_towel_heat_relay
+            primary: Towel heat
+            secondary: "{{ 'On' if is_state(entity, 'on') else 'Off' }}"
+            icon: mdi:radiator
+            color: "{{ 'deep-orange' if is_state(entity, 'on') else 'disabled' }}"
+            grid_options:
+              columns: 6
+              rows: 2
+
+  # NeonPlan 3D model of the flat. It's drawn in NeonPlan's own editor and kept in its .storage, not in the repo
+  - title: NeonPlan
+    path: neonplan
+    icon: mdi:home-floor-3
+    type: panel
+    cards:
+      - type: custom:neonplan3d-card
+        fill: true
+
+  # Overview again, drawn with Mushroom cards (HACS, www/community). Tap toggles, hold opens details
+  - title: Home
+    path: home
+    icon: mdi:home-heart
+    type: sections
+    max_columns: 4
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: Home
+            icon: frog:frog-face
           - type: weather-forecast
             entity: weather.forecast_home_assistant
             forecast_type: daily
-
-          # Opens the Assist dialog with a pipeline that talks to conversation.claude
-          - type: button
-            name: Claude RU
+          - &assist
+            type: custom:mushroom-template-card
+            primary: Claude RU
             icon: mdi:robot-outline
-            show_state: false
+            color: purple
             grid_options:
               columns: 6
               rows: 1
@@ -24,287 +140,624 @@ views:
               action: assist
               pipeline_id: 01m5zm9azpze6aa3t4z44wmh41
               start_listening: false
-          - type: button
-            name: Claude EN
-            icon: mdi:robot-outline
-            show_state: false
-            grid_options:
-              columns: 6
-              rows: 1
+          - <<: *assist
+            primary: Claude EN
             tap_action:
               action: assist
               pipeline_id: 01m5zme405yy9kmsr49dbazjpq
               start_listening: false
 
-          # Modes for the whole flat, no area
-          - type: entities
-            title: General actions
-            show_header_toggle: false
-            entities:
-              - input_boolean.day_off
-              - input_boolean.vacation
-              - input_boolean.tuya_mode
+          - type: heading
+            heading: Modes
+            heading_style: subtitle
+          # The base for every on/off card: green when on, grey when off
+          - &toggle
+            type: custom:mushroom-template-card
+            entity: input_boolean.day_off
+            primary: Day off
+            secondary: "{{ 'On' if is_state(entity, 'on') else 'Off' }}"
+            icon: mdi:beach
+            color: "{{ 'green' if is_state(entity, 'on') else 'disabled' }}"
+            vertical: true
+            grid_options:
+              columns: 4
+              rows: 2
+            tap_action:
+              action: toggle
+            hold_action:
+              action: more-info
+          - <<: *toggle
+            entity: input_boolean.vacation
+            primary: Vacation
+            icon: mdi:airplane
+            tap_action:
+              action: toggle
+              confirmation:
+                text: "Switch Vacation mode?"
+          - <<: *toggle
+            entity: input_boolean.tuya_mode
+            primary: Tuya rules
+            icon: mdi:cellphone-cog
+            tap_action:
+              action: toggle
+              confirmation:
+                text: "Switch Tuya rule mode? HA automations that move Tuya devices stop while it is on"
 
-          # Shortcuts to the room cards' buttons, so they are near the top on a phone
-          - type: entities
-            title: Quick access
-            show_header_toggle: false
-            entities:
-              - type: section
-                label: Living room
-              - type: buttons
-                entities:
-                  - entity: scene.living_room_blinds_full_close
-                    name: Full close
-                    icon: mdi:roller-shade-closed
-                  - entity: scene.living_room_blinds_open
-                    name: Open
-                    icon: mdi:roller-shade
-              - type: buttons
-                entities:
-                  - entity: scene.living_room_blinds_full_close_open
-                    name: Full close + open
-                    icon: mdi:roller-shade
-                  - entity: scene.living_room_blinds_full_open_door
-                    name: Open door
-                    icon: mdi:door-open
-              - type: buttons
-                entities: &blinds_up_down
-                  - entity: scene.blinds
-                    name: Blinds ^
-                    icon: mdi:blinds-open
-                  - entity: scene.blinds_v
-                    name: Blinds v
-                    icon: mdi:blinds
-              - type: section
-                label: Bedroom
-              - entity: switch.bedroom_curtains_toggle
-                name: Curtains closed
-              - type: section
-                label: Master bathroom
-              - entity: switch.master_bathroom_towel_heat_relay
-                name: Towel heat
+          # empty heading: a gap before the next room
+          - type: heading
+            heading: ""
+          - type: heading
+            heading: Hall
+            icon: mdi:wardrobe-outline
+          - &info
+            type: custom:mushroom-template-card
+            entity: binary_sensor.huawei_igd_wan_status
+            primary: Internet
+            secondary: "{{ 'Online · ' ~ states('sensor.huawei_igd_external_ip') if is_state(entity, 'on') else ('Offline' if is_state(entity, 'off') else 'Unavailable') }}"
+            icon: mdi:web
+            color: "{{ 'green' if is_state(entity, 'on') else ('red' if is_state(entity, 'off') else 'disabled') }}"
+            grid_options:
+              columns: 12
+              rows: 1
+            tap_action:
+              action: more-info
+          - <<: *info
+            entity: sensor.hall_router_donwload_speed
+            primary: Router
+            # KiB/s from the router: whole numbers from 10, MiB/s from 1024
+            secondary: >-
+              {% macro speed(id) %}{% set v = states(id) | float(0) %}
+              {{- (v / 1024) | round(1) ~ ' MiB/s' if v >= 1024 else (v | round(0) | int if v >= 10 else v | round(1)) ~ ' KiB/s' }}{% endmacro %}
+              {{ 'Unavailable' if states(entity) in ['unavailable', 'unknown'] else
+                 '↓ ' ~ speed(entity) ~ ' · ↑ ' ~ speed('sensor.hall_router_upload_speed') }}
+            icon: mdi:router-wireless
+            color: "{{ 'disabled' if states(entity) in ['unavailable', 'unknown'] else 'blue' }}"
+          - <<: *info
+            entity: sensor.qbittorrent_status
+            primary: qBittorrent
+            secondary: >-
+              ↓ {{ states('sensor.qbittorrent_download_speed') }} {{ state_attr('sensor.qbittorrent_download_speed', 'unit_of_measurement') }}
+              · {{ states('sensor.qbittorrent_active_torrents') }} active
+            icon: mdi:download
+            color: "{{ 'disabled' if states(entity) in ['unavailable', 'unknown'] else 'teal' }}"
+            grid_options:
+              columns: 6
+              rows: 1
+          - <<: *toggle
+            entity: switch.qbittorrent_alternative_speed
+            primary: Slow downloads
+            icon: mdi:speedometer-slow
+            vertical: false
+            grid_options:
+              columns: 6
+              rows: 1
+          - <<: *toggle
+            entity: switch.zigbee2mqtt_bridge_permit_join
+            primary: Zigbee pairing
+            icon: mdi:zigbee
+            color: "{{ 'amber' if is_state(entity, 'on') else 'disabled' }}"
+            vertical: false
+            grid_options:
+              columns: 6
+              rows: 1
+          - type: custom:mushroom-template-card
+            entity: button.zigbee2mqtt_bridge_restart
+            primary: Restart bridge
+            secondary: Hold to restart
+            icon: mdi:restart
+            color: grey
+            grid_options:
+              columns: 6
+              rows: 1
+            tap_action:
+              action: none
+            hold_action:
+              action: perform-action
+              perform_action: button.press
+              target:
+                entity_id: button.zigbee2mqtt_bridge_restart
+          - <<: *info
+            entity: sensor.failed_integrations
+            primary: Failed integrations
+            secondary: "{{ states(entity) }}"
+            icon: mdi:alert-circle-outline
+            color: "{{ 'green' if states(entity) | int(0) == 0 else 'red' }}"
+            grid_options:
+              columns: 12
+              rows: 1
+
+          # empty heading: a gap before the next room
+          - type: heading
+            heading: ""
+          - type: heading
+            heading: Garage
+            icon: mdi:car
+          - <<: *info
+            entity: binary_sensor.garage_audi_a5_sportback_doors_open
+            primary: Audi A5
+            secondary: >-
+              {% set open = namespace(names=[]) %}
+              {%- for name in ['doors', 'windows', 'trunk'] if is_state('binary_sensor.garage_audi_a5_sportback_' ~ name ~ '_open', 'on') %}
+                {%- set open.names = open.names + [name] %}
+              {%- endfor %}
+              {{- (open.names | join(', ') | capitalize ~ ' open') if open.names else 'All closed' }}
+            icon: mdi:car-side
+            color: >-
+              {{ 'red' if is_state('binary_sensor.garage_audi_a5_sportback_doors_open', 'on')
+                 or is_state('binary_sensor.garage_audi_a5_sportback_windows_open', 'on')
+                 or is_state('binary_sensor.garage_audi_a5_sportback_trunk_open', 'on') else 'green' }}
+          - &car
+            <<: *info
+            entity: sensor.garage_audi_a5_sportback_fuel_level
+            primary: Fuel
+            secondary: "{{ states(entity) }} % · {{ states('sensor.garage_audi_a5_sportback_range') }} km"
+            icon: mdi:gas-station
+            color: "{{ 'red' if states(entity) | int(100) < 15 else 'amber' }}"
+            grid_options:
+              columns: 6
+              rows: 2
+            vertical: true
+          - <<: *car
+            entity: sensor.garage_audi_a5_sportback_outside_temperature
+            primary: Outside
+            secondary: "{{ states(entity) }} °C"
+            icon: mdi:thermometer
+            color: light-blue
+          - <<: *car
+            entity: sensor.garage_audi_a5_sportback_odometer
+            primary: Odometer
+            secondary: "{{ states(entity) | int(0) | string | regex_replace('(?<=\\d)(?=(\\d{3})+$)', ' ') }} km"
+            icon: mdi:counter
+            color: grey
+          # lock sensors: off means locked
+          - <<: *car
+            entity: binary_sensor.garage_audi_a5_sportback_doors_locked
+            primary: Lock
+            secondary: >-
+              {% set doors = is_state(entity, 'off') %}{% set trunk = is_state('binary_sensor.garage_audi_a5_sportback_trunk_locked', 'off') %}
+              {{ 'Locked' if doors and trunk else ('Trunk unlocked' if doors else ('Doors unlocked' if trunk else 'Unlocked')) }}
+            icon: >-
+              {{ 'mdi:lock' if is_state(entity, 'off') and is_state('binary_sensor.garage_audi_a5_sportback_trunk_locked', 'off') else 'mdi:lock-open-variant' }}
+            color: >-
+              {{ 'green' if is_state(entity, 'off') and is_state('binary_sensor.garage_audi_a5_sportback_trunk_locked', 'off') else 'red' }}
+          - type: custom:mushroom-template-card
+            entity: button.garage_audi_a5_sportback_refresh_data
+            primary: Refresh car data
+            icon: mdi:refresh
+            color: grey
+            grid_options:
+              columns: 12
+              rows: 1
+            tap_action:
+              action: perform-action
+              perform_action: button.press
+              target:
+                entity_id: button.garage_audi_a5_sportback_refresh_data
 
       - type: grid
         cards:
-          - type: entities
-            title: Living room
-            show_header_toggle: false
+          - type: heading
+            heading: Living room
             icon: mdi:sofa
-            entities:
-              - input_boolean.guests_in_living_room
-              - media_player.living_room_philips_tv
-              - type: buttons
-                entities:
-                  - entity: script.tv_mode
-                    name: TV mode
-                    icon: mdi:youtube-tv
-              - type: section
-                label: Fridge
-              - entity: sensor.living_room_refrigerator_fridge_temperature
-                name: Fridge
-              - entity: number.living_room_refrigerator_fridge_temperature
-                name: Fridge target
-              - entity: sensor.living_room_refrigerator_freezer_temperature
-                name: Freezer
-              - entity: number.living_room_refrigerator_freezer_temperature
-                name: Freezer target
-              - entity: binary_sensor.living_room_refrigerator_fridge_door
-                name: Fridge door
-              - entity: binary_sensor.living_room_refrigerator_freezer_door
-                name: Freezer door
-              - entity: switch.living_room_refrigerator_cubed_ice
-                name: Ice cubes
-              - type: section
-                label: Blinds
-              - cover.living_room_blinds_left_door
-              - cover.living_room_blinds_middle
-              - cover.living_room_blinds_right
-              - type: buttons
-                entities:
-                  - entity: scene.living_room_blinds_full_close
-                    name: Full close
-                    icon: mdi:roller-shade-closed
-                  - entity: scene.living_room_blinds_open
-                    name: Open
-                    icon: mdi:roller-shade
-                  - entity: scene.living_room_blinds_full_close_open
-                    name: Full close + open
-                    icon: mdi:roller-shade
-                  - entity: scene.living_room_blinds_full_open_door
-                    name: Open door
-                    icon: mdi:door-open
-              - type: buttons
-                entities: *blinds_up_down
-              - entity: automation.blinds_full_close_2_h_after_sunset
-                name: Close, sunset + 2 h
-              - entity: automation.blinds_full_close_at_01_00
-                name: Close at 01:00
-              - entity: automation.blinds_open_2_h_after_sunrise
-                name: Open, sunrise + 2 h
+          - <<: *toggle
+            entity: input_boolean.guests_in_living_room
+            primary: Guests
+            icon: mdi:account-multiple
+            vertical: false
+            grid_options:
+              columns: 12
+              rows: 1
+            tap_action:
+              action: toggle
+              confirmation:
+                text: "Switch Guests mode?"
+          - type: custom:mushroom-template-card
+            entity: media_player.living_room_philips_tv
+            primary: TV
+            secondary: "{{ state_attr(entity, 'media_title') or states(entity) | capitalize }}"
+            icon: mdi:television
+            color: "{{ 'blue' if is_state(entity, 'on') or is_state(entity, 'playing') else 'disabled' }}"
+            grid_options:
+              columns: 6
+              rows: 1
+            tap_action:
+              action: more-info
+          - &run
+            type: custom:mushroom-template-card
+            entity: script.tv_mode
+            primary: TV mode
+            icon: mdi:youtube-tv
+            color: red
+            grid_options:
+              columns: 6
+              rows: 1
+            tap_action:
+              action: perform-action
+              perform_action: script.turn_on
+              target:
+                entity_id: script.tv_mode
+            hold_action:
+              action: more-info
 
-          - type: entities
-            title: Office
-            show_header_toggle: false
+          - type: heading
+            heading: Fridge
+            heading_style: subtitle
+          # Tap opens the target, so it can be changed
+          - &fridge
+            type: custom:mushroom-template-card
+            entity: number.living_room_refrigerator_fridge_temperature
+            primary: Fridge
+            secondary: >-
+              {{ states('sensor.living_room_refrigerator_fridge_temperature') }} °C · target {{ states(entity) }} °C
+              {{- ' · door open' if is_state('binary_sensor.living_room_refrigerator_fridge_door', 'on') }}
+            icon: mdi:fridge-bottom
+            color: "{{ 'red' if is_state('binary_sensor.living_room_refrigerator_fridge_door', 'on') else 'light-blue' }}"
+            grid_options:
+              columns: 6
+              rows: 2
+            vertical: true
+            tap_action:
+              action: more-info
+          - <<: *fridge
+            entity: number.living_room_refrigerator_freezer_temperature
+            primary: Freezer
+            secondary: >-
+              {{ states('sensor.living_room_refrigerator_freezer_temperature') }} °C · target {{ states(entity) }} °C
+              {{- ' · door open' if is_state('binary_sensor.living_room_refrigerator_freezer_door', 'on') }}
+            icon: mdi:fridge-top
+            color: "{{ 'red' if is_state('binary_sensor.living_room_refrigerator_freezer_door', 'on') else 'blue' }}"
+          - <<: *toggle
+            entity: switch.living_room_refrigerator_cubed_ice
+            primary: Ice cubes
+            icon: mdi:cube-outline
+            vertical: false
+            grid_options:
+              columns: 12
+              rows: 1
+            tap_action:
+              action: toggle
+              confirmation:
+                text: "Switch ice cubes?"
+
+          - type: heading
+            heading: Blinds
+            heading_style: subtitle
+          - &cover
+            type: custom:mushroom-template-card
+            entity: cover.living_room_blinds_left_door
+            primary: Left (door)
+            secondary: >-
+              {{ states(entity) | capitalize }}{{ ' · ' ~ state_attr(entity, 'current_position') ~ ' %' if state_attr(entity, 'current_position') is not none }}
+            icon: mdi:blinds
+            color: "{{ 'amber' if is_state(entity, 'open') else 'disabled' }}"
+            features_position: inline
+            features:
+              - type: cover-open-close
+            tap_action:
+              action: more-info
+          - <<: *cover
+            entity: cover.living_room_blinds_middle
+            primary: Middle
+          - <<: *cover
+            entity: cover.living_room_blinds_right
+            primary: Right
+          - &scene
+            type: custom:mushroom-template-card
+            entity: scene.living_room_blinds_full_close
+            primary: Full close
+            icon: mdi:roller-shade-closed
+            color: teal
+            grid_options:
+              columns: 6
+              rows: 1
+            tap_action:
+              action: perform-action
+              perform_action: scene.turn_on
+              target:
+                entity_id: scene.living_room_blinds_full_close
+          - <<: *scene
+            entity: scene.living_room_blinds_open
+            primary: Open
+            icon: mdi:roller-shade
+            tap_action:
+              action: perform-action
+              perform_action: scene.turn_on
+              target:
+                entity_id: scene.living_room_blinds_open
+          - <<: *scene
+            entity: scene.living_room_blinds_full_close_open
+            primary: Full close + open
+            icon: mdi:roller-shade
+            tap_action:
+              action: perform-action
+              perform_action: scene.turn_on
+              target:
+                entity_id: scene.living_room_blinds_full_close_open
+          - <<: *scene
+            entity: scene.living_room_blinds_full_open_door
+            primary: Open door
+            icon: mdi:door-open
+            tap_action:
+              action: perform-action
+              perform_action: scene.turn_on
+              target:
+                entity_id: scene.living_room_blinds_full_open_door
+          - <<: *scene
+            entity: scene.blinds
+            primary: Blinds ^
+            icon: mdi:blinds-open
+            tap_action:
+              action: perform-action
+              perform_action: scene.turn_on
+              target:
+                entity_id: scene.blinds
+          - <<: *scene
+            entity: scene.blinds_v
+            primary: Blinds v
+            icon: mdi:blinds
+            tap_action:
+              action: perform-action
+              perform_action: scene.turn_on
+              target:
+                entity_id: scene.blinds_v
+          - <<: *toggle
+            entity: automation.blinds_full_close_2_h_after_sunset
+            primary: Close
+            secondary: sunset + 2 h
+            icon: mdi:weather-sunset-down
+          - <<: *toggle
+            entity: automation.blinds_full_close_at_01_00
+            primary: Close
+            secondary: at 01:00
+            icon: mdi:clock-outline
+          - <<: *toggle
+            entity: automation.blinds_open_2_h_after_sunrise
+            primary: Open
+            secondary: sunrise + 2 h
+            icon: mdi:weather-sunset-up
+
+          # empty heading: a gap before the next room
+          - type: heading
+            heading: ""
+          - type: heading
+            heading: Bedroom
+            icon: mdi:bed
+          - <<: *cover
+            entity: cover.bedroom_curtains
+            primary: Curtains
+            icon: mdi:curtains
+          - <<: *scene
+            entity: scene.bedroom_curtains_close
+            primary: Close
+            icon: mdi:curtains-closed
+            tap_action:
+              action: perform-action
+              perform_action: scene.turn_on
+              target:
+                entity_id: scene.bedroom_curtains_close
+          - <<: *scene
+            entity: scene.bedroom_curtains_open
+            primary: Open
+            icon: mdi:curtains
+            tap_action:
+              action: perform-action
+              perform_action: scene.turn_on
+              target:
+                entity_id: scene.bedroom_curtains_open
+          - <<: *toggle
+            entity: automation.curtains_close_at_sunset
+            primary: Close at sunset
+            icon: mdi:weather-sunset-down
+            vertical: false
+            grid_options:
+              columns: 12
+              rows: 1
+
+      - type: grid
+        cards:
+          - type: heading
+            heading: Office
             icon: mdi:chair-rolling
-            entities:
-              - type: section
-                label: Desk
-              - entity: automation.desk_schedule
-                name: Schedule (paused by Day off)
-              - script.desk_up
-              - script.desk_down
-              - type: section
-                label: Cube Matrix
-              - entity: select.cube_matrix_192_168_101_121_background
-                name: Background
-              - entity: automation.cube_another_frog_every_hour
-                name: Another frog every hour
-              - entity: automation.cube_animations_for_desk_blinds_and_modes
-                name: Animations for desk, blinds and modes
-              - type: section
-                label: Printer
-              - sensor.office_printer
-              - sensor.office_hp_tango_black_cartridge
-              - sensor.office_printer_tri_color_cartridge
+          - <<: *toggle
+            entity: automation.desk_schedule
+            primary: Desk schedule
+            secondary: "{{ 'Paused by Day off' if is_state('input_boolean.day_off', 'on') else ('On' if is_state(entity, 'on') else 'Off') }}"
+            icon: mdi:desk
+            vertical: false
+            grid_options:
+              columns: 12
+              rows: 1
+          - <<: *run
+            entity: script.desk_up
+            primary: Desk up
+            icon: mdi:arrow-up-bold
+            color: indigo
+            tap_action:
+              action: perform-action
+              perform_action: script.turn_on
+              target:
+                entity_id: script.desk_up
+          - <<: *run
+            entity: script.desk_down
+            primary: Desk down
+            icon: mdi:arrow-down-bold
+            color: indigo
+            tap_action:
+              action: perform-action
+              perform_action: script.turn_on
+              target:
+                entity_id: script.desk_down
 
-          # Entities rows have no brightness slider, so the cube's light is a tile under the Office card
-          - type: tile
+          - type: heading
+            heading: Cube Matrix
+            heading_style: subtitle
+          - type: custom:mushroom-template-card
             entity: light.cube_matrix_192_168_101_121
-            name: Cube Matrix
+            primary: Cube Matrix
+            secondary: "{{ [1, (state_attr(entity, 'brightness') / 2.55) | round] | max ~ ' %' if is_state(entity, 'on') else 'Off' }}"
+            icon: mdi:cube-outline
+            color: "{{ 'green' if is_state(entity, 'on') else 'disabled' }}"
             grid_options:
               columns: 9
               rows: 2
             features_position: bottom
             features:
               - type: light-brightness
-          # 0% / 100% in one tap, next to the slider
-          - type: tile
+            tap_action:
+              action: toggle
+            hold_action:
+              action: more-info
+          - <<: *toggle
             entity: switch.cube_bright
-            name: Bright
-            vertical: true
-            hide_state: true
+            primary: Bright
+            secondary: ""
+            icon: mdi:brightness-7
+            color: "{{ 'amber' if is_state(entity, 'on') else 'disabled' }}"
             grid_options:
               columns: 3
               rows: 2
+          - type: custom:mushroom-template-card
+            entity: select.cube_matrix_192_168_101_121_background
+            primary: Background
+            secondary: "{{ states(entity) }}"
+            icon: mdi:image-filter-hdr
+            color: green
+            features_position: bottom
+            features:
+              - type: select-options
+            grid_options:
+              columns: 12
+              rows: 2
             tap_action:
-              action: toggle
-            icon_tap_action:
-              action: toggle
+              action: more-info
+          - <<: *toggle
+            entity: automation.cube_another_frog_every_hour
+            primary: Frog every hour
+            icon: frog:frog-face
+            grid_options:
+              columns: 6
+              rows: 2
+          - <<: *toggle
+            entity: automation.cube_animations_for_desk_blinds_and_modes
+            primary: Animations
+            icon: mdi:animation-play
+            grid_options:
+              columns: 6
+              rows: 2
 
-          - type: entities
-            title: Bedroom
-            show_header_toggle: false
-            icon: mdi:bed
-            entities:
-              - cover.bedroom_curtains
-              - type: buttons
-                entities:
-                  - entity: scene.bedroom_curtains_close
-                    name: Close
-                    icon: mdi:curtains-closed
-                  - entity: scene.bedroom_curtains_open
-                    name: Open
-                    icon: mdi:curtains
-              - entity: automation.curtains_close_at_sunset
-                name: Close at sunset
-
-          - type: entities
-            title: Master bathroom
-            show_header_toggle: false
-            icon: mdi:shower-head
-            entities:
-              - climate.master_bathroom_thermostat_master
-              - entity: switch.master_floor_warming
-                name: Floor warming
-              - entity: automation.floor_warming_master_schedule
-                name: Floor warming schedule
-              - entity: switch.master_bathroom_towel_heat_relay
-                name: Towel heat
-              - entity: automation.towel_heat_master_schedule
-                name: Towel heat schedule
-
-          - type: entities
-            title: Guest bathroom
-            show_header_toggle: false
-            icon: mdi:shower
-            entities:
-              - climate.guest_bathroom_thermostat_guest
-              - entity: switch.guest_floor_warming
-                name: Floor warming
-              - entity: automation.floor_warming_guest_schedule
-                name: Floor warming schedule
-              - climate.guest_bathroom_towel_heat_guest
-              - entity: switch.guest_towel_heat
-                name: Towel heat
+          - type: heading
+            heading: Printer
+            heading_style: subtitle
+          - &ink
+            type: custom:mushroom-template-card
+            entity: sensor.office_printer
+            primary: Printer
+            secondary: "{{ states(entity) | capitalize }}"
+            icon: mdi:printer
+            color: "{{ 'disabled' if states(entity) in ['unavailable', 'off', 'unknown'] else 'green' }}"
+            grid_options:
+              columns: 4
+              rows: 2
+            vertical: true
+            tap_action:
+              action: more-info
+          - <<: *ink
+            entity: sensor.office_hp_tango_black_cartridge
+            primary: Black
+            secondary: "{{ states(entity) }} %"
+            icon: mdi:water
+            color: "{{ 'red' if states(entity) | int(100) < 15 else 'grey' }}"
+          - <<: *ink
+            entity: sensor.office_printer_tri_color_cartridge
+            primary: Colour
+            secondary: "{{ states(entity) }} %"
+            icon: mdi:palette
+            color: "{{ 'red' if states(entity) | int(100) < 15 else 'pink' }}"
 
       - type: grid
         cards:
-          - type: entities
-            title: Hall
-            show_header_toggle: false
-            icon: mdi:wardrobe-outline
-            entities:
-              - type: section
-                label: Router
-              - entity: binary_sensor.huawei_igd_wan_status
-                name: Internet
-              - entity: sensor.huawei_igd_external_ip
-                name: External IP
-              - entity: sensor.hall_router_donwload_speed
-                name: Download speed
-              - entity: sensor.hall_router_upload_speed
-                name: Upload speed
-              - type: section
-                label: Zigbee
-              - entity: switch.zigbee2mqtt_bridge_permit_join
-                name: Allow new devices to join
-              - entity: button.zigbee2mqtt_bridge_restart
-                name: Restart the bridge
-              - type: section
-                label: Downloads
-              - entity: sensor.qbittorrent_status
-                name: qBittorrent
-              - entity: sensor.qbittorrent_download_speed
-                name: Download speed
-              - entity: sensor.qbittorrent_upload_speed
-                name: Upload speed
-              - entity: sensor.qbittorrent_active_torrents
-                name: Active torrents
-              - entity: switch.qbittorrent_alternative_speed
-                name: Slow mode
-              - type: section
-                label: Health
-              - entity: sensor.backup_last_successful_automatic_backup
-                name: Last backup
-              - entity: sensor.failed_integrations
-                name: Failed HA integrations
+          - type: heading
+            heading: Master bathroom
+            icon: mdi:shower-head
+          - &thermostat
+            type: custom:mushroom-template-card
+            entity: climate.master_bathroom_thermostat_master
+            primary: Thermostat
+            secondary: >-
+              {{ 'Unavailable' if states(entity) in ['unavailable', 'unknown'] else
+                 state_attr(entity, 'current_temperature') ~ ' °C → ' ~ state_attr(entity, 'temperature') ~ ' °C' }}
+            icon: mdi:thermostat
+            color: "{{ 'deep-orange' if state_attr(entity, 'hvac_action') == 'heating' else ('disabled' if states(entity) in ['off', 'unavailable', 'unknown'] else 'orange') }}"
+            features_position: bottom
+            features:
+              - type: target-temperature
+            grid_options:
+              columns: 12
+              rows: 2
+            tap_action:
+              action: more-info
+          - <<: *toggle
+            entity: switch.master_floor_warming
+            primary: Floor warming
+            icon: mdi:heating-coil
+            color: "{{ 'deep-orange' if is_state(entity, 'on') else 'disabled' }}"
+            grid_options:
+              columns: 6
+              rows: 2
+          - <<: *toggle
+            entity: automation.floor_warming_master_schedule
+            primary: Floor schedule
+            icon: mdi:calendar-clock
+            grid_options:
+              columns: 6
+              rows: 2
+          - <<: *toggle
+            entity: switch.master_bathroom_towel_heat_relay
+            primary: Towel heat
+            icon: mdi:radiator
+            color: "{{ 'deep-orange' if is_state(entity, 'on') else 'disabled' }}"
+            grid_options:
+              columns: 6
+              rows: 2
+          - <<: *toggle
+            entity: automation.towel_heat_master_schedule
+            primary: Towel schedule
+            icon: mdi:calendar-clock
+            grid_options:
+              columns: 6
+              rows: 2
 
-          - type: entities
-            title: Garage
-            show_header_toggle: false
-            icon: mdi:car
-            entities:
-              - entity: sensor.garage_audi_a5_sportback_outside_temperature
-                name: Outside temperature
-              - entity: sensor.garage_audi_a5_sportback_range
-                name: Range
-              - entity: sensor.garage_audi_a5_sportback_fuel_level
-                name: Fuel
-              - entity: binary_sensor.garage_audi_a5_sportback_doors_locked
-                name: Locked
-              - entity: binary_sensor.garage_audi_a5_sportback_doors_open
-                name: Doors
-              - entity: binary_sensor.garage_audi_a5_sportback_windows_open
-                name: Windows
-              - entity: binary_sensor.garage_audi_a5_sportback_trunk_open
-                name: Trunk
-              - entity: sensor.garage_audi_a5_sportback_next_service
-                name: Next service
-              - entity: sensor.garage_audi_a5_sportback_odometer
-                name: Odometer
-              - entity: button.garage_audi_a5_sportback_refresh_data
-                name: Refresh data
+          # empty heading: a gap before the next room
+          - type: heading
+            heading: ""
+          - type: heading
+            heading: Guest bathroom
+            icon: mdi:shower
+          - <<: *thermostat
+            entity: climate.guest_bathroom_thermostat_guest
+          - <<: *toggle
+            entity: switch.guest_floor_warming
+            primary: Floor warming
+            icon: mdi:heating-coil
+            color: "{{ 'deep-orange' if is_state(entity, 'on') else 'disabled' }}"
+            grid_options:
+              columns: 6
+              rows: 2
+          - <<: *toggle
+            entity: automation.floor_warming_guest_schedule
+            primary: Floor schedule
+            icon: mdi:calendar-clock
+            grid_options:
+              columns: 6
+              rows: 2
+          - <<: *thermostat
+            entity: climate.guest_bathroom_towel_heat_guest
+            primary: Towel heat
+            icon: mdi:radiator
+            tap_action:
+              action: toggle
+            hold_action:
+              action: more-info
 
   - title: Schedule
     path: schedule
@@ -404,7 +857,6 @@ views:
                         entity_id: input_select.uptime_range
                       data:
                         option: Month
-
 
       - type: grid
         cards:
@@ -826,11 +1278,309 @@ views:
                 name: Audi
                 suffix: "%"
 
-  # NeonPlan 3D model of the flat. It's drawn in NeonPlan's own editor and kept in its .storage, not in the repo
-  - title: NeonPlan
-    path: neonplan
-    icon: mdi:home-floor-3
-    type: panel
-    cards:
-      - type: custom:neonplan3d-card
-        fill: true
+  - title: Overview
+    path: overview
+    # Each section is one column on a wide screen, on a phone they go one under another
+    type: sections
+    max_columns: 3
+    # No title toggles on the cards: one tap there switches every row of the card at once
+    sections:
+      - type: grid
+        cards:
+          - type: weather-forecast
+            entity: weather.forecast_home_assistant
+            forecast_type: daily
+
+          # Opens the Assist dialog with a pipeline that talks to conversation.claude
+          - type: button
+            name: Claude RU
+            icon: mdi:robot-outline
+            show_state: false
+            grid_options:
+              columns: 6
+              rows: 1
+            tap_action:
+              action: assist
+              pipeline_id: 01m5zm9azpze6aa3t4z44wmh41
+              start_listening: false
+          - type: button
+            name: Claude EN
+            icon: mdi:robot-outline
+            show_state: false
+            grid_options:
+              columns: 6
+              rows: 1
+            tap_action:
+              action: assist
+              pipeline_id: 01m5zme405yy9kmsr49dbazjpq
+              start_listening: false
+
+          # Modes for the whole flat, no area
+          - type: entities
+            title: General actions
+            show_header_toggle: false
+            entities:
+              - input_boolean.day_off
+              - input_boolean.vacation
+              - input_boolean.tuya_mode
+
+          # Shortcuts to the room cards' buttons, so they are near the top on a phone
+          - type: entities
+            title: Quick access
+            show_header_toggle: false
+            entities:
+              - type: section
+                label: Living room
+              - type: buttons
+                entities:
+                  - entity: scene.living_room_blinds_full_close
+                    name: Full close
+                    icon: mdi:roller-shade-closed
+                  - entity: scene.living_room_blinds_open
+                    name: Open
+                    icon: mdi:roller-shade
+              - type: buttons
+                entities:
+                  - entity: scene.living_room_blinds_full_close_open
+                    name: Full close + open
+                    icon: mdi:roller-shade
+                  - entity: scene.living_room_blinds_full_open_door
+                    name: Open door
+                    icon: mdi:door-open
+              - type: buttons
+                entities: &blinds_up_down
+                  - entity: scene.blinds
+                    name: Blinds ^
+                    icon: mdi:blinds-open
+                  - entity: scene.blinds_v
+                    name: Blinds v
+                    icon: mdi:blinds
+              - type: section
+                label: Bedroom
+              - entity: switch.bedroom_curtains_toggle
+                name: Curtains closed
+              - type: section
+                label: Master bathroom
+              - entity: switch.master_bathroom_towel_heat_relay
+                name: Towel heat
+
+      - type: grid
+        cards:
+          - type: entities
+            title: Living room
+            show_header_toggle: false
+            icon: mdi:sofa
+            entities:
+              - input_boolean.guests_in_living_room
+              - media_player.living_room_philips_tv
+              - type: buttons
+                entities:
+                  - entity: script.tv_mode
+                    name: TV mode
+                    icon: mdi:youtube-tv
+              - type: section
+                label: Fridge
+              - entity: sensor.living_room_refrigerator_fridge_temperature
+                name: Fridge
+              - entity: number.living_room_refrigerator_fridge_temperature
+                name: Fridge target
+              - entity: sensor.living_room_refrigerator_freezer_temperature
+                name: Freezer
+              - entity: number.living_room_refrigerator_freezer_temperature
+                name: Freezer target
+              - entity: binary_sensor.living_room_refrigerator_fridge_door
+                name: Fridge door
+              - entity: binary_sensor.living_room_refrigerator_freezer_door
+                name: Freezer door
+              - entity: switch.living_room_refrigerator_cubed_ice
+                name: Ice cubes
+              - type: section
+                label: Blinds
+              - cover.living_room_blinds_left_door
+              - cover.living_room_blinds_middle
+              - cover.living_room_blinds_right
+              - type: buttons
+                entities:
+                  - entity: scene.living_room_blinds_full_close
+                    name: Full close
+                    icon: mdi:roller-shade-closed
+                  - entity: scene.living_room_blinds_open
+                    name: Open
+                    icon: mdi:roller-shade
+                  - entity: scene.living_room_blinds_full_close_open
+                    name: Full close + open
+                    icon: mdi:roller-shade
+                  - entity: scene.living_room_blinds_full_open_door
+                    name: Open door
+                    icon: mdi:door-open
+              - type: buttons
+                entities: *blinds_up_down
+              - entity: automation.blinds_full_close_2_h_after_sunset
+                name: Close, sunset + 2 h
+              - entity: automation.blinds_full_close_at_01_00
+                name: Close at 01:00
+              - entity: automation.blinds_open_2_h_after_sunrise
+                name: Open, sunrise + 2 h
+
+          - type: entities
+            title: Office
+            show_header_toggle: false
+            icon: mdi:chair-rolling
+            entities:
+              - type: section
+                label: Desk
+              - entity: automation.desk_schedule
+                name: Schedule (paused by Day off)
+              - script.desk_up
+              - script.desk_down
+              - type: section
+                label: Cube Matrix
+              - entity: select.cube_matrix_192_168_101_121_background
+                name: Background
+              - entity: automation.cube_another_frog_every_hour
+                name: Another frog every hour
+              - entity: automation.cube_animations_for_desk_blinds_and_modes
+                name: Animations for desk, blinds and modes
+              - type: section
+                label: Printer
+              - sensor.office_printer
+              - sensor.office_hp_tango_black_cartridge
+              - sensor.office_printer_tri_color_cartridge
+
+          # Entities rows have no brightness slider, so the cube's light is a tile under the Office card
+          - type: tile
+            entity: light.cube_matrix_192_168_101_121
+            name: Cube Matrix
+            grid_options:
+              columns: 9
+              rows: 2
+            features_position: bottom
+            features:
+              - type: light-brightness
+          # 0% / 100% in one tap, next to the slider
+          - type: tile
+            entity: switch.cube_bright
+            name: Bright
+            vertical: true
+            hide_state: true
+            grid_options:
+              columns: 3
+              rows: 2
+            tap_action:
+              action: toggle
+            icon_tap_action:
+              action: toggle
+
+          - type: entities
+            title: Bedroom
+            show_header_toggle: false
+            icon: mdi:bed
+            entities:
+              - cover.bedroom_curtains
+              - type: buttons
+                entities:
+                  - entity: scene.bedroom_curtains_close
+                    name: Close
+                    icon: mdi:curtains-closed
+                  - entity: scene.bedroom_curtains_open
+                    name: Open
+                    icon: mdi:curtains
+              - entity: automation.curtains_close_at_sunset
+                name: Close at sunset
+
+          - type: entities
+            title: Master bathroom
+            show_header_toggle: false
+            icon: mdi:shower-head
+            entities:
+              - climate.master_bathroom_thermostat_master
+              - entity: switch.master_floor_warming
+                name: Floor warming
+              - entity: automation.floor_warming_master_schedule
+                name: Floor warming schedule
+              - entity: switch.master_bathroom_towel_heat_relay
+                name: Towel heat
+              - entity: automation.towel_heat_master_schedule
+                name: Towel heat schedule
+
+          - type: entities
+            title: Guest bathroom
+            show_header_toggle: false
+            icon: mdi:shower
+            entities:
+              - climate.guest_bathroom_thermostat_guest
+              - entity: switch.guest_floor_warming
+                name: Floor warming
+              - entity: automation.floor_warming_guest_schedule
+                name: Floor warming schedule
+              - climate.guest_bathroom_towel_heat_guest
+              - entity: switch.guest_towel_heat
+                name: Towel heat
+
+      - type: grid
+        cards:
+          - type: entities
+            title: Hall
+            show_header_toggle: false
+            icon: mdi:wardrobe-outline
+            entities:
+              - type: section
+                label: Router
+              - entity: binary_sensor.huawei_igd_wan_status
+                name: Internet
+              - entity: sensor.huawei_igd_external_ip
+                name: External IP
+              - entity: sensor.hall_router_donwload_speed
+                name: Download speed
+              - entity: sensor.hall_router_upload_speed
+                name: Upload speed
+              - type: section
+                label: Zigbee
+              - entity: switch.zigbee2mqtt_bridge_permit_join
+                name: Allow new devices to join
+              - entity: button.zigbee2mqtt_bridge_restart
+                name: Restart the bridge
+              - type: section
+                label: Downloads
+              - entity: sensor.qbittorrent_status
+                name: qBittorrent
+              - entity: sensor.qbittorrent_download_speed
+                name: Download speed
+              - entity: sensor.qbittorrent_upload_speed
+                name: Upload speed
+              - entity: sensor.qbittorrent_active_torrents
+                name: Active torrents
+              - entity: switch.qbittorrent_alternative_speed
+                name: Slow mode
+              - type: section
+                label: Health
+              - entity: sensor.backup_last_successful_automatic_backup
+                name: Last backup
+              - entity: sensor.failed_integrations
+                name: Failed HA integrations
+
+          - type: entities
+            title: Garage
+            show_header_toggle: false
+            icon: mdi:car
+            entities:
+              - entity: sensor.garage_audi_a5_sportback_outside_temperature
+                name: Outside temperature
+              - entity: sensor.garage_audi_a5_sportback_range
+                name: Range
+              - entity: sensor.garage_audi_a5_sportback_fuel_level
+                name: Fuel
+              - entity: binary_sensor.garage_audi_a5_sportback_doors_locked
+                name: Locked
+              - entity: binary_sensor.garage_audi_a5_sportback_doors_open
+                name: Doors
+              - entity: binary_sensor.garage_audi_a5_sportback_windows_open
+                name: Windows
+              - entity: binary_sensor.garage_audi_a5_sportback_trunk_open
+                name: Trunk
+              - entity: sensor.garage_audi_a5_sportback_next_service
+                name: Next service
+              - entity: sensor.garage_audi_a5_sportback_odometer
+                name: Odometer
+              - entity: button.garage_audi_a5_sportback_refresh_data
+                name: Refresh data
