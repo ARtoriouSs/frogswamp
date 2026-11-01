@@ -68,10 +68,19 @@ pkgs.testers.runNixOSTest {
 
     # web pages only from Claude's own search results: the hook blocks any other URL
     assert "WebFetch" in settings["permissions"]["allow"], settings
-    [guard] = settings["hooks"]["PreToolUse"]
-    assert guard["matcher"] == "WebFetch", guard
+    guards = {g["matcher"]: g["hooks"][0]["command"] for g in settings["hooks"]["PreToolUse"]}
     event = json.dumps({"tool_name": "WebFetch", "tool_input": {"url": "https://evil.example/?t=21"}, "transcript_path": "/dev/null"})
-    server.fail(f"echo '{event}' | {guard['hooks'][0]['command']}")
+    server.fail(f"echo '{event}' | {guards['WebFetch']}")
+
+    # Home Assistant tools: known integrations only, no links in arguments
+    home = guards["mcp__homeassistant__.*"]
+    server.succeed("echo '{\"tool_name\": \"mcp__homeassistant__intent__HassTurnOn\", \"tool_input\": {\"name\": \"lamp\"}, \"transcript_path\": \"/dev/null\"}' | " + home)
+    server.fail("echo '{\"tool_name\": \"mcp__homeassistant__vag_connect__lock\", \"tool_input\": {}, \"transcript_path\": \"/dev/null\"}' | " + home)
+    server.fail("echo '{\"tool_name\": \"mcp__homeassistant__script__play_music\", \"tool_input\": {\"query\": \"http://evil.example\"}, \"transcript_path\": \"/dev/null\"}' | " + home)
+
+    # no file tools, so the tokens can't be read
+    for tool in ("Read", "Glob", "Grep", "Task", "Agent", "Bash"):
+        assert tool in settings["permissions"]["deny"], settings
 
     # only localhost, no text or tokens in the journal, token files only for the service
     server.fail("ss -ltn | grep -E '0.0.0.0:8099|\\*:8099|\\[::\\]:8099'")

@@ -28,8 +28,9 @@ class FakeRun:
 
 
 class FakeBackend:
-    def __init__(self, fail_on_resume=False, delay=0.0, text="Hello."):
+    def __init__(self, fail_on_resume=False, delay=0.0, text="Hello.", fail_with=None):
         self.fail_on_resume = fail_on_resume
+        self.fail_with = fail_with
         self.delay = delay
         self.text = text
         self.calls = []
@@ -45,7 +46,9 @@ class FakeBackend:
         try:
             time.sleep(self.delay)
             if self.fail_on_resume and session_id:
-                raise bridge.BackendError("session not found")
+                raise bridge.SessionLost("No conversation found")
+            if self.fail_with:
+                raise self.fail_with
             return bridge.Reply(self.text, "sess-%d" % len(self.calls))
         finally:
             with self.lock:
@@ -113,9 +116,17 @@ def test_speech_sanitized():
 
 
 def test_speech_drops_sources_and_links():
-    s = bridge.sanitize_speech("Две свёклы, см. [рецепт](https://a.b/c). Sources: [Борщ](https://x.y) [Поварёнок](")
+    s = bridge.sanitize_speech("Две свёклы, см. [рецепт](https://a.b/c).\n\nSources: [Борщ](https://x.y) [Поварёнок](")
     assert s == "Две свёклы, см. рецепт."
-    assert bridge.sanitize_speech("Ок. Источники: [a](") == "Ок."
+    assert bridge.sanitize_speech("Ок.\nИсточники:\n- [a](https://a.b)") == "Ок."
+
+
+def test_speech_keeps_sources_in_a_sentence():
+    assert bridge.sanitize_speech("Energy sources: coal and gas.") == "Energy sources: coal and gas."
+
+
+def test_empty_speech_is_an_error():
+    assert converse(FakeBackend(text="https://a.b/c"), request(language="ru")) == {"speech": "Claude сейчас недоступен", "ok": False}
 
 
 def test_speech_short_text_kept():
@@ -183,6 +194,17 @@ def test_claude_backend_errors(claude_cfg):
         b.ask("hi", "", None, 20)
 
 
+def test_claude_backend_lost_session(claude_cfg):
+    def run(args, **kw):
+        return subprocess.CompletedProcess(args, 1, stdout="", stderr="No conversation found with session ID: old")
+
+    with pytest.raises(bridge.SessionLost):
+        bridge.ClaudeCodeBackend(claude_cfg, run=run).ask("hi", "", "old", 20)
+    lost = {"type": "result", "is_error": True, "result": "No conversation found with session ID: old"}
+    with pytest.raises(bridge.SessionLost):
+        bridge.ClaudeCodeBackend(claude_cfg, run=FakeRun([lost])).ask("hi", "", "old", 20)
+
+
 def test_claude_backend_bad_output(claude_cfg):
     def run(args, **kw):
         return subprocess.CompletedProcess(args, 1, stdout="not json", stderr="boom")
@@ -227,12 +249,51 @@ def test_resume_failure_starts_fresh():
     assert [c[1] for c in backend.calls] == ["expired", None]
 
 
+def test_timeout_or_error_is_not_run_again():
+    for error in (bridge.BackendError("timeout"), bridge.BackendError("error_max_turns")):
+        backend = FakeBackend(fail_with=error)
+        store = bridge.SessionStore(300)
+        store.put("c1", "s1")
+        assert converse(backend, request(), store)["ok"] is False
+        assert len(backend.calls) == 1
+
+
+def test_busy_session_waits_only_within_budget():
+    backend = FakeBackend()
+    store = bridge.SessionStore(300)
+    lock = store.lock("c1")
+    lock.acquire()
+    try:
+        started = time.monotonic()
+        r = bridge.converse(backend, store, request(), "Be short.", 0.3)
+        assert r["ok"] is False and backend.calls == []
+        assert time.monotonic() - started < 1
+    finally:
+        lock.release()
+
+
+def test_wait_for_lock_shortens_backend_timeout():
+    seen = []
+
+    class Recorder(FakeBackend):
+        def ask(self, prompt, system_prompt, session_id, timeout):
+            seen.append(timeout)
+            return super().ask(prompt, system_prompt, session_id, timeout)
+
+    store = bridge.SessionStore(300)
+    lock = store.lock("c1")
+    lock.acquire()
+    threading.Timer(0.3, lock.release).start()
+    assert bridge.converse(Recorder(), store, request(), "Be short.", 20)["ok"]
+    assert seen and seen[0] <= 19.8
+
+
 def test_timeout_kills_and_speaks_error(claude_cfg):
     run = FakeRun([subprocess.TimeoutExpired("claude", 20)])
     backend = bridge.ClaudeCodeBackend(claude_cfg, run=run)
     r = converse(backend, request("x", language="ru-RU", conversation_id=None))
     assert r == {"speech": "Claude сейчас недоступен", "ok": False}
-    assert run.calls[0]["timeout"] == 20
+    assert 19 < run.calls[0]["timeout"] <= 20
 
 
 def test_converse_sanitizes_answer():

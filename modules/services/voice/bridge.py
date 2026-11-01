@@ -26,11 +26,14 @@ ERROR_SPEECH = {
 }
 URL_RE = re.compile(r"https?://\S+")
 # the web search tool asks for a sources list at the end, it makes no sense in speech
-SOURCES_RE = re.compile(r"\s*\b(?:Sources|Источники)\s*:.*$", re.DOTALL | re.IGNORECASE)
+SOURCES_RE = re.compile(r"^\s*(?:Sources|Источники)\s*:.*", re.MULTILINE | re.DOTALL | re.IGNORECASE)
 MD_LINK_RE = re.compile(r"\[([^\]]*)\]\([^)]*\)?")
 LIST_MARK_RE = re.compile(r"^\s*(?:[-•]|\d+\.)\s+", re.MULTILINE)
 MARKDOWN_RE = re.compile(r"[*_#`>]")
 SHARED_SESSION = "shared"
+# don't start Claude with less time than this, HA would give up before the answer
+MIN_RUN_SECONDS = 3
+SESSION_LOST = "No conversation found"
 
 
 class Reply(NamedTuple):
@@ -40,6 +43,10 @@ class Reply(NamedTuple):
 
 class BackendError(Exception):
     pass
+
+
+class SessionLost(BackendError):
+    """The backend doesn't know the session any more; only this error is safe to retry"""
 
 
 def normalize_language(lang):
@@ -167,6 +174,8 @@ class ClaudeCodeBackend:
             )
         except subprocess.TimeoutExpired:
             raise BackendError("timeout")
+        if SESSION_LOST in done.stdout or SESSION_LOST in done.stderr:
+            raise SessionLost("session lost")
         try:
             out = json.loads(done.stdout)
         except ValueError:
@@ -187,26 +196,41 @@ def make_backend(cfg):
 
 
 def converse(backend, store, req, system_prompt, timeout, debug_log=False, shared=False):
+    """`timeout` is the whole budget: waiting for a busy session counts too, so HA gets an answer in time"""
     language = normalize_language(req.get("language"))
     # shared: one backend session for the whole home, whatever HA conversation the request is in
     conv_id = SHARED_SESSION if shared else req.get("conversation_id")
     prompt = build_prompt(req["text"], language, req.get("earlier") or [])
     started = time.monotonic()
-    with store.lock(conv_id):
+
+    def left():
+        return timeout - (time.monotonic() - started)
+
+    def fail(error):
+        log.warning("lang=%s ok=False %.1fs error=%s", language, time.monotonic() - started, error)
+        return {"speech": error_speech(language), "ok": False}
+
+    lock = store.lock(conv_id)
+    if not lock.acquire(timeout=max(0, timeout - MIN_RUN_SECONDS)):
+        return fail("busy")
+    try:
         session_id = store.get(conv_id)
         try:
             try:
-                reply = backend.ask(prompt, system_prompt, session_id, timeout)
-            except BackendError:
-                if not session_id:
+                reply = backend.ask(prompt, system_prompt, session_id, left())
+            except SessionLost:
+                if left() < MIN_RUN_SECONDS:
                     raise
-                # an old session can be gone on the backend side
-                reply = backend.ask(prompt, system_prompt, None, timeout)
+                # nothing ran in a lost session, so asking again is safe
+                reply = backend.ask(prompt, system_prompt, None, left())
         except BackendError as e:
-            log.warning("lang=%s ok=False %.1fs error=%s", language, time.monotonic() - started, e)
-            return {"speech": error_speech(language), "ok": False}
+            return fail(e)
         store.put(conv_id, reply.session_id)
+    finally:
+        lock.release()
     speech = sanitize_speech(reply.text)
+    if not speech:
+        return fail("empty answer")
     log.info("lang=%s ok=True %.1fs", language, time.monotonic() - started)
     if debug_log:
         log.info("text=%r speech=%r", req["text"], speech)

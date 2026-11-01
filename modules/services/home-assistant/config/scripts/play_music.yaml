@@ -21,6 +21,9 @@ play_music:
         entity:
           domain: media_player
   sequence:
+    # a link would make Music Assistant fetch it from the server, so only names are played
+    - condition: template
+      value_template: "{{ query is not search('(?i)\\b(https?|ftps?|rtsps?|rtmps?|mms|wss?|sftp)://') }}"
     - action: music_assistant.play_media
       target:
         entity_id: "{{ player }}"

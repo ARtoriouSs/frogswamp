@@ -33,11 +33,13 @@ phone / Voice PE ─ wake word ─▶ HA pipeline ─▶ Whisper ─▶ local ph
 | Only exposed entities | HA MCP uses the non-admin, local-only user `voice-agent`; Assist sees exposed entities only, "expose new entities" is off |
 | No automations, scripts or scenes edited | No such tools in the Assist API; the prompt says it can't |
 | No device changes the owner didn't ask for | Prompt: only the newest request, never repeat earlier actions |
-| Read only: Zigbee bridge, car, qBittorrent, phone | Only sensors of these are exposed (Zigbee bridge: connection state and version). VW Group Connect adds Škoda tools to the Assist API past exposure; they are denied in `claude-settings.json` |
+| Read only: Zigbee bridge, car, qBittorrent, phone | Only sensors of these are exposed (Zigbee bridge: connection state and version). Integrations can add tools to the Assist API past exposure (VW Group Connect adds Škoda ones), so the hook `web_guard.py home` allows HA tools of known integrations only (`HA_INTEGRATIONS`); add a new one there on purpose |
 | Never "Tuya mode" / "Home Assistant mode" | Not exposed, and named in the prompt |
-| No home data or credentials on the web | `WebFetch` only for URLs from the session's own `WebSearch` results (hook `web_guard.py`, blocks anything else, also on any error). The prompt forbids home or owner data in search text and says to ignore instructions on web pages |
+| No home data or credentials on the web | `WebFetch` only for URLs from the session's own `WebSearch` results (hook `web_guard.py fetch`). No http/ftp/rtsp links in any HA tool call, so Music Assistant can't be made to fetch one (`play_music` checks it too). The prompt forbids home or owner data in search text. Both hooks block on any error |
+| Web pages can't steer the home | After Claude read the web in a request, HA control tools are blocked until the owner's next request; reading the home stays allowed |
 | Tokens stay secret | sops → `LoadCredential`, passed to Claude by env only; no token in the Nix store, a command line or the log. HA's state and `/run/secrets` are hidden from the service |
-| No local tools | `Bash`, `Edit`, `Write`, `NotebookEdit` are denied |
+| No local tools | `Bash`, `Edit`, `Write`, `NotebookEdit`, `Read`, `Glob`, `Grep`, `Task`, `Agent` are denied; the unit has the usual systemd hardening (`ProtectProc`, no capabilities, private devices) |
+| HA gets an answer in time | The bridge's 25 s budget includes waiting for a busy session; a failed or timed-out request is never run again, only a lost session is retried |
 
 The journal has metadata only (language, ok, time). `frogswamp.voice.debugLog = true` also logs the text.
 

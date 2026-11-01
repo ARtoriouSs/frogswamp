@@ -22,6 +22,12 @@ let
           "Edit"
           "Write"
           "NotebookEdit"
+          # no reading files, so the tokens in its environment and credentials stay out of reach
+          "Read"
+          "Glob"
+          "Grep"
+          "Task"
+          "Agent"
         ]
         # VW Group Connect adds these to HA's Assist API by itself, past the exposure settings
         ++ map (tool: "mcp__homeassistant__vag_connect__${tool}") [
@@ -30,18 +36,22 @@ let
           "skoda_set_location_target_soc"
         ];
       };
-      # web pages are read only from Claude's own search results, so no link can carry home data
-      hooks.PreToolUse = [
-        {
-          matcher = "WebFetch";
-          hooks = [
-            {
-              type = "command";
-              command = "${pkgs.python3}/bin/python3 ${./web_guard.py}";
-            }
-          ];
-        }
-      ];
+      # keep home data off the web, see web_guard.py
+      hooks.PreToolUse =
+        lib.mapAttrsToList
+          (matcher: mode: {
+            inherit matcher;
+            hooks = [
+              {
+                type = "command";
+                command = "${pkgs.python3}/bin/python3 ${./web_guard.py} ${mode}";
+              }
+            ];
+          })
+          {
+            WebFetch = "fetch";
+            "mcp__homeassistant__.*" = "home";
+          };
     }
   );
   # ${HA_TOKEN} is filled in by Claude Code from the environment, so no token is in the store
@@ -186,6 +196,19 @@ in
         ProtectHome = true;
         PrivateTmp = true;
         NoNewPrivileges = true;
+        ProtectProc = "invisible";
+        ProtectKernelTunables = true;
+        ProtectKernelModules = true;
+        ProtectKernelLogs = true;
+        ProtectControlGroups = true;
+        ProtectClock = true;
+        ProtectHostname = true;
+        PrivateDevices = true;
+        RestrictNamespaces = true;
+        RestrictRealtime = true;
+        LockPersonality = true;
+        SystemCallArchitectures = "native";
+        CapabilityBoundingSet = "";
         InaccessiblePaths = [
           "-/var/lib/home-assistant"
           "-/run/secrets"
