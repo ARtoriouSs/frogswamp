@@ -13,6 +13,8 @@ Pick a movie or show on your phone, watch it on the TV in minutes, and it cleans
 
 The same URLs work away from home with the Tailscale app on. Login: `pupsich`, password from `just secret arr/ui_password`. Every app asks for it, also on the home network (the browser remembers it).
 
+Jellyfin's login is the same, but the repo doesn't set it: it's the admin user from Jellyfin's setup wizard. After a reinstall without backups, create it as `pupsich` with that password (Dashboard → Users). The repo services use the API key (`jellyfin/api_key`), not this login, so changing it only means logging in again in Kodi and the apps. Home Assistant's Jellyfin integration uses this login too.
+
 ## From the phone
 
 - **Movie:** Radarr → *Add New* → search → **Quality profile `frogswamp`** → *Add + Search*.
