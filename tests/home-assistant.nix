@@ -96,6 +96,7 @@ pkgs.testers.runNixOSTest {
     assert "/config/custom_components/hacs:ro" in unit, unit
     assert "/config/custom_components/cubematrix:ro" in unit, unit
     assert "/config/cubematrix:ro" in unit, unit
+    assert "/config/www/frogswamp:ro" in unit, unit
     # an empty folder stands in for /dev/bus/usb, so the recovery can wake up HA's USB watcher
     assert "/run/home-assistant/usb-watch:/dev/bus/usb:ro" in unit, unit
     server.succeed("test -d /run/home-assistant/usb-watch")

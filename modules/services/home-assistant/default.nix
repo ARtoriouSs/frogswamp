@@ -93,6 +93,8 @@ in
           "${stateDir}:/config"
           "/run/dbus:/run/dbus:ro"
           "${cfg.secretsFile}:/config/secrets.yaml:ro"
+          # a subfolder: integrations write their own files to www/
+          "${configDir}/www:/config/www/frogswamp:ro"
         ]
         ++ map (name: "${configDir}/${name}:/config/${name}:ro") repoOwned
         ++ lib.optional cfg.hacs "${hacs}:/config/custom_components/hacs:ro"
