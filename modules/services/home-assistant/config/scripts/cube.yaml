@@ -3,6 +3,7 @@
 # A new event stops the one in progress
 cube_event:
   alias: "Cube: event animation"
+  icon: mdi:animation-play
   mode: restart
   fields:
     preset:

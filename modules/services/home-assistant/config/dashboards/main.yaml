@@ -68,6 +68,14 @@ views:
                   - entity: scene.living_room_blinds_full_open_door
                     name: Open door
                     icon: mdi:door-open
+              - type: buttons
+                entities: &blinds_up_down
+                  - entity: scene.blinds
+                    name: Blinds ^
+                    icon: mdi:blinds-open
+                  - entity: scene.blinds_v
+                    name: Blinds v
+                    icon: mdi:blinds
               - type: section
                 label: Bedroom
               - entity: switch.bedroom_curtains_toggle
@@ -126,6 +134,8 @@ views:
                   - entity: scene.living_room_blinds_full_open_door
                     name: Open door
                     icon: mdi:door-open
+              - type: buttons
+                entities: *blinds_up_down
               - entity: automation.blinds_full_close_2_h_after_sunset
                 name: Close, sunset + 2 h
               - entity: automation.blinds_full_close_at_01_00

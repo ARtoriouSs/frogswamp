@@ -5,6 +5,7 @@
 # Then the child lock goes off, so the height can be changed on the pad right away. The panel locks itself again
 desk_move_with_unlock:
   alias: "Desk: move"
+  icon: mdi:desk
   # A new press stops the move in progress, e.g. down while up is still waiting
   mode: restart
   fields:
