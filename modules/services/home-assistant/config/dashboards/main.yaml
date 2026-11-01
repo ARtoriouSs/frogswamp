@@ -39,7 +39,7 @@ views:
                 entity_id: scene.living_room_blinds_open
           - <<: *remote
             entity: scene.living_room_blinds_full_close_open
-            primary: Full close + open
+            primary: Reset
             icon: mdi:roller-shade
             tap_action:
               action: perform-action
@@ -48,7 +48,7 @@ views:
                 entity_id: scene.living_room_blinds_full_close_open
           - <<: *remote
             entity: scene.living_room_blinds_full_open_door
-            primary: Open door
+            primary: Open balcony
             icon: mdi:door-open
             tap_action:
               action: perform-action
@@ -57,7 +57,7 @@ views:
                 entity_id: scene.living_room_blinds_full_open_door
           - <<: *remote
             entity: scene.blinds
-            primary: Blinds ^
+            primary: Blinds ↑
             icon: mdi:blinds-open
             color: cyan
             tap_action:
@@ -67,7 +67,7 @@ views:
                 entity_id: scene.blinds
           - <<: *remote
             entity: scene.blinds_v
-            primary: Blinds v
+            primary: Blinds ↓
             icon: mdi:blinds
             color: cyan
             tap_action:
@@ -526,24 +526,6 @@ views:
             entity: cover.bedroom_curtains
             primary: Curtains
             icon: mdi:curtains
-          - <<: *scene
-            entity: scene.bedroom_curtains_close
-            primary: Close
-            icon: mdi:curtains-closed
-            tap_action:
-              action: perform-action
-              perform_action: scene.turn_on
-              target:
-                entity_id: scene.bedroom_curtains_close
-          - <<: *scene
-            entity: scene.bedroom_curtains_open
-            primary: Open
-            icon: mdi:curtains
-            tap_action:
-              action: perform-action
-              perform_action: scene.turn_on
-              target:
-                entity_id: scene.bedroom_curtains_open
           - <<: *toggle
             entity: automation.curtains_close_at_sunset
             primary: Close at sunset
@@ -759,7 +741,707 @@ views:
             hold_action:
               action: more-info
 
+  # Schedule again, with Mushroom cards. The times are set in packages/schedule.yaml: a change made here is reset on the next HA restart
   - title: Schedule
+    path: schedule-new
+    icon: mdi:calendar-clock
+    type: sections
+    max_columns: 3
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: Today
+            icon: mdi:calendar-today
+          - type: custom:mushroom-template-card
+            entity: binary_sensor.workday_sensor_pl
+            primary: "{{ 'Workday' if is_state(entity, 'on') else 'No work today' }}"
+            secondary: "{{ now().strftime('%A, %d.%m') }}"
+            icon: "{{ 'mdi:briefcase' if is_state(entity, 'on') else 'mdi:beach' }}"
+            color: "{{ 'blue' if is_state(entity, 'on') else 'green' }}"
+            grid_options:
+              columns: 12
+              rows: 1
+            tap_action:
+              action: more-info
+          - &sched_toggle
+            type: custom:mushroom-template-card
+            entity: input_boolean.day_off
+            primary: Day off
+            secondary: "{{ 'On' if is_state(entity, 'on') else 'Off' }}"
+            icon: mdi:beach
+            color: "{{ 'green' if is_state(entity, 'on') else 'disabled' }}"
+            vertical: true
+            grid_options:
+              columns: 6
+              rows: 2
+            tap_action:
+              action: toggle
+            hold_action:
+              action: more-info
+          - <<: *sched_toggle
+            entity: input_boolean.vacation
+            primary: Vacation
+            icon: mdi:airplane
+            tap_action:
+              action: toggle
+              confirmation:
+                text: "Switch Vacation mode?"
+          - type: custom:mushroom-template-card
+            entity: sensor.pixel_7_next_alarm
+            primary: Next phone alarm
+            secondary: >-
+              {% set t = as_timestamp(states(entity), none) %}
+              {{ t | timestamp_custom('%a %d.%m, %H:%M') if t else 'None set' }}
+            icon: mdi:alarm
+            color: "{{ 'amber' if as_timestamp(states(entity), none) else 'disabled' }}"
+            grid_options:
+              columns: 12
+              rows: 1
+            tap_action:
+              action: more-info
+
+      - type: grid
+        cards:
+          - type: heading
+            heading: Wakeup
+            icon: mdi:weather-sunset-up
+          # input_datetime holds "07:30:00": the card shows hours and minutes
+          - &time
+            type: custom:mushroom-template-card
+            entity: input_datetime.wakeup_workday
+            primary: "{{ states(entity)[:5] }}"
+            secondary: Workday
+            icon: mdi:briefcase-outline
+            color: amber
+            vertical: true
+            grid_options:
+              columns: 6
+              rows: 2
+            tap_action:
+              action: more-info
+          - <<: *time
+            entity: input_datetime.wakeup_weekend
+            secondary: Weekend or holiday
+            icon: mdi:beach
+          - type: heading
+            heading: ""
+          - type: heading
+            heading: Bedtime
+            icon: mdi:sleep
+          - <<: *time
+            entity: input_datetime.bedtime_workday
+            secondary: Before a workday
+            icon: mdi:briefcase-outline
+            color: indigo
+          - <<: *time
+            entity: input_datetime.bedtime_weekend
+            secondary: Before a weekend day or holiday
+            icon: mdi:beach
+            color: indigo
+          - type: heading
+            heading: ""
+          - type: heading
+            heading: Work
+            icon: mdi:laptop
+          - <<: *time
+            entity: input_datetime.work_start
+            secondary: Start
+            icon: mdi:play
+            color: blue
+          - <<: *time
+            entity: input_datetime.work_end
+            secondary: End
+            icon: mdi:stop
+            color: blue
+
+      - type: grid
+        cards:
+          - type: heading
+            heading: Workdays
+            icon: mdi:calendar-month
+          # Workday's calendar has an event on each workday, so a weekday without one is a holiday
+          - type: calendar
+            initial_view: dayGridMonth
+            entities:
+              - calendar.workday_sensor_pl_calendar
+
+  # Uptime again, with Mushroom cards: the % per device next to the timelines (sensors in packages/uptime.yaml)
+  - title: Uptime
+    path: uptime-new
+    icon: mdi:lan-connect
+    type: sections
+    max_columns: 3
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: Range
+            icon: mdi:calendar-range
+          - type: custom:mushroom-template-card
+            entity: input_select.uptime_range
+            primary: Day
+            icon: mdi:calendar-today
+            color: "{{ 'primary' if is_state(entity, 'Day') else 'disabled' }}"
+            grid_options:
+              columns: 4
+              rows: 1
+            tap_action:
+              action: perform-action
+              perform_action: input_select.select_option
+              target:
+                entity_id: input_select.uptime_range
+              data:
+                option: Day
+          - type: custom:mushroom-template-card
+            entity: input_select.uptime_range
+            primary: Week
+            icon: mdi:calendar-week
+            color: "{{ 'primary' if is_state(entity, 'Week') else 'disabled' }}"
+            grid_options:
+              columns: 4
+              rows: 1
+            tap_action:
+              action: perform-action
+              perform_action: input_select.select_option
+              target:
+                entity_id: input_select.uptime_range
+              data:
+                option: Week
+          - type: custom:mushroom-template-card
+            entity: input_select.uptime_range
+            primary: Month
+            icon: mdi:calendar-month
+            color: "{{ 'primary' if is_state(entity, 'Month') else 'disabled' }}"
+            grid_options:
+              columns: 4
+              rows: 1
+            tap_action:
+              action: perform-action
+              perform_action: input_select.select_option
+              target:
+                entity_id: input_select.uptime_range
+              data:
+                option: Month
+          - type: heading
+            heading: Living room
+            heading_style: subtitle
+          - type: custom:mushroom-template-card
+            entity: binary_sensor.blinds_right_online
+            primary: Blinds right
+            secondary: "{% set u = state_attr(entity, 'uptime') %}{{ (u ~ ' %') if u is not none else '—' }} · {{ 'online' if is_state(entity, 'on') else 'offline' }}"
+            icon: mdi:blinds
+            color: "{% set u = state_attr(entity, 'uptime') %}{{ 'red' if is_state(entity, 'off') else ('disabled' if u is none else ('green' if u >= 99 else ('amber' if u >= 95 else 'red'))) }}"
+            grid_options:
+              columns: 6
+              rows: 1
+            tap_action:
+              action: more-info
+          - type: custom:mushroom-template-card
+            entity: binary_sensor.blinds_middle_online
+            primary: Blinds middle
+            secondary: "{% set u = state_attr(entity, 'uptime') %}{{ (u ~ ' %') if u is not none else '—' }} · {{ 'online' if is_state(entity, 'on') else 'offline' }}"
+            icon: mdi:blinds
+            color: "{% set u = state_attr(entity, 'uptime') %}{{ 'red' if is_state(entity, 'off') else ('disabled' if u is none else ('green' if u >= 99 else ('amber' if u >= 95 else 'red'))) }}"
+            grid_options:
+              columns: 6
+              rows: 1
+            tap_action:
+              action: more-info
+          - type: custom:mushroom-template-card
+            entity: binary_sensor.blinds_left_door_online
+            primary: Blinds left / door
+            secondary: "{% set u = state_attr(entity, 'uptime') %}{{ (u ~ ' %') if u is not none else '—' }} · {{ 'online' if is_state(entity, 'on') else 'offline' }}"
+            icon: mdi:blinds
+            color: "{% set u = state_attr(entity, 'uptime') %}{{ 'red' if is_state(entity, 'off') else ('disabled' if u is none else ('green' if u >= 99 else ('amber' if u >= 95 else 'red'))) }}"
+            grid_options:
+              columns: 6
+              rows: 1
+            tap_action:
+              action: more-info
+          - type: custom:mushroom-template-card
+            entity: binary_sensor.tv_online
+            primary: TV
+            secondary: "{% set u = state_attr(entity, 'uptime') %}{{ (u ~ ' %') if u is not none else '—' }} · {{ 'online' if is_state(entity, 'on') else 'offline' }}"
+            icon: mdi:television
+            color: "{% set u = state_attr(entity, 'uptime') %}{{ 'red' if is_state(entity, 'off') else ('disabled' if u is none else ('green' if u >= 99 else ('amber' if u >= 95 else 'red'))) }}"
+            grid_options:
+              columns: 6
+              rows: 1
+            tap_action:
+              action: more-info
+          - type: custom:mushroom-template-card
+            entity: binary_sensor.fridge_online
+            primary: Fridge
+            secondary: "{% set u = state_attr(entity, 'uptime') %}{{ (u ~ ' %') if u is not none else '—' }} · {{ 'online' if is_state(entity, 'on') else 'offline' }}"
+            icon: mdi:fridge
+            color: "{% set u = state_attr(entity, 'uptime') %}{{ 'red' if is_state(entity, 'off') else ('disabled' if u is none else ('green' if u >= 99 else ('amber' if u >= 95 else 'red'))) }}"
+            grid_options:
+              columns: 6
+              rows: 1
+            tap_action:
+              action: more-info
+          - type: heading
+            heading: Bedroom
+            heading_style: subtitle
+          - type: custom:mushroom-template-card
+            entity: binary_sensor.curtains_online
+            primary: Curtains
+            secondary: "{% set u = state_attr(entity, 'uptime') %}{{ (u ~ ' %') if u is not none else '—' }} · {{ 'online' if is_state(entity, 'on') else 'offline' }}"
+            icon: mdi:curtains
+            color: "{% set u = state_attr(entity, 'uptime') %}{{ 'red' if is_state(entity, 'off') else ('disabled' if u is none else ('green' if u >= 99 else ('amber' if u >= 95 else 'red'))) }}"
+            grid_options:
+              columns: 6
+              rows: 1
+            tap_action:
+              action: more-info
+          - type: heading
+            heading: Office
+            heading_style: subtitle
+          - type: custom:mushroom-template-card
+            entity: binary_sensor.desk_online
+            primary: Desk
+            secondary: "{% set u = state_attr(entity, 'uptime') %}{{ (u ~ ' %') if u is not none else '—' }} · {{ 'online' if is_state(entity, 'on') else 'offline' }}"
+            icon: mdi:desk
+            color: "{% set u = state_attr(entity, 'uptime') %}{{ 'red' if is_state(entity, 'off') else ('disabled' if u is none else ('green' if u >= 99 else ('amber' if u >= 95 else 'red'))) }}"
+            grid_options:
+              columns: 6
+              rows: 1
+            tap_action:
+              action: more-info
+          - type: custom:mushroom-template-card
+            entity: binary_sensor.cube_online
+            primary: Cube
+            secondary: "{% set u = state_attr(entity, 'uptime') %}{{ (u ~ ' %') if u is not none else '—' }} · {{ 'online' if is_state(entity, 'on') else 'offline' }}"
+            icon: mdi:cube-outline
+            color: "{% set u = state_attr(entity, 'uptime') %}{{ 'red' if is_state(entity, 'off') else ('disabled' if u is none else ('green' if u >= 99 else ('amber' if u >= 95 else 'red'))) }}"
+            grid_options:
+              columns: 6
+              rows: 1
+            tap_action:
+              action: more-info
+          - type: custom:mushroom-template-card
+            entity: binary_sensor.printer_online
+            primary: Printer
+            secondary: "{% set u = state_attr(entity, 'uptime') %}{{ (u ~ ' %') if u is not none else '—' }} · {{ 'online' if is_state(entity, 'on') else 'offline' }}"
+            icon: mdi:printer
+            color: "{% set u = state_attr(entity, 'uptime') %}{{ 'red' if is_state(entity, 'off') else ('disabled' if u is none else ('green' if u >= 99 else ('amber' if u >= 95 else 'red'))) }}"
+            grid_options:
+              columns: 6
+              rows: 1
+            tap_action:
+              action: more-info
+          - type: heading
+            heading: Guest bathroom
+            heading_style: subtitle
+          - type: custom:mushroom-template-card
+            entity: binary_sensor.guest_thermostat_online
+            primary: Thermostat
+            secondary: "{% set u = state_attr(entity, 'uptime') %}{{ (u ~ ' %') if u is not none else '—' }} · {{ 'online' if is_state(entity, 'on') else 'offline' }}"
+            icon: mdi:thermostat
+            color: "{% set u = state_attr(entity, 'uptime') %}{{ 'red' if is_state(entity, 'off') else ('disabled' if u is none else ('green' if u >= 99 else ('amber' if u >= 95 else 'red'))) }}"
+            grid_options:
+              columns: 6
+              rows: 1
+            tap_action:
+              action: more-info
+          - type: custom:mushroom-template-card
+            entity: binary_sensor.guest_towel_heat_online
+            primary: Towel heat
+            secondary: "{% set u = state_attr(entity, 'uptime') %}{{ (u ~ ' %') if u is not none else '—' }} · {{ 'online' if is_state(entity, 'on') else 'offline' }}"
+            icon: mdi:radiator
+            color: "{% set u = state_attr(entity, 'uptime') %}{{ 'red' if is_state(entity, 'off') else ('disabled' if u is none else ('green' if u >= 99 else ('amber' if u >= 95 else 'red'))) }}"
+            grid_options:
+              columns: 6
+              rows: 1
+            tap_action:
+              action: more-info
+          - type: heading
+            heading: Master bathroom
+            heading_style: subtitle
+          - type: custom:mushroom-template-card
+            entity: binary_sensor.master_thermostat_online
+            primary: Thermostat
+            secondary: "{% set u = state_attr(entity, 'uptime') %}{{ (u ~ ' %') if u is not none else '—' }} · {{ 'online' if is_state(entity, 'on') else 'offline' }}"
+            icon: mdi:thermostat
+            color: "{% set u = state_attr(entity, 'uptime') %}{{ 'red' if is_state(entity, 'off') else ('disabled' if u is none else ('green' if u >= 99 else ('amber' if u >= 95 else 'red'))) }}"
+            grid_options:
+              columns: 6
+              rows: 1
+            tap_action:
+              action: more-info
+          - type: custom:mushroom-template-card
+            entity: binary_sensor.master_towel_heat_relay_online
+            primary: Towel heat relay
+            secondary: "{% set u = state_attr(entity, 'uptime') %}{{ (u ~ ' %') if u is not none else '—' }} · {{ 'online' if is_state(entity, 'on') else 'offline' }}"
+            icon: mdi:radiator
+            color: "{% set u = state_attr(entity, 'uptime') %}{{ 'red' if is_state(entity, 'off') else ('disabled' if u is none else ('green' if u >= 99 else ('amber' if u >= 95 else 'red'))) }}"
+            grid_options:
+              columns: 6
+              rows: 1
+            tap_action:
+              action: more-info
+          - type: heading
+            heading: Hall
+            heading_style: subtitle
+          - type: custom:mushroom-template-card
+            entity: binary_sensor.router_online
+            primary: Router
+            secondary: "{% set u = state_attr(entity, 'uptime') %}{{ (u ~ ' %') if u is not none else '—' }} · {{ 'online' if is_state(entity, 'on') else 'offline' }}"
+            icon: mdi:router-wireless
+            color: "{% set u = state_attr(entity, 'uptime') %}{{ 'red' if is_state(entity, 'off') else ('disabled' if u is none else ('green' if u >= 99 else ('amber' if u >= 95 else 'red'))) }}"
+            grid_options:
+              columns: 6
+              rows: 1
+            tap_action:
+              action: more-info
+          - type: custom:mushroom-template-card
+            entity: binary_sensor.zigbee_bridge_online
+            primary: Zigbee bridge
+            secondary: "{% set u = state_attr(entity, 'uptime') %}{{ (u ~ ' %') if u is not none else '—' }} · {{ 'online' if is_state(entity, 'on') else 'offline' }}"
+            icon: mdi:zigbee
+            color: "{% set u = state_attr(entity, 'uptime') %}{{ 'red' if is_state(entity, 'off') else ('disabled' if u is none else ('green' if u >= 99 else ('amber' if u >= 95 else 'red'))) }}"
+            grid_options:
+              columns: 6
+              rows: 1
+            tap_action:
+              action: more-info
+          - type: heading
+            heading: Garage
+            heading_style: subtitle
+          - type: custom:mushroom-template-card
+            entity: binary_sensor.audi_online
+            primary: Audi
+            secondary: "{% set u = state_attr(entity, 'uptime') %}{{ (u ~ ' %') if u is not none else '—' }} · {{ 'online' if is_state(entity, 'on') else 'offline' }}"
+            icon: mdi:car
+            color: "{% set u = state_attr(entity, 'uptime') %}{{ 'red' if is_state(entity, 'off') else ('disabled' if u is none else ('green' if u >= 99 else ('amber' if u >= 95 else 'red'))) }}"
+            grid_options:
+              columns: 6
+              rows: 1
+            tap_action:
+              action: more-info
+      - type: grid
+        cards:
+          - type: heading
+            heading: Living room
+            icon: mdi:sofa
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Day
+            card:
+              type: history-graph
+              hours_to_show: 24
+              entities:
+                - entity: binary_sensor.blinds_right_online
+                  name: "Blinds right\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A"
+                - entity: binary_sensor.blinds_middle_online
+                  name: "Blinds middle\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A"
+                - entity: binary_sensor.blinds_left_door_online
+                  name: "Blinds left / door\u200A"
+                - entity: binary_sensor.tv_online
+                  name: "TV\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
+                - entity: binary_sensor.fridge_online
+                  name: "Fridge\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A"
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Week
+            card:
+              type: history-graph
+              hours_to_show: 168
+              entities:
+                - entity: binary_sensor.blinds_right_online
+                  name: "Blinds right\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A"
+                - entity: binary_sensor.blinds_middle_online
+                  name: "Blinds middle\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A"
+                - entity: binary_sensor.blinds_left_door_online
+                  name: "Blinds left / door\u200A"
+                - entity: binary_sensor.tv_online
+                  name: "TV\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
+                - entity: binary_sensor.fridge_online
+                  name: "Fridge\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A"
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Month
+            card:
+              type: history-graph
+              hours_to_show: 744
+              entities:
+                - entity: binary_sensor.blinds_right_online
+                  name: "Blinds right\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A"
+                - entity: binary_sensor.blinds_middle_online
+                  name: "Blinds middle\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A"
+                - entity: binary_sensor.blinds_left_door_online
+                  name: "Blinds left / door\u200A"
+                - entity: binary_sensor.tv_online
+                  name: "TV\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
+                - entity: binary_sensor.fridge_online
+                  name: "Fridge\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A"
+          - type: heading
+            heading: ""
+          - type: heading
+            heading: Bedroom
+            icon: mdi:bed
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Day
+            card:
+              type: history-graph
+              hours_to_show: 24
+              entities:
+                - entity: binary_sensor.curtains_online
+                  name: "Curtains\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Week
+            card:
+              type: history-graph
+              hours_to_show: 168
+              entities:
+                - entity: binary_sensor.curtains_online
+                  name: "Curtains\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Month
+            card:
+              type: history-graph
+              hours_to_show: 744
+              entities:
+                - entity: binary_sensor.curtains_online
+                  name: "Curtains\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
+          - type: heading
+            heading: ""
+          - type: heading
+            heading: Office
+            icon: mdi:chair-rolling
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Day
+            card:
+              type: history-graph
+              hours_to_show: 24
+              entities:
+                - entity: binary_sensor.desk_online
+                  name: "Desk\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
+                - entity: binary_sensor.cube_online
+                  name: "Cube\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A"
+                - entity: binary_sensor.printer_online
+                  name: "Printer\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A"
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Week
+            card:
+              type: history-graph
+              hours_to_show: 168
+              entities:
+                - entity: binary_sensor.desk_online
+                  name: "Desk\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
+                - entity: binary_sensor.cube_online
+                  name: "Cube\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A"
+                - entity: binary_sensor.printer_online
+                  name: "Printer\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A"
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Month
+            card:
+              type: history-graph
+              hours_to_show: 744
+              entities:
+                - entity: binary_sensor.desk_online
+                  name: "Desk\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
+                - entity: binary_sensor.cube_online
+                  name: "Cube\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A"
+                - entity: binary_sensor.printer_online
+                  name: "Printer\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A"
+      - type: grid
+        cards:
+          - type: heading
+            heading: Guest bathroom
+            icon: mdi:shower
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Day
+            card:
+              type: history-graph
+              hours_to_show: 24
+              entities:
+                - entity: binary_sensor.guest_thermostat_online
+                  name: "Thermostat\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
+                - entity: binary_sensor.guest_towel_heat_online
+                  name: "Towel heat\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Week
+            card:
+              type: history-graph
+              hours_to_show: 168
+              entities:
+                - entity: binary_sensor.guest_thermostat_online
+                  name: "Thermostat\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
+                - entity: binary_sensor.guest_towel_heat_online
+                  name: "Towel heat\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Month
+            card:
+              type: history-graph
+              hours_to_show: 744
+              entities:
+                - entity: binary_sensor.guest_thermostat_online
+                  name: "Thermostat\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
+                - entity: binary_sensor.guest_towel_heat_online
+                  name: "Towel heat\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
+          - type: heading
+            heading: ""
+          - type: heading
+            heading: Master bathroom
+            icon: mdi:shower-head
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Day
+            card:
+              type: history-graph
+              hours_to_show: 24
+              entities:
+                - entity: binary_sensor.master_thermostat_online
+                  name: "Thermostat\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
+                - entity: binary_sensor.master_towel_heat_relay_online
+                  name: "Towel heat relay\u00A0\u200A"
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Week
+            card:
+              type: history-graph
+              hours_to_show: 168
+              entities:
+                - entity: binary_sensor.master_thermostat_online
+                  name: "Thermostat\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
+                - entity: binary_sensor.master_towel_heat_relay_online
+                  name: "Towel heat relay\u00A0\u200A"
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Month
+            card:
+              type: history-graph
+              hours_to_show: 744
+              entities:
+                - entity: binary_sensor.master_thermostat_online
+                  name: "Thermostat\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
+                - entity: binary_sensor.master_towel_heat_relay_online
+                  name: "Towel heat relay\u00A0\u200A"
+          - type: heading
+            heading: ""
+          - type: heading
+            heading: Hall
+            icon: mdi:wardrobe-outline
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Day
+            card:
+              type: history-graph
+              hours_to_show: 24
+              entities:
+                - entity: binary_sensor.router_online
+                  name: "Router\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
+                - entity: binary_sensor.zigbee_bridge_online
+                  name: "Zigbee bridge\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Week
+            card:
+              type: history-graph
+              hours_to_show: 168
+              entities:
+                - entity: binary_sensor.router_online
+                  name: "Router\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
+                - entity: binary_sensor.zigbee_bridge_online
+                  name: "Zigbee bridge\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Month
+            card:
+              type: history-graph
+              hours_to_show: 744
+              entities:
+                - entity: binary_sensor.router_online
+                  name: "Router\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
+                - entity: binary_sensor.zigbee_bridge_online
+                  name: "Zigbee bridge\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
+          - type: heading
+            heading: ""
+          - type: heading
+            heading: Garage
+            icon: mdi:car
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Day
+            card:
+              type: history-graph
+              hours_to_show: 24
+              entities:
+                - entity: binary_sensor.audi_online
+                  name: "Audi\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Week
+            card:
+              type: history-graph
+              hours_to_show: 168
+              entities:
+                - entity: binary_sensor.audi_online
+                  name: "Audi\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.uptime_range
+                state: Month
+            card:
+              type: history-graph
+              hours_to_show: 744
+              entities:
+                - entity: binary_sensor.audi_online
+                  name: "Audi\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
+
+  - title: Schedule (old)
     path: schedule
     icon: mdi:calendar-clock
     cards:
@@ -808,7 +1490,7 @@ views:
         entities:
           - calendar.workday_sensor_pl_calendar
 
-  - title: Uptime
+  - title: Uptime (old)
     path: uptime
     icon: mdi:lan-connect
     # Sections, not masonry: masonry puts a short card and the next one in the same column.
@@ -1277,310 +1959,3 @@ views:
                 attribute: uptime
                 name: Audi
                 suffix: "%"
-
-  - title: Overview
-    path: overview
-    # Each section is one column on a wide screen, on a phone they go one under another
-    type: sections
-    max_columns: 3
-    # No title toggles on the cards: one tap there switches every row of the card at once
-    sections:
-      - type: grid
-        cards:
-          - type: weather-forecast
-            entity: weather.forecast_home_assistant
-            forecast_type: daily
-
-          # Opens the Assist dialog with a pipeline that talks to conversation.claude
-          - type: button
-            name: Claude RU
-            icon: mdi:robot-outline
-            show_state: false
-            grid_options:
-              columns: 6
-              rows: 1
-            tap_action:
-              action: assist
-              pipeline_id: 01m5zm9azpze6aa3t4z44wmh41
-              start_listening: false
-          - type: button
-            name: Claude EN
-            icon: mdi:robot-outline
-            show_state: false
-            grid_options:
-              columns: 6
-              rows: 1
-            tap_action:
-              action: assist
-              pipeline_id: 01m5zme405yy9kmsr49dbazjpq
-              start_listening: false
-
-          # Modes for the whole flat, no area
-          - type: entities
-            title: General actions
-            show_header_toggle: false
-            entities:
-              - input_boolean.day_off
-              - input_boolean.vacation
-              - input_boolean.tuya_mode
-
-          # Shortcuts to the room cards' buttons, so they are near the top on a phone
-          - type: entities
-            title: Quick access
-            show_header_toggle: false
-            entities:
-              - type: section
-                label: Living room
-              - type: buttons
-                entities:
-                  - entity: scene.living_room_blinds_full_close
-                    name: Full close
-                    icon: mdi:roller-shade-closed
-                  - entity: scene.living_room_blinds_open
-                    name: Open
-                    icon: mdi:roller-shade
-              - type: buttons
-                entities:
-                  - entity: scene.living_room_blinds_full_close_open
-                    name: Full close + open
-                    icon: mdi:roller-shade
-                  - entity: scene.living_room_blinds_full_open_door
-                    name: Open door
-                    icon: mdi:door-open
-              - type: buttons
-                entities: &blinds_up_down
-                  - entity: scene.blinds
-                    name: Blinds ^
-                    icon: mdi:blinds-open
-                  - entity: scene.blinds_v
-                    name: Blinds v
-                    icon: mdi:blinds
-              - type: section
-                label: Bedroom
-              - entity: switch.bedroom_curtains_toggle
-                name: Curtains closed
-              - type: section
-                label: Master bathroom
-              - entity: switch.master_bathroom_towel_heat_relay
-                name: Towel heat
-
-      - type: grid
-        cards:
-          - type: entities
-            title: Living room
-            show_header_toggle: false
-            icon: mdi:sofa
-            entities:
-              - input_boolean.guests_in_living_room
-              - media_player.living_room_philips_tv
-              - type: buttons
-                entities:
-                  - entity: script.tv_mode
-                    name: TV mode
-                    icon: mdi:youtube-tv
-              - type: section
-                label: Fridge
-              - entity: sensor.living_room_refrigerator_fridge_temperature
-                name: Fridge
-              - entity: number.living_room_refrigerator_fridge_temperature
-                name: Fridge target
-              - entity: sensor.living_room_refrigerator_freezer_temperature
-                name: Freezer
-              - entity: number.living_room_refrigerator_freezer_temperature
-                name: Freezer target
-              - entity: binary_sensor.living_room_refrigerator_fridge_door
-                name: Fridge door
-              - entity: binary_sensor.living_room_refrigerator_freezer_door
-                name: Freezer door
-              - entity: switch.living_room_refrigerator_cubed_ice
-                name: Ice cubes
-              - type: section
-                label: Blinds
-              - cover.living_room_blinds_left_door
-              - cover.living_room_blinds_middle
-              - cover.living_room_blinds_right
-              - type: buttons
-                entities:
-                  - entity: scene.living_room_blinds_full_close
-                    name: Full close
-                    icon: mdi:roller-shade-closed
-                  - entity: scene.living_room_blinds_open
-                    name: Open
-                    icon: mdi:roller-shade
-                  - entity: scene.living_room_blinds_full_close_open
-                    name: Full close + open
-                    icon: mdi:roller-shade
-                  - entity: scene.living_room_blinds_full_open_door
-                    name: Open door
-                    icon: mdi:door-open
-              - type: buttons
-                entities: *blinds_up_down
-              - entity: automation.blinds_full_close_2_h_after_sunset
-                name: Close, sunset + 2 h
-              - entity: automation.blinds_full_close_at_01_00
-                name: Close at 01:00
-              - entity: automation.blinds_open_2_h_after_sunrise
-                name: Open, sunrise + 2 h
-
-          - type: entities
-            title: Office
-            show_header_toggle: false
-            icon: mdi:chair-rolling
-            entities:
-              - type: section
-                label: Desk
-              - entity: automation.desk_schedule
-                name: Schedule (paused by Day off)
-              - script.desk_up
-              - script.desk_down
-              - type: section
-                label: Cube Matrix
-              - entity: select.cube_matrix_192_168_101_121_background
-                name: Background
-              - entity: automation.cube_another_frog_every_hour
-                name: Another frog every hour
-              - entity: automation.cube_animations_for_desk_blinds_and_modes
-                name: Animations for desk, blinds and modes
-              - type: section
-                label: Printer
-              - sensor.office_printer
-              - sensor.office_hp_tango_black_cartridge
-              - sensor.office_printer_tri_color_cartridge
-
-          # Entities rows have no brightness slider, so the cube's light is a tile under the Office card
-          - type: tile
-            entity: light.cube_matrix_192_168_101_121
-            name: Cube Matrix
-            grid_options:
-              columns: 9
-              rows: 2
-            features_position: bottom
-            features:
-              - type: light-brightness
-          # 0% / 100% in one tap, next to the slider
-          - type: tile
-            entity: switch.cube_bright
-            name: Bright
-            vertical: true
-            hide_state: true
-            grid_options:
-              columns: 3
-              rows: 2
-            tap_action:
-              action: toggle
-            icon_tap_action:
-              action: toggle
-
-          - type: entities
-            title: Bedroom
-            show_header_toggle: false
-            icon: mdi:bed
-            entities:
-              - cover.bedroom_curtains
-              - type: buttons
-                entities:
-                  - entity: scene.bedroom_curtains_close
-                    name: Close
-                    icon: mdi:curtains-closed
-                  - entity: scene.bedroom_curtains_open
-                    name: Open
-                    icon: mdi:curtains
-              - entity: automation.curtains_close_at_sunset
-                name: Close at sunset
-
-          - type: entities
-            title: Master bathroom
-            show_header_toggle: false
-            icon: mdi:shower-head
-            entities:
-              - climate.master_bathroom_thermostat_master
-              - entity: switch.master_floor_warming
-                name: Floor warming
-              - entity: automation.floor_warming_master_schedule
-                name: Floor warming schedule
-              - entity: switch.master_bathroom_towel_heat_relay
-                name: Towel heat
-              - entity: automation.towel_heat_master_schedule
-                name: Towel heat schedule
-
-          - type: entities
-            title: Guest bathroom
-            show_header_toggle: false
-            icon: mdi:shower
-            entities:
-              - climate.guest_bathroom_thermostat_guest
-              - entity: switch.guest_floor_warming
-                name: Floor warming
-              - entity: automation.floor_warming_guest_schedule
-                name: Floor warming schedule
-              - climate.guest_bathroom_towel_heat_guest
-              - entity: switch.guest_towel_heat
-                name: Towel heat
-
-      - type: grid
-        cards:
-          - type: entities
-            title: Hall
-            show_header_toggle: false
-            icon: mdi:wardrobe-outline
-            entities:
-              - type: section
-                label: Router
-              - entity: binary_sensor.huawei_igd_wan_status
-                name: Internet
-              - entity: sensor.huawei_igd_external_ip
-                name: External IP
-              - entity: sensor.hall_router_donwload_speed
-                name: Download speed
-              - entity: sensor.hall_router_upload_speed
-                name: Upload speed
-              - type: section
-                label: Zigbee
-              - entity: switch.zigbee2mqtt_bridge_permit_join
-                name: Allow new devices to join
-              - entity: button.zigbee2mqtt_bridge_restart
-                name: Restart the bridge
-              - type: section
-                label: Downloads
-              - entity: sensor.qbittorrent_status
-                name: qBittorrent
-              - entity: sensor.qbittorrent_download_speed
-                name: Download speed
-              - entity: sensor.qbittorrent_upload_speed
-                name: Upload speed
-              - entity: sensor.qbittorrent_active_torrents
-                name: Active torrents
-              - entity: switch.qbittorrent_alternative_speed
-                name: Slow mode
-              - type: section
-                label: Health
-              - entity: sensor.backup_last_successful_automatic_backup
-                name: Last backup
-              - entity: sensor.failed_integrations
-                name: Failed HA integrations
-
-          - type: entities
-            title: Garage
-            show_header_toggle: false
-            icon: mdi:car
-            entities:
-              - entity: sensor.garage_audi_a5_sportback_outside_temperature
-                name: Outside temperature
-              - entity: sensor.garage_audi_a5_sportback_range
-                name: Range
-              - entity: sensor.garage_audi_a5_sportback_fuel_level
-                name: Fuel
-              - entity: binary_sensor.garage_audi_a5_sportback_doors_locked
-                name: Locked
-              - entity: binary_sensor.garage_audi_a5_sportback_doors_open
-                name: Doors
-              - entity: binary_sensor.garage_audi_a5_sportback_windows_open
-                name: Windows
-              - entity: binary_sensor.garage_audi_a5_sportback_trunk_open
-                name: Trunk
-              - entity: sensor.garage_audi_a5_sportback_next_service
-                name: Next service
-              - entity: sensor.garage_audi_a5_sportback_odometer
-                name: Odometer
-              - entity: button.garage_audi_a5_sportback_refresh_data
-                name: Refresh data
