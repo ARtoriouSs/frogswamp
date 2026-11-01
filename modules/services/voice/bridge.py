@@ -25,6 +25,9 @@ ERROR_SPEECH = {
     "en": "Claude is not available right now",
 }
 URL_RE = re.compile(r"https?://\S+")
+# the web search tool asks for a sources list at the end, it makes no sense in speech
+SOURCES_RE = re.compile(r"\s*\b(?:Sources|Источники)\s*:.*$", re.DOTALL | re.IGNORECASE)
+MD_LINK_RE = re.compile(r"\[([^\]]*)\]\([^)]*\)?")
 LIST_MARK_RE = re.compile(r"^\s*(?:[-•]|\d+\.)\s+", re.MULTILINE)
 MARKDOWN_RE = re.compile(r"[*_#`>]")
 SHARED_SESSION = "shared"
@@ -63,6 +66,8 @@ def build_prompt(text, language, earlier):
 
 
 def sanitize_speech(text, limit=600):
+    text = SOURCES_RE.sub("", text)
+    text = MD_LINK_RE.sub(r"\1", text)
     text = URL_RE.sub("", text)
     text = LIST_MARK_RE.sub("", text)
     text = MARKDOWN_RE.sub("", text)

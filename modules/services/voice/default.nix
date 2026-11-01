@@ -58,7 +58,8 @@ let
     builtins.toJSON {
       listen = "127.0.0.1:${toString cfg.port}";
       backend = "claude-code";
-      timeout = 20;
+      # web search plus reading a page takes 10-15 s; HA waits 30 s
+      timeout = 25;
       # one Claude session for the whole home, forgotten after 6 hours of silence
       shared_session = true;
       session_ttl = 6 * 3600;

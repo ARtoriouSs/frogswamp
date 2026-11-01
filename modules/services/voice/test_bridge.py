@@ -112,6 +112,12 @@ def test_speech_sanitized():
     assert s.endswith(".")
 
 
+def test_speech_drops_sources_and_links():
+    s = bridge.sanitize_speech("Две свёклы, см. [рецепт](https://a.b/c). Sources: [Борщ](https://x.y) [Поварёнок](")
+    assert s == "Две свёклы, см. рецепт."
+    assert bridge.sanitize_speech("Ок. Источники: [a](") == "Ок."
+
+
 def test_speech_short_text_kept():
     assert bridge.sanitize_speech("  Открыла левую штору.  ") == "Открыла левую штору."
 
