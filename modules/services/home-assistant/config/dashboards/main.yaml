@@ -879,7 +879,8 @@ views:
             heading: Air · GIOŚ Grochowska
             heading_style: subtitle
           # Colours follow the GIOŚ index, from very good (green) to very bad (brown)
-          - type: custom:mushroom-template-card
+          - &air_quality
+            type: custom:mushroom-template-card
             entity: sensor.air_quality_air_quality_index
             primary: Air quality
             secondary: "{{ 'Unavailable' if states(entity) in ['unavailable', 'unknown'] else states(entity) | replace('_', ' ') | capitalize }}"
@@ -2124,6 +2125,53 @@ views:
             forecast_type: daily
             grid_options:
               columns: full
+          - *sun
+          - <<: *sun
+            primary: Sunset
+            secondary: >-
+              {% set time = as_local(as_datetime(state_attr(entity, 'next_setting'))) %}
+              {{ time.strftime('%H:%M') }}{{ ' tomorrow' if time.date() != now().date() }}
+            icon: mdi:weather-sunset-down
+            color: deep-orange
+
+          - type: heading
+            heading: Temperature
+            heading_style: subtitle
+          - *temperature
+          - <<: *room_temperature
+            grid_options:
+              columns: 4
+              rows: 2
+          - <<: *room_temperature
+            entity: sensor.hall_temperature
+            primary: Hall
+            icon: mdi:wardrobe-outline
+            grid_options:
+              columns: 4
+              rows: 2
+          - <<: *room_temperature
+            entity: weather.forecast_home_assistant
+            primary: Outside
+            secondary: "{{ state_attr(entity, 'temperature') }} °C"
+            icon: mdi:weather-partly-cloudy
+            color: light-blue
+            grid_options:
+              columns: 4
+              rows: 2
+
+          - type: heading
+            heading: Air · GIOŚ Grochowska
+            heading_style: subtitle
+          - *air_quality
+          - *pollutant
+          - <<: *pollutant
+            entity: sensor.air_quality_pm10
+            primary: PM10
+            icon: mdi:blur-radial
+          - <<: *pollutant
+            entity: sensor.air_quality_nitrogen_dioxide
+            primary: NO₂
+            icon: mdi:car-side
 
           - type: heading
             heading: Guest bathroom
