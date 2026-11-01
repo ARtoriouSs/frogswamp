@@ -1,6 +1,6 @@
 # 🐸 frogswamp
 
-Home server as code. A GMKtec NucBox G3 (N100, 16 GB, 512 GB NVMe) runs NixOS 26.05 with Home Assistant, Zigbee2MQTT, Jellyfin, a media download stack (qBittorrent, Radarr, Sonarr, Prowlarr, Bazarr), a Samba media share, an Ace Stream engine with a "Football" page that plays matches on the TV, and a Homepage dashboard. It is reachable from anywhere via Tailscale.
+Home server as code. A GMKtec NucBox G3 (N100, 16 GB, 512 GB NVMe) runs NixOS 26.05 with Home Assistant, Zigbee2MQTT, Jellyfin, a media download stack (qBittorrent, Radarr, Sonarr, Prowlarr, Bazarr), a Samba media share, an Ace Stream engine with a "Football" page that plays matches on the TV, a Homepage dashboard, and a Russian/English voice assistant (local speech, Claude for the rest). It is reachable from anywhere via Tailscale.
 
 Everything about the server is declared in this repo. Its state (HA integrations, Zigbee pairings, Jellyfin users and watched status, Arr settings and indexers) is backed up every night to a USB SSD (Kingston A400) and to Backblaze B2. Media files are **not** backed up.
 
@@ -18,7 +18,7 @@ Everything about the server is declared in this repo. Its state (HA integrations
 
 The same URLs work away from home when the Tailscale app is on.
 
-More detail: [hosts](hosts/README.md) · [modules](modules/README.md) · [Home Assistant](modules/services/home-assistant/README.md) · [media](modules/services/media/README.md) · [football](modules/services/football/README.md) · [secrets](secrets/README.md) · [scripts](scripts/README.md)
+More detail: [hosts](hosts/README.md) · [modules](modules/README.md) · [Home Assistant](modules/services/home-assistant/README.md) · [media](modules/services/media/README.md) · [football](modules/services/football/README.md) · [voice](modules/services/voice/README.md) · [secrets](secrets/README.md) · [scripts](scripts/README.md)
 
 **Reinstalling the server?** Follow the checklist in [RESET.md](RESET.md).
 
