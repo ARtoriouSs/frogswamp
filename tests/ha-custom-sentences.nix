@@ -87,6 +87,17 @@ let
     assert say("23.54", lang="en") == "It's 23.5 degrees in the bedroom", say("23.54", lang="en")
     assert say("21.0", "hall", "en") == "It's 21 degrees in the hall", say("21.0", "hall", "en")
     assert say("unavailable", lang="en") == "I don't know, the bedroom sensor is unavailable right now"
+
+    # play_music refuses links; HA's `search` test is re.search
+    import re
+    with open(f"{config}/scripts/play_music.yaml") as f:
+        [check] = [s for s in yaml.safe_load(f)["play_music"]["sequence"] if s.get("condition") == "template"]
+    env = jinja2.Environment()
+    env.tests["search"] = lambda value, find: re.search(find, str(value)) is not None
+    allows = lambda q: env.from_string(check["value_template"]).render(query=q) == "True"
+    assert allows("Metallica") and allows("spotify://track/1")
+    for q in ("https://evil.example/a.mp3", "Play RTSP://cam", "ftp://x"):
+        assert not allows(q), q
     print("ok", len(cases), "phrases")
   '';
 in

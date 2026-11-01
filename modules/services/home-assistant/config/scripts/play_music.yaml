@@ -21,9 +21,10 @@ play_music:
         entity:
           domain: media_player
   sequence:
-    # a link would make Music Assistant fetch it from the server, so only names are played
+    # a link would make Music Assistant fetch it from the server, so only names are played.
+    # No \b in the pattern: Jinja turns it into a backspace inside a string
     - condition: template
-      value_template: "{{ query is not search('(?i)\\b(https?|ftps?|rtsps?|rtmps?|mms|wss?|sftp)://') }}"
+      value_template: "{{ query is not search('(?i)(https?|ftps?|rtsps?|rtmps?|mms|wss?|sftp)://') }}"
     - action: music_assistant.play_media
       target:
         entity_id: "{{ player }}"
