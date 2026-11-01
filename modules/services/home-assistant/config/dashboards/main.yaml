@@ -756,30 +756,41 @@ views:
           # Blue under 18 °C, green up to 24 °C, orange above
           - &temperature
             type: custom:mushroom-template-card
+            entity: sensor.home_temperature
+            primary: Home
+            secondary: "{{ 'Unavailable' if states(entity) in ['unavailable', 'unknown'] else states(entity) ~ ' °C · average of the rooms' }}"
+            icon: mdi:home-thermometer
+            color: >-
+              {% set value = states(entity) | float(none) %}
+              {{ 'disabled' if value is none else ('blue' if value < 18 else ('green' if value <= 24 else 'orange')) }}
+            grid_options:
+              columns: 12
+              rows: 1
+            tap_action:
+              action: more-info
+          - &room_temperature
+            <<: *temperature
             entity: sensor.bedroom_temperature
             primary: Bedroom
             secondary: "{{ 'Unavailable' if states(entity) in ['unavailable', 'unknown'] else states(entity) ~ ' °C' }}"
             icon: mdi:bed
-            color: >-
-              {% set value = states(entity) | float(none) %}
-              {{ 'disabled' if value is none else ('blue' if value < 18 else ('green' if value <= 24 else 'orange')) }}
             vertical: true
             grid_options:
               columns: 3
               rows: 2
             tap_action:
               action: more-info
-          - <<: *temperature
+          - <<: *room_temperature
             entity: sensor.hall_temperature
             primary: Hall
             icon: mdi:wardrobe-outline
-          - <<: *temperature
+          - <<: *room_temperature
             entity: weather.forecast_home_assistant
             primary: Outside
             secondary: "{{ state_attr(entity, 'temperature') }} °C"
             icon: mdi:weather-partly-cloudy
             color: light-blue
-          - <<: *temperature
+          - <<: *room_temperature
             entity: sensor.garage_audi_a5_sportback_outside_temperature
             primary: Car
             icon: mdi:car
@@ -787,6 +798,8 @@ views:
           - type: history-graph
             hours_to_show: 24
             entities:
+              - entity: sensor.home_temperature
+                name: Home
               - entity: sensor.bedroom_temperature
                 name: Bedroom
               - entity: sensor.hall_temperature
@@ -795,6 +808,43 @@ views:
                 name: Car
             grid_options:
               columns: full
+
+          - type: heading
+            heading: Weather
+            heading_style: subtitle
+          - type: weather-forecast
+            entity: weather.forecast_home_assistant
+            forecast_type: daily
+            grid_options:
+              columns: full
+          - type: weather-forecast
+            entity: weather.forecast_home_assistant
+            forecast_type: hourly
+            show_current: false
+            grid_options:
+              columns: full
+          # next_rising and next_setting jump to tomorrow once the sun has risen or set
+          - &sun
+            type: custom:mushroom-template-card
+            entity: sun.sun
+            primary: Sunrise
+            secondary: >-
+              {% set time = as_local(as_datetime(state_attr(entity, 'next_rising'))) %}
+              {{ time.strftime('%H:%M') }}{{ ' tomorrow' if time.date() != now().date() }}
+            icon: mdi:weather-sunset-up
+            color: amber
+            grid_options:
+              columns: 6
+              rows: 1
+            tap_action:
+              action: more-info
+          - <<: *sun
+            primary: Sunset
+            secondary: >-
+              {% set time = as_local(as_datetime(state_attr(entity, 'next_setting'))) %}
+              {{ time.strftime('%H:%M') }}{{ ' tomorrow' if time.date() != now().date() }}
+            icon: mdi:weather-sunset-down
+            color: deep-orange
 
           - type: heading
             heading: Fridge
