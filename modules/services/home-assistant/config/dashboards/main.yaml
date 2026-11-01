@@ -1,8 +1,12 @@
 title: Home
+# Views are shown by user ID (Settings → People → the user, or the auth list). Guest sees only the Guest view
 views:
   # Phone remote: the Quick access buttons, big, one column even on a wide screen
   - title: Remote
     path: remote
+    visible:
+      - user: 276c6c52cb474dd9bdf6dac5ca4fad31 # Aleksander
+      - user: 06ec04272df9426db1d4322dfc5bda92 # Natallia
     icon: mdi:remote
     type: sections
     max_columns: 1
@@ -107,6 +111,9 @@ views:
   # NeonPlan 3D model of the flat. It's drawn in NeonPlan's own editor and kept in its .storage, not in the repo
   - title: NeonPlan
     path: neonplan
+    visible:
+      - user: 276c6c52cb474dd9bdf6dac5ca4fad31 # Aleksander
+      - user: 06ec04272df9426db1d4322dfc5bda92 # Natallia
     icon: mdi:home-floor-3
     type: panel
     cards:
@@ -116,6 +123,9 @@ views:
   # The whole flat with Mushroom cards (HACS, www/community). Tap toggles, hold opens details
   - title: Home
     path: home
+    visible:
+      - user: 276c6c52cb474dd9bdf6dac5ca4fad31 # Aleksander
+      - user: 06ec04272df9426db1d4322dfc5bda92 # Natallia
     icon: mdi:home-heart
     type: sections
     max_columns: 4
@@ -760,6 +770,9 @@ views:
   # Room temperatures and heating per bathroom. Humidity and fans go here later
   - title: Climate
     path: climate
+    visible:
+      - user: 276c6c52cb474dd9bdf6dac5ca4fad31 # Aleksander
+      - user: 06ec04272df9426db1d4322dfc5bda92 # Natallia
     icon: mdi:thermometer
     type: sections
     max_columns: 3
@@ -1002,6 +1015,9 @@ views:
   # Lights and players. The Cube Matrix is the only smart light for now
   - title: Light & media
     path: light-media
+    visible:
+      - user: 276c6c52cb474dd9bdf6dac5ca4fad31 # Aleksander
+      - user: 06ec04272df9426db1d4322dfc5bda92 # Natallia
     icon: mdi:lightbulb-group
     type: sections
     max_columns: 2
@@ -1198,6 +1214,9 @@ views:
   # Mushroom cards. The times are set in packages/schedule.yaml: a change made here is reset on the next HA restart
   - title: Schedule
     path: schedule
+    visible:
+      - user: 276c6c52cb474dd9bdf6dac5ca4fad31 # Aleksander
+      - user: 06ec04272df9426db1d4322dfc5bda92 # Natallia
     icon: mdi:calendar-clock
     type: sections
     max_columns: 3
@@ -1328,6 +1347,9 @@ views:
   # Range, timelines (two columns wide) and the % per device (sensors in packages/uptime.yaml)
   - title: Uptime
     path: uptime
+    visible:
+      - user: 276c6c52cb474dd9bdf6dac5ca4fad31 # Aleksander
+      - user: 06ec04272df9426db1d4322dfc5bda92 # Natallia
     icon: mdi:lan-connect
     type: sections
     max_columns: 4
@@ -1952,6 +1974,9 @@ views:
   # for now only the fridge
   - title: Energy
     path: energy
+    visible:
+      - user: 276c6c52cb474dd9bdf6dac5ca4fad31 # Aleksander
+      - user: 06ec04272df9426db1d4322dfc5bda92 # Natallia
     icon: mdi:lightning-bolt
     type: sections
     max_columns: 2
@@ -1994,3 +2019,128 @@ views:
                 name: Fridge
             grid_options:
               columns: full
+
+  # Guests see only this view (custom-sidebar-config.yaml hides the rest of the sidebar for them).
+  # It hides things, it doesn't block them: a guest can still reach any entity through the API
+  - title: Guest
+    path: guest
+    icon: mdi:account-heart
+    type: sections
+    max_columns: 2
+    visible:
+      - user: 5333ed0a26804633b953d9786352922d # Guest
+      - user: 276c6c52cb474dd9bdf6dac5ca4fad31 # Aleksander
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: Living room
+            icon: mdi:sofa
+          # The guest mode pauses the living room schedules
+          - <<: *toggle
+            entity: input_boolean.guests_in_living_room
+            primary: Guest mode
+            icon: mdi:account-multiple
+            vertical: false
+            grid_options:
+              columns: 12
+              rows: 1
+          - <<: *remote
+            entity: scene.living_room_blinds_full_close
+            primary: Full close
+          - <<: *remote
+            entity: scene.living_room_blinds_open
+            primary: Open
+            icon: mdi:roller-shade
+            tap_action:
+              action: perform-action
+              perform_action: scene.turn_on
+              target:
+                entity_id: scene.living_room_blinds_open
+          - <<: *remote
+            entity: scene.living_room_blinds_full_close_open
+            primary: Reset
+            icon: mdi:roller-shade
+            tap_action:
+              action: perform-action
+              perform_action: scene.turn_on
+              target:
+                entity_id: scene.living_room_blinds_full_close_open
+          - <<: *remote
+            entity: scene.living_room_blinds_full_open_door
+            primary: Open balcony
+            icon: mdi:door-open
+            tap_action:
+              action: perform-action
+              perform_action: scene.turn_on
+              target:
+                entity_id: scene.living_room_blinds_full_open_door
+          - <<: *remote
+            entity: scene.blinds
+            primary: Blinds ↑
+            icon: mdi:blinds-open
+            color: cyan
+            tap_action:
+              action: perform-action
+              perform_action: scene.turn_on
+              target:
+                entity_id: scene.blinds
+          - <<: *remote
+            entity: scene.blinds_v
+            primary: Blinds ↓
+            icon: mdi:blinds
+            color: cyan
+            tap_action:
+              action: perform-action
+              perform_action: scene.turn_on
+              target:
+                entity_id: scene.blinds_v
+
+          - type: heading
+            heading: TV
+            heading_style: subtitle
+          - *player
+          - <<: *run
+            entity: script.tv_mode
+            primary: TV mode
+            icon: mdi:youtube-tv
+            color: red
+            grid_options:
+              columns: 12
+              rows: 1
+            tap_action:
+              action: perform-action
+              perform_action: script.turn_on
+              target:
+                entity_id: script.tv_mode
+
+      - type: grid
+        cards:
+          - type: heading
+            heading: Weather
+            icon: mdi:weather-partly-cloudy
+          - type: weather-forecast
+            entity: weather.forecast_home_assistant
+            forecast_type: daily
+            grid_options:
+              columns: full
+
+          - type: heading
+            heading: Guest bathroom
+            icon: mdi:shower
+          - <<: *toggle
+            entity: switch.guest_floor_warming
+            primary: Floor warming
+            icon: mdi:heating-coil
+            color: "{{ 'deep-orange' if is_state(entity, 'on') else 'disabled' }}"
+            grid_options:
+              columns: 6
+              rows: 2
+          - <<: *toggle
+            entity: switch.guest_towel_heat
+            primary: Towel heat
+            icon: mdi:radiator
+            color: "{{ 'deep-orange' if is_state(entity, 'on') else 'disabled' }}"
+            grid_options:
+              columns: 6
+              rows: 2

@@ -79,3 +79,59 @@ order:
   - item: /maintenance
     match: href
     hide: true
+
+# Guest sees only Main, and inside it only the Guest view (see dashboards/main.yaml).
+# Matched by the user's name, not the username
+exceptions:
+  - user: Guest
+    order:
+      - item: /main-yaml
+        match: href
+        order: 1
+      - item: /lovelace
+        match: href
+        exact: true
+        hide: true
+      - item: /home
+        match: href
+        exact: true
+        hide: true
+      - item: /light
+        match: href
+        hide: true
+      - item: /climate
+        match: href
+        hide: true
+      - item: /security
+        match: href
+        hide: true
+      - item: /maintenance
+        match: href
+        hide: true
+      - item: /map
+        match: href
+        hide: true
+      - item: /calendar
+        match: href
+        hide: true
+      - item: /energy
+        match: href
+        hide: true
+      - item: /logbook
+        match: href
+        hide: true
+      - item: /history
+        match: href
+        hide: true
+      - item: /hacs
+        match: href
+        hide: true
+      - item: /neonplan3d
+        match: href
+        hide: true
+      - item: /media-browser
+        match: href
+        hide: true
+      - item: /todo
+        match: href
+        hide: true
