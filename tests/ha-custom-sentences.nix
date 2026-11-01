@@ -28,6 +28,9 @@ let
         "выключи тёплый пол в мастер ванной": ("FrogFloorHeatingOff", {"bathroom": "master"}),
         "включи полотенцесушитель в мастер санузле": ("FrogTowelHeatOn", {"bathroom": "master"}),
         "выключи полотенцесушитель в гостевой ванной": ("FrogTowelHeatOff", {"bathroom": "guest"}),
+        "какая температура в спальне": ("FrogRoomTemperature", {"room": "bedroom"}),
+        "сколько сейчас градусов в коридоре": ("FrogRoomTemperature", {"room": "hall"}),
+        "какая сейчас температура в прихожей": ("FrogRoomTemperature", {"room": "hall"}),
     }
     for text, (intent, slots) in expected.items():
         result = recognize(text, intents)
@@ -36,8 +39,21 @@ let
         assert (result.intent.name, got) == (intent, slots), (text, result.intent.name, got)
 
     # single devices stay with HA's built-in phrases
-    for text in ("открой левые жалюзи", "закрой правые жалюзи", "включи тёплый пол"):
+    for text in ("открой левые жалюзи", "закрой правые жалюзи", "включи тёплый пол", "какая температура в гостиной"):
         assert recognize(text, intents) is None, f"should not match: {text}"
+
+    # the temperature answer, with HA's template functions faked
+    import jinja2
+    def say(value, room="bedroom"):
+        env = jinja2.Environment()
+        env.globals.update(states=lambda e: value, is_number=lambda v: v.replace(".", "", 1).isdigit())
+        return env.from_string(scripts["FrogRoomTemperature"]["speech"]["text"]).render(room=room).strip()
+    assert say("23.54") == "В спальне 23,5 градуса", say("23.54")
+    assert say("21.0", "hall") == "В прихожей 21 градус", say("21.0", "hall")
+    assert say("22.0") == "В спальне 22 градуса"
+    assert say("25") == "В спальне 25 градусов"
+    assert say("11.0") == "В спальне 11 градусов"
+    assert say("unavailable") == "Не знаю, датчик в спальне сейчас недоступен", say("unavailable")
     print("ok", len(expected), "phrases")
   '';
 in
@@ -47,6 +63,7 @@ pkgs.runCommand "test-ha-custom-sentences"
       (pkgs.python3.withPackages (ps: [
         ps.hassil
         ps.pyyaml
+        ps.jinja2
       ]))
     ];
   }

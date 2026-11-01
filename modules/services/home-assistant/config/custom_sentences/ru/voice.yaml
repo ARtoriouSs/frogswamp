@@ -39,6 +39,11 @@ intents:
     data:
       - sentences:
           - "выключи полотенцесушитель в {bathroom}"
+  FrogRoomTemperature:
+    data:
+      - sentences:
+          - "(какая|сколько) [сейчас] температур(а|ы) в {room}"
+          - "сколько [сейчас] градусов в {room}"
 lists:
   bathroom:
     values:
@@ -46,3 +51,9 @@ lists:
         out: guest
       - in: "(мастер санузле|мастер ванной|большой ванной)"
         out: master
+  room:
+    values:
+      - in: "спальне"
+        out: bedroom
+      - in: "(прихожей|коридоре)"
+        out: hall

@@ -64,3 +64,18 @@ intent_script:
           entity_id: "{{ {'guest': 'climate.guest_bathroom_towel_heat_guest', 'master': 'switch.master_bathroom_towel_heat_relay'}[bathroom] }}"
     speech:
       text: "Выключаю полотенцесушитель"
+  FrogRoomTemperature:
+    speech:
+      # 23.5 is said as "23,5 градуса"; whole numbers get the right form: 21 градус, 22 градуса, 25 градусов
+      text: >-
+        {% set t = states({'bedroom': 'sensor.bedroom_temperature', 'hall': 'sensor.hall_temperature'}[room]) %}
+        {% set where = {'bedroom': 'спальне', 'hall': 'прихожей'}[room] %}
+        {% if not is_number(t) %}Не знаю, датчик в {{ where }} сейчас недоступен
+        {%- else %}
+        {%- set n = t | float | round(1) %}
+        {%- if n == n | int %}
+        {%- set i = n | int %}
+        {%- set form = 'градусов' if i % 100 in [11, 12, 13, 14] else {1: 'градус', 2: 'градуса', 3: 'градуса', 4: 'градуса'}.get(i % 10, 'градусов') %}
+        В {{ where }} {{ i }} {{ form }}
+        {%- else %}В {{ where }} {{ n | string | replace('.', ',') }} градуса{% endif %}
+        {%- endif %}
