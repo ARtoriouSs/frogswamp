@@ -1,0 +1,137 @@
+# Living room blinds and bedroom curtains through Tuya Local, in place of the Tuya cloud scenes.
+# The blinds' position: 100 = drawn across the window, 0 = gathered at the side (HA calls 100 "open").
+# An open/close command without a position only turns the slats.
+# The button scripts below start blinds_run and return at once; it runs in restart mode, so a new
+# command stops the one still running (e.g. Full close during Close + open's 47 s wait)
+blinds_run:
+  alias: "Blinds: run a move"
+  icon: mdi:blinds
+  mode: restart
+  fields:
+    move:
+      description: full_close, open, full_close_open, open_door, slats_open or slats_close
+      required: true
+      example: full_close
+  variables:
+    blinds:
+      - cover.blinds_left_door_local
+      - cover.blinds_middle_local
+      - cover.blinds_right_local
+  sequence:
+    - choose:
+        - conditions: "{{ move in ['full_close', 'open', 'full_close_open'] }}"
+          sequence:
+            - action: cover.set_cover_position
+              target:
+                entity_id: "{{ blinds }}"
+              data:
+                position: 100
+            - if: "{{ move == 'full_close_open' }}"
+              then:
+                # the time the blinds need to draw across from fully gathered
+                - delay: "00:00:47"
+            # Open: five slat steps, 2 s apart, the same as the Tuya scene
+            - if: "{{ move in ['open', 'full_close_open'] }}"
+              then:
+                - repeat:
+                    count: 5
+                    sequence:
+                      - delay: "00:00:02"
+                      - action: cover.open_cover
+                        target:
+                          entity_id: "{{ blinds }}"
+        - conditions: "{{ move == 'open_door' }}"
+          sequence:
+            - action: cover.set_cover_position
+              target:
+                entity_id: cover.blinds_left_door_local
+              data:
+                position: 0
+        - conditions: "{{ move in ['slats_open', 'slats_close'] }}"
+          sequence:
+            - action: "cover.{{ 'open' if move == 'slats_open' else 'close' }}_cover"
+              target:
+                entity_id: "{{ blinds }}"
+
+blinds_full_close:
+  alias: "Blinds: full close"
+  icon: mdi:roller-shade-closed
+  sequence:
+    - action: script.turn_on
+      target:
+        entity_id: script.blinds_run
+      data:
+        variables:
+          move: full_close
+
+blinds_open:
+  alias: "Blinds: open"
+  icon: mdi:roller-shade
+  sequence:
+    - action: script.turn_on
+      target:
+        entity_id: script.blinds_run
+      data:
+        variables:
+          move: open
+
+blinds_full_close_open:
+  alias: "Blinds: full close + open"
+  icon: mdi:roller-shade
+  sequence:
+    - action: script.turn_on
+      target:
+        entity_id: script.blinds_run
+      data:
+        variables:
+          move: full_close_open
+
+blinds_open_door:
+  alias: "Blinds: open door"
+  icon: mdi:door-open
+  sequence:
+    - action: script.turn_on
+      target:
+        entity_id: script.blinds_run
+      data:
+        variables:
+          move: open_door
+
+blinds_slats_open:
+  alias: "Blinds: slats ^"
+  icon: mdi:blinds-open
+  sequence:
+    - action: script.turn_on
+      target:
+        entity_id: script.blinds_run
+      data:
+        variables:
+          move: slats_open
+
+blinds_slats_close:
+  alias: "Blinds: slats v"
+  icon: mdi:blinds
+  sequence:
+    - action: script.turn_on
+      target:
+        entity_id: script.blinds_run
+      data:
+        variables:
+          move: slats_close
+
+# The curtains through the cover that turns Tuya Local's upside down one the right way round
+curtains_open:
+  alias: "Curtains: open"
+  icon: mdi:curtains
+  sequence:
+    - action: cover.open_cover
+      target:
+        entity_id: cover.bedroom_curtains_local
+
+curtains_close:
+  alias: "Curtains: close"
+  icon: mdi:curtains-closed
+  sequence:
+    - action: cover.close_cover
+      target:
+        entity_id: cover.bedroom_curtains_local

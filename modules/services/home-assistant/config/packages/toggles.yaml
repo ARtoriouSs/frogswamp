@@ -1,51 +1,51 @@
-# Pairs of scenes or scripts as one on/off switch, for the Overview page and NeonPlan pins
+# Pairs of scripts as one on/off switch, for the Overview page and NeonPlan pins
 template:
   - switch:
       - name: Bedroom curtains closed
         unique_id: repo_neonplan_bedroom_curtains_toggle
         default_entity_id: switch.bedroom_curtains_toggle
         icon: mdi:curtains-closed
-        state: "{{ is_state('cover.bedroom_curtains', 'closed') }}"
+        state: "{{ is_state('cover.bedroom_curtains_local', 'closed') }}"
         turn_on:
-          - action: scene.turn_on
-            target:
-              entity_id: scene.bedroom_curtains_close
+          - action: script.curtains_close
         turn_off:
-          - action: scene.turn_on
-            target:
-              entity_id: scene.bedroom_curtains_open
+          - action: script.curtains_open
 
-      # Through the Tuya floor warming scenes, like the schedule. The thermostat stays in its own mode
-      # either way, so the last scene run from HA tells the state
+      # Through script.floor_warming_set, like the schedule: on = manual at 45 °C, off = manual at 5 °C.
+      # On while the thermostat heats in manual mode to more than 5 °C
       - name: Guest floor warming
         unique_id: repo_neonplan_guest_floor_warming
         icon: mdi:heating-coil
         state: >-
-          {{ as_timestamp(states('scene.guest_bathroom_floor_warming_guest_on'), 0)
-             > as_timestamp(states('scene.guest_bathroom_floor_warming_guest_off'), 0) }}
+          {{ is_state('climate.thermostat_guest_local', 'heat')
+             and state_attr('climate.thermostat_guest_local', 'temperature') | float(0) > 5 }}
         turn_on:
-          - action: scene.turn_on
-            target:
-              entity_id: scene.guest_bathroom_floor_warming_guest_on
+          - action: script.floor_warming_set
+            data:
+              bathroom: guest
+              state: "on"
         turn_off:
-          - action: scene.turn_on
-            target:
-              entity_id: scene.guest_bathroom_floor_warming_guest_off
+          - action: script.floor_warming_set
+            data:
+              bathroom: guest
+              state: "off"
 
       - name: Master floor warming
         unique_id: repo_neonplan_master_floor_warming
         icon: mdi:heating-coil
         state: >-
-          {{ as_timestamp(states('scene.master_bathroom_floor_warming_master_on'), 0)
-             > as_timestamp(states('scene.master_bathroom_floor_warming_master_off'), 0) }}
+          {{ is_state('climate.thermostat_master_local', 'heat')
+             and state_attr('climate.thermostat_master_local', 'temperature') | float(0) > 5 }}
         turn_on:
-          - action: scene.turn_on
-            target:
-              entity_id: scene.master_bathroom_floor_warming_master_on
+          - action: script.floor_warming_set
+            data:
+              bathroom: master
+              state: "on"
         turn_off:
-          - action: scene.turn_on
-            target:
-              entity_id: scene.master_bathroom_floor_warming_master_off
+          - action: script.floor_warming_set
+            data:
+              bathroom: master
+              state: "off"
 
       # The heater itself, on/off. A climate pin in NeonPlan opens its settings, a switch toggles
       - name: Guest towel heat

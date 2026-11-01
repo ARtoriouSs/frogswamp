@@ -8,15 +8,26 @@ template:
         device_class: temperature
         state_class: measurement
         unit_of_measurement: "°C"
-        state: "{{ state_attr('climate.master_bathroom_thermostat_master', 'current_temperature') }}"
-        availability: "{{ state_attr('climate.master_bathroom_thermostat_master', 'current_temperature') is number }}"
+        state: "{{ state_attr('climate.thermostat_master_local', 'current_temperature') }}"
+        availability: "{{ state_attr('climate.thermostat_master_local', 'current_temperature') is number }}"
       - name: Hall temperature
         unique_id: repo_hall_temperature
         device_class: temperature
         state_class: measurement
         unit_of_measurement: "°C"
-        state: "{{ state_attr('climate.guest_bathroom_thermostat_guest', 'current_temperature') }}"
-        availability: "{{ state_attr('climate.guest_bathroom_thermostat_guest', 'current_temperature') is number }}"
+        state: "{{ state_attr('climate.thermostat_guest_local', 'current_temperature') }}"
+        availability: "{{ state_attr('climate.thermostat_guest_local', 'current_temperature') is number }}"
+
+      # The towel heater's sensor sits by its electronics and reads ~15 °C too warm. Its own correction
+      # is set to -5 (the most it allows, in the Tuya app or HA), the other -10 is here. Not in the Home
+      # average: it's a bathroom
+      - name: Guest bathroom temperature
+        unique_id: repo_guest_bathroom_temperature
+        device_class: temperature
+        state_class: measurement
+        unit_of_measurement: "°C"
+        state: "{{ (state_attr('climate.guest_bathroom_towel_heat_guest', 'current_temperature') - 10) | round(1) }}"
+        availability: "{{ state_attr('climate.guest_bathroom_towel_heat_guest', 'current_temperature') is number }}"
 
       # Average of the rooms above, a room that is offline is left out. Add new room sensors to the list
       - name: Home temperature

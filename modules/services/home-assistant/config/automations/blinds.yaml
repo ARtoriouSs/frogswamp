@@ -1,4 +1,4 @@
-# Curtains and blinds on a schedule. The scenes are Tuya "tap-to-run" scenes, run in the Tuya cloud.
+# Curtains and blinds on a schedule, through the scripts in scripts/blinds.yaml (Tuya Local).
 # Vacation and Tuya rule mode stop all of them; Guests in the living room stops the morning opening
 - id: repo_curtains_close_sunset
   alias: "Curtains: close at sunset"
@@ -12,9 +12,7 @@
         - input_boolean.tuya_mode
       state: "off"
   actions:
-    - action: scene.turn_on
-      target:
-        entity_id: scene.bedroom_curtains_close
+    - action: script.curtains_close
 
 - id: repo_blinds_close_evening
   alias: "Blinds: full close 2 h after sunset"
@@ -29,9 +27,7 @@
         - input_boolean.tuya_mode
       state: "off"
   actions:
-    - action: scene.turn_on
-      target:
-        entity_id: scene.living_room_blinds_full_close
+    - action: script.blinds_full_close
 
 # Again at night, in case they were opened in the evening
 - id: repo_blinds_close_night
@@ -46,9 +42,7 @@
         - input_boolean.tuya_mode
       state: "off"
   actions:
-    - action: scene.turn_on
-      target:
-        entity_id: scene.living_room_blinds_full_close
+    - action: script.blinds_full_close
 
 - id: repo_blinds_open_morning
   alias: "Blinds: open 2 h after sunrise"
@@ -64,6 +58,4 @@
         - input_boolean.tuya_mode
       state: "off"
   actions:
-    - action: scene.turn_on
-      target:
-        entity_id: scene.living_room_blinds_open
+    - action: script.blinds_open

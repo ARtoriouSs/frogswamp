@@ -19,7 +19,7 @@ views:
           # Remote is the first view, so it defines its own bases (anchors work only after their definition)
           - &remote
             type: custom:mushroom-template-card
-            entity: scene.living_room_blinds_full_close
+            entity: script.blinds_full_close
             primary: Full close
             icon: mdi:roller-shade-closed
             color: teal
@@ -29,56 +29,56 @@ views:
               rows: 2
             tap_action:
               action: perform-action
-              perform_action: scene.turn_on
+              perform_action: script.turn_on
               target:
-                entity_id: scene.living_room_blinds_full_close
+                entity_id: script.blinds_full_close
           - <<: *remote
-            entity: scene.living_room_blinds_open
+            entity: script.blinds_open
             primary: Open
             icon: mdi:roller-shade
             tap_action:
               action: perform-action
-              perform_action: scene.turn_on
+              perform_action: script.turn_on
               target:
-                entity_id: scene.living_room_blinds_open
+                entity_id: script.blinds_open
           - <<: *remote
-            entity: scene.living_room_blinds_full_close_open
+            entity: script.blinds_full_close_open
             primary: Reset
             icon: mdi:roller-shade
             tap_action:
               action: perform-action
-              perform_action: scene.turn_on
+              perform_action: script.turn_on
               target:
-                entity_id: scene.living_room_blinds_full_close_open
+                entity_id: script.blinds_full_close_open
           - <<: *remote
-            entity: scene.living_room_blinds_full_open_door
+            entity: script.blinds_open_door
             primary: Open balcony
             icon: mdi:door-open
             tap_action:
               action: perform-action
-              perform_action: scene.turn_on
+              perform_action: script.turn_on
               target:
-                entity_id: scene.living_room_blinds_full_open_door
+                entity_id: script.blinds_open_door
           - <<: *remote
-            entity: scene.blinds
+            entity: script.blinds_slats_open
             primary: Blinds ↑
             icon: mdi:blinds-open
             color: cyan
             tap_action:
               action: perform-action
-              perform_action: scene.turn_on
+              perform_action: script.turn_on
               target:
-                entity_id: scene.blinds
+                entity_id: script.blinds_slats_open
           - <<: *remote
-            entity: scene.blinds_v
+            entity: script.blinds_slats_close
             primary: Blinds ↓
             icon: mdi:blinds
             color: cyan
             tap_action:
               action: perform-action
-              perform_action: scene.turn_on
+              perform_action: script.turn_on
               target:
-                entity_id: scene.blinds_v
+                entity_id: script.blinds_slats_close
 
           - type: heading
             heading: Master Bedroom
@@ -450,26 +450,28 @@ views:
             heading_style: subtitle
           - &cover
             type: custom:mushroom-template-card
-            entity: cover.living_room_blinds_left_door
+            entity: cover.blinds_left_door_local
             primary: Left (door)
+            # Tuya Local only knows open and closed at the end positions, in between it is unknown:
+            # shown as half-open and counted as open
             secondary: >-
-              {{ states(entity) | capitalize }}{{ ' · ' ~ state_attr(entity, 'current_position') ~ ' %' if state_attr(entity, 'current_position') is not none }}
+              {{ 'Half-open' if is_state(entity, 'unknown') else states(entity) | capitalize }}{{ ' · ' ~ state_attr(entity, 'current_position') ~ ' %' if state_attr(entity, 'current_position') is not none }}
             icon: mdi:blinds
-            color: "{{ 'amber' if is_state(entity, 'open') else 'disabled' }}"
+            color: "{{ 'amber' if states(entity) in ['open', 'unknown'] else 'disabled' }}"
             features_position: inline
             features:
               - type: cover-open-close
             tap_action:
               action: more-info
           - <<: *cover
-            entity: cover.living_room_blinds_middle
+            entity: cover.blinds_middle_local
             primary: Middle
           - <<: *cover
-            entity: cover.living_room_blinds_right
+            entity: cover.blinds_right_local
             primary: Right
           - &scene
             type: custom:mushroom-template-card
-            entity: scene.living_room_blinds_full_close
+            entity: script.blinds_full_close
             primary: Full close
             icon: mdi:roller-shade-closed
             color: teal
@@ -478,54 +480,54 @@ views:
               rows: 1
             tap_action:
               action: perform-action
-              perform_action: scene.turn_on
+              perform_action: script.turn_on
               target:
-                entity_id: scene.living_room_blinds_full_close
+                entity_id: script.blinds_full_close
           - <<: *scene
-            entity: scene.living_room_blinds_open
+            entity: script.blinds_open
             primary: Open
             icon: mdi:roller-shade
             tap_action:
               action: perform-action
-              perform_action: scene.turn_on
+              perform_action: script.turn_on
               target:
-                entity_id: scene.living_room_blinds_open
+                entity_id: script.blinds_open
           - <<: *scene
-            entity: scene.living_room_blinds_full_close_open
+            entity: script.blinds_full_close_open
             primary: Full close + open
             icon: mdi:roller-shade
             tap_action:
               action: perform-action
-              perform_action: scene.turn_on
+              perform_action: script.turn_on
               target:
-                entity_id: scene.living_room_blinds_full_close_open
+                entity_id: script.blinds_full_close_open
           - <<: *scene
-            entity: scene.living_room_blinds_full_open_door
+            entity: script.blinds_open_door
             primary: Open door
             icon: mdi:door-open
             tap_action:
               action: perform-action
-              perform_action: scene.turn_on
+              perform_action: script.turn_on
               target:
-                entity_id: scene.living_room_blinds_full_open_door
+                entity_id: script.blinds_open_door
           - <<: *scene
-            entity: scene.blinds
+            entity: script.blinds_slats_open
             primary: Blinds ^
             icon: mdi:blinds-open
             tap_action:
               action: perform-action
-              perform_action: scene.turn_on
+              perform_action: script.turn_on
               target:
-                entity_id: scene.blinds
+                entity_id: script.blinds_slats_open
           - <<: *scene
-            entity: scene.blinds_v
+            entity: script.blinds_slats_close
             primary: Blinds v
             icon: mdi:blinds
             tap_action:
               action: perform-action
-              perform_action: scene.turn_on
+              perform_action: script.turn_on
               target:
-                entity_id: scene.blinds_v
+                entity_id: script.blinds_slats_close
           - <<: *toggle
             entity: automation.blinds_full_close_2_h_after_sunset
             primary: Close
@@ -549,7 +551,7 @@ views:
             heading: Bedroom
             icon: mdi:bed
           - <<: *cover
-            entity: cover.bedroom_curtains
+            entity: cover.bedroom_curtains_local
             primary: Curtains
             icon: mdi:curtains
           - <<: *toggle
@@ -689,7 +691,7 @@ views:
             icon: mdi:shower-head
           - &thermostat
             type: custom:mushroom-template-card
-            entity: climate.master_bathroom_thermostat_master
+            entity: climate.thermostat_master_local
             primary: Thermostat
             secondary: >-
               {{ 'Unavailable' if states(entity) in ['unavailable', 'unknown'] else
@@ -741,8 +743,22 @@ views:
           - type: heading
             heading: Guest bathroom
             icon: mdi:shower
+          # From the towel heater's sensor, see packages/room_temperature.yaml
+          - type: custom:mushroom-template-card
+            entity: sensor.guest_bathroom_temperature
+            primary: Temperature
+            secondary: "{{ 'Unavailable' if states(entity) in ['unavailable', 'unknown'] else states(entity) ~ ' °C' }}"
+            icon: mdi:thermometer
+            color: >-
+              {% set value = states(entity) | float(none) %}
+              {{ 'disabled' if value is none else ('blue' if value < 18 else ('green' if value <= 24 else 'orange')) }}
+            grid_options:
+              columns: 12
+              rows: 1
+            tap_action:
+              action: more-info
           - <<: *thermostat
-            entity: climate.guest_bathroom_thermostat_guest
+            entity: climate.thermostat_guest_local
           - <<: *toggle
             entity: switch.guest_floor_warming
             primary: Floor warming
@@ -814,6 +830,10 @@ views:
             primary: Hall
             icon: mdi:wardrobe-outline
           - <<: *room_temperature
+            entity: sensor.guest_bathroom_temperature
+            primary: Guest bath
+            icon: mdi:shower
+          - <<: *room_temperature
             entity: weather.forecast_home_assistant
             primary: Outside
             secondary: "{{ state_attr(entity, 'temperature') }} °C"
@@ -833,6 +853,8 @@ views:
                 name: Bedroom
               - entity: sensor.hall_temperature
                 name: Hall
+              - entity: sensor.guest_bathroom_temperature
+                name: Guest bath
               - entity: sensor.garage_audi_a5_sportback_outside_temperature
                 name: Car
             grid_options:
@@ -940,7 +962,7 @@ views:
           - type: history-graph
             hours_to_show: 24
             entities:
-              - entity: climate.master_bathroom_thermostat_master
+              - entity: climate.thermostat_master_local
                 name: Thermostat
             grid_options:
               columns: full
@@ -981,11 +1003,11 @@ views:
             heading: Guest bathroom
             icon: mdi:shower
           - <<: *thermostat
-            entity: climate.guest_bathroom_thermostat_guest
+            entity: climate.thermostat_guest_local
           - type: history-graph
             hours_to_show: 24
             entities:
-              - entity: climate.guest_bathroom_thermostat_guest
+              - entity: climate.thermostat_guest_local
                 name: Thermostat
             grid_options:
               columns: full
@@ -2047,55 +2069,55 @@ views:
               columns: 12
               rows: 1
           - <<: *remote
-            entity: scene.living_room_blinds_full_close
+            entity: script.blinds_full_close
             primary: Full close
           - <<: *remote
-            entity: scene.living_room_blinds_open
+            entity: script.blinds_open
             primary: Open
             icon: mdi:roller-shade
             tap_action:
               action: perform-action
-              perform_action: scene.turn_on
+              perform_action: script.turn_on
               target:
-                entity_id: scene.living_room_blinds_open
+                entity_id: script.blinds_open
           - <<: *remote
-            entity: scene.living_room_blinds_full_close_open
+            entity: script.blinds_full_close_open
             primary: Reset
             icon: mdi:roller-shade
             tap_action:
               action: perform-action
-              perform_action: scene.turn_on
+              perform_action: script.turn_on
               target:
-                entity_id: scene.living_room_blinds_full_close_open
+                entity_id: script.blinds_full_close_open
           - <<: *remote
-            entity: scene.living_room_blinds_full_open_door
+            entity: script.blinds_open_door
             primary: Open balcony
             icon: mdi:door-open
             tap_action:
               action: perform-action
-              perform_action: scene.turn_on
+              perform_action: script.turn_on
               target:
-                entity_id: scene.living_room_blinds_full_open_door
+                entity_id: script.blinds_open_door
           - <<: *remote
-            entity: scene.blinds
+            entity: script.blinds_slats_open
             primary: Blinds ↑
             icon: mdi:blinds-open
             color: cyan
             tap_action:
               action: perform-action
-              perform_action: scene.turn_on
+              perform_action: script.turn_on
               target:
-                entity_id: scene.blinds
+                entity_id: script.blinds_slats_open
           - <<: *remote
-            entity: scene.blinds_v
+            entity: script.blinds_slats_close
             primary: Blinds ↓
             icon: mdi:blinds
             color: cyan
             tap_action:
               action: perform-action
-              perform_action: scene.turn_on
+              perform_action: script.turn_on
               target:
-                entity_id: scene.blinds_v
+                entity_id: script.blinds_slats_close
 
           - type: heading
             heading: TV
@@ -2158,26 +2180,21 @@ views:
             heading: Temperature
             heading_style: subtitle
           - *temperature
-          - <<: *room_temperature
-            grid_options:
-              columns: 4
-              rows: 2
+          - *room_temperature
           - <<: *room_temperature
             entity: sensor.hall_temperature
             primary: Hall
             icon: mdi:wardrobe-outline
-            grid_options:
-              columns: 4
-              rows: 2
+          - <<: *room_temperature
+            entity: sensor.guest_bathroom_temperature
+            primary: Guest bath
+            icon: mdi:shower
           - <<: *room_temperature
             entity: weather.forecast_home_assistant
             primary: Outside
             secondary: "{{ state_attr(entity, 'temperature') }} °C"
             icon: mdi:weather-partly-cloudy
             color: light-blue
-            grid_options:
-              columns: 4
-              rows: 2
 
           - type: heading
             heading: Air · GIOŚ Grochowska

@@ -11,7 +11,7 @@ input_boolean:
     icon: mdi:lightbulb-off
     initial: false
 
-# Scenes as switches, so they can be placed as pins on the NeonPlan plan (scenes can't be placed there).
+# Scripts as switches, so they can be placed as pins on the NeonPlan plan (scripts can't be placed there).
 # A tap on a pin toggles its switch. The ones the Overview page uses too are in toggles.yaml
 template:
   - switch:
@@ -23,57 +23,47 @@ template:
         turn_on: []
         turn_off: []
 
-      # The blinds don't report their slats, so "closed" means Full close ran after every other blinds scene
+      # The blinds don't report their slats, so "closed" means Full close ran after every other blinds script
       - name: Living room blinds closed
         unique_id: repo_neonplan_living_room_blinds_toggle
         default_entity_id: switch.living_room_blinds_toggle
         icon: mdi:blinds
         state: >-
-          {% set closed = as_timestamp(states('scene.living_room_blinds_full_close'), 0) %}
+          {% set closed = as_timestamp(state_attr('script.blinds_full_close', 'last_triggered'), 0) %}
           {{ closed > 0 and closed > [
-               as_timestamp(states('scene.living_room_blinds_open'), 0),
-               as_timestamp(states('scene.living_room_blinds_full_close_open'), 0),
-               as_timestamp(states('scene.living_room_blinds_full_open_door'), 0)
+               as_timestamp(state_attr('script.blinds_open', 'last_triggered'), 0),
+               as_timestamp(state_attr('script.blinds_full_close_open', 'last_triggered'), 0),
+               as_timestamp(state_attr('script.blinds_open_door', 'last_triggered'), 0)
              ] | max }}
         turn_on:
-          - action: scene.turn_on
-            target:
-              entity_id: scene.living_room_blinds_full_close
+          - action: script.blinds_full_close
         turn_off:
-          - action: scene.turn_on
-            target:
-              entity_id: scene.living_room_blinds_open
+          - action: script.blinds_open
 
-      # On while Open door is the last blinds scene. Reset closes the door again: full close, then the slats open
+      # On while Open door is the last blinds script. Reset closes the door again: full close, then the slats open
       - name: Living room blinds open door
         unique_id: repo_neonplan_living_room_blinds_open_door_toggle
         default_entity_id: switch.living_room_blinds_open_door_toggle
         icon: mdi:door-open
         state: >-
-          {% set door = as_timestamp(states('scene.living_room_blinds_full_open_door'), 0) %}
+          {% set door = as_timestamp(state_attr('script.blinds_open_door', 'last_triggered'), 0) %}
           {{ door > 0 and door > [
-               as_timestamp(states('scene.living_room_blinds_open'), 0),
-               as_timestamp(states('scene.living_room_blinds_full_close'), 0),
-               as_timestamp(states('scene.living_room_blinds_full_close_open'), 0)
+               as_timestamp(state_attr('script.blinds_open', 'last_triggered'), 0),
+               as_timestamp(state_attr('script.blinds_full_close', 'last_triggered'), 0),
+               as_timestamp(state_attr('script.blinds_full_close_open', 'last_triggered'), 0)
              ] | max }}
         turn_on:
-          - action: scene.turn_on
-            target:
-              entity_id: scene.living_room_blinds_full_open_door
+          - action: script.blinds_open_door
         turn_off:
-          - action: scene.turn_on
-            target:
-              entity_id: scene.living_room_blinds_full_close_open
+          - action: script.blinds_full_close_open
 
-      # Push button: always off, so every tap runs the scene
+      # Push button: always off, so every tap runs the script
       - name: Living room blinds reset
         unique_id: repo_neonplan_living_room_blinds_reset
         icon: mdi:restore
         state: "{{ false }}"
         turn_on:
-          - action: scene.turn_on
-            target:
-              entity_id: scene.living_room_blinds_full_close_open
+          - action: script.blinds_full_close_open
         turn_off: []
 
       # Push buttons: always off, so every tap moves the desk

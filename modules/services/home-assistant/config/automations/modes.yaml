@@ -35,8 +35,11 @@
     - action: climate.turn_off
       target:
         entity_id: climate.guest_bathroom_towel_heat_guest
-    - action: scene.turn_on
-      target:
-        entity_id:
-          - scene.guest_bathroom_floor_warming_guest_off
-          - scene.master_bathroom_floor_warming_master_off
+    - action: script.floor_warming_set
+      data:
+        bathroom: guest
+        state: "off"
+    - action: script.floor_warming_set
+      data:
+        bathroom: master
+        state: "off"
