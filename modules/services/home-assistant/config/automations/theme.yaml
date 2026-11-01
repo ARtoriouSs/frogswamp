@@ -1,0 +1,14 @@
+# Frogswamp is the default theme for both modes. A user who picks another theme in the profile keeps it
+- id: repo_theme_default
+  alias: "Theme: Frogswamp by default"
+  triggers:
+    - trigger: homeassistant
+      event: start
+  actions:
+    - action: frontend.set_theme
+      data:
+        name: Frogswamp
+    - action: frontend.set_theme
+      data:
+        name: Frogswamp
+        mode: dark

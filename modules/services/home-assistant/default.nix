@@ -24,6 +24,7 @@ let
     "scenes"
     "dashboards"
     "custom_sentences"
+    "themes"
   ];
 in
 {

@@ -1,0 +1,85 @@
+# The one theme for all of HA (dashboards, tabs, sidebar, dialogs). Made the default by
+# automations/theme.yaml, so it applies to every user who keeps "Backend-selected" in the profile.
+# Dark: deep swamp with a frog green accent and a soft glow on cards. Light: the same, calmer
+Frogswamp:
+  # Shared by both modes
+  ha-card-border-radius: 16px
+  ha-card-border-width: 1px
+  ha-dialog-border-radius: 20px
+  mush-card-primary-font-weight: "600"
+  mush-chip-border-radius: 12px
+  mush-icon-border-radius: 12px
+
+  modes:
+    dark:
+      primary-color: "#3ddc84"
+      rgb-primary-color: "61, 220, 132"
+      accent-color: "#2de2e6"
+      rgb-accent-color: "45, 226, 230"
+
+      primary-background-color: "#0b1110"
+      secondary-background-color: "#111a18"
+      card-background-color: "#131c1a"
+      ha-card-background: "#131c1a"
+      ha-card-border-color: "rgba(61, 220, 132, 0.14)"
+      # A thin outline, a dark drop shadow and a faint green glow
+      ha-card-box-shadow: "0 6px 24px rgba(0, 0, 0, 0.45), 0 0 18px rgba(61, 220, 132, 0.06)"
+
+      primary-text-color: "#e6f2ee"
+      secondary-text-color: "#8fa8a0"
+      disabled-text-color: "#52645e"
+      divider-color: "rgba(61, 220, 132, 0.12)"
+
+      # Tab bar of the dashboards
+      app-header-background-color: "#0b1110"
+      app-header-text-color: "#e6f2ee"
+      app-header-selection-bar-color: "#3ddc84"
+      app-header-edit-background-color: "#16302a"
+
+      sidebar-background-color: "#0d1513"
+      sidebar-text-color: "#b7cbc4"
+      sidebar-icon-color: "#8fa8a0"
+      sidebar-selected-text-color: "#3ddc84"
+      sidebar-selected-icon-color: "#3ddc84"
+
+      state-icon-color: "#8fa8a0"
+      state-icon-active-color: "#3ddc84"
+      switch-checked-color: "#3ddc84"
+      switch-checked-button-color: "#3ddc84"
+      switch-checked-track-color: "#1f6e44"
+      input-fill-color: "#16211f"
+      code-editor-background-color: "#0f1715"
+
+    light:
+      primary-color: "#16a34a"
+      rgb-primary-color: "22, 163, 74"
+      accent-color: "#0891b2"
+      rgb-accent-color: "8, 145, 178"
+
+      primary-background-color: "#f3f7f5"
+      secondary-background-color: "#e8efec"
+      card-background-color: "#ffffff"
+      ha-card-background: "#ffffff"
+      ha-card-border-color: "rgba(22, 163, 74, 0.16)"
+      ha-card-box-shadow: "0 4px 16px rgba(16, 40, 30, 0.08)"
+
+      primary-text-color: "#14211d"
+      secondary-text-color: "#55675f"
+      divider-color: "rgba(22, 163, 74, 0.14)"
+
+      app-header-background-color: "#f3f7f5"
+      app-header-text-color: "#14211d"
+      app-header-selection-bar-color: "#16a34a"
+      app-header-edit-background-color: "#d7ebe0"
+
+      sidebar-background-color: "#eaf2ee"
+      sidebar-text-color: "#2c3b36"
+      sidebar-icon-color: "#55675f"
+      sidebar-selected-text-color: "#16a34a"
+      sidebar-selected-icon-color: "#16a34a"
+
+      state-icon-color: "#55675f"
+      state-icon-active-color: "#16a34a"
+      switch-checked-color: "#16a34a"
+      switch-checked-button-color: "#16a34a"
+      switch-checked-track-color: "#86d6a6"
