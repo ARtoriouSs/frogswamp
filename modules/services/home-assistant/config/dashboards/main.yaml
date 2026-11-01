@@ -1128,6 +1128,14 @@ views:
             volume_controls:
               - volume_mute
               - volume_set
+          # Ask Claude to play something, e.g. "play Metallica"
+          - *assist
+          - <<: *assist
+            primary: Claude EN
+            tap_action:
+              action: assist
+              pipeline_id: 01m5zme405yy9kmsr49dbazjpq
+              start_listening: false
 
   # Mushroom cards. The times are set in packages/schedule.yaml: a change made here is reset on the next HA restart
   - title: Schedule
@@ -1881,3 +1889,50 @@ views:
               rows: 1
             tap_action:
               action: more-info
+
+  # The same cards as the built-in Energy page. Devices are set up there (Settings → Dashboards → Energy),
+  # for now only the fridge
+  - title: Energy
+    path: energy
+    icon: mdi:lightning-bolt
+    type: sections
+    max_columns: 2
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: Fridge
+            icon: mdi:fridge
+          - type: energy-date-selection
+            grid_options:
+              columns: full
+          - type: energy-devices-detail-graph
+            grid_options:
+              columns: full
+          - type: energy-devices-graph
+            grid_options:
+              columns: full
+
+      - type: grid
+        cards:
+          - type: heading
+            heading: Power now
+            icon: mdi:flash
+          - type: custom:mushroom-template-card
+            entity: sensor.living_room_refrigerator_power
+            primary: Fridge
+            secondary: "{{ states(entity) }} W · {{ states('sensor.living_room_refrigerator_energy') | float(0) | round(1) }} kWh total"
+            icon: mdi:fridge
+            color: amber
+            grid_options:
+              columns: 12
+              rows: 1
+            tap_action:
+              action: more-info
+          - type: history-graph
+            hours_to_show: 24
+            entities:
+              - entity: sensor.living_room_refrigerator_power
+                name: Fridge
+            grid_options:
+              columns: full
