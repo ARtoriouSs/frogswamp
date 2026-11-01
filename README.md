@@ -41,6 +41,22 @@ Port forwarding (51413 for torrents, 8621 for Ace Stream) only helps with a publ
 
 Fixed addresses below `.100`: the server (`.10`) and the TV (`.20`, static IP set on the TV, see the [football README](modules/services/football/README.md#one-time-setup)).
 
+DHCP reservations (router → DHCP → static leases), so HA finds these devices at the same address: the Tuya devices for Tuya Local, and the cube, which the cubematrix integration reaches by IP. They are inside the pool, the reservation keeps them there:
+
+| Device | IP | MAC | Tuya protocol |
+|---|---|---|---|
+| Yeelight Cube Matrix (office) | `192.168.101.121` | `c0:4e:30:ee:72:54` | not Tuya |
+| Curtains | `192.168.101.101` | `bc:35:1e:d1:ff:80` | 3.5 |
+| Blinds - middle | `192.168.101.104` | `80:64:7c:be:b6:fa` | 3.5 |
+| Thermostat - Guest | `192.168.101.110` | `bc:35:1e:19:dc:f5` | 3.5 |
+| Thermostat - Master | `192.168.101.111` | `bc:35:1e:19:d5:46` | 3.5 |
+| Blinds - left / door | `192.168.101.112` | `80:64:7c:be:d5:16` | 3.5 |
+| Blinds - right | `192.168.101.113` | `80:64:7c:be:d0:dd` | 3.5 |
+| Desk | `192.168.101.117` | `38:2c:e5:80:ba:33` | 3.4 |
+| Towel heat - guest | not known yet (it was offline when the list was made) | | |
+
+A device that gets a new Wi-Fi module (repair) gets a new MAC: update its row and the reservation.
+
 ### 1.2 Accounts
 
 - **Tailscale:** paste [`docs/tailscale-acl.hujson`](docs/tailscale-acl.hujson) into *Access controls*. Then create an OAuth client (scope *Auth Keys: write*, tag `tag:homelab`). Its secret goes into `tailscale/oauth_secret` (step 1.4).
