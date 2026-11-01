@@ -212,6 +212,22 @@ views:
                  '↓ ' ~ speed(entity) ~ ' · ↑ ' ~ speed('sensor.hall_router_upload_speed') }}
             icon: mdi:router-wireless
             color: "{{ 'disabled' if states(entity) in ['unavailable', 'unknown'] else 'blue' }}"
+          # A tap runs a test (~30 s), a hold shows the history
+          - <<: *info
+            entity: script.speedtest_run
+            primary: Speed test
+            secondary: >-
+              {% if is_state(entity, 'on') %}Testing…
+              {%- elif has_value('sensor.speedtest_download') %}↓ {{ states('sensor.speedtest_download') }} · ↑ {{ states('sensor.speedtest_upload') }} Mbit/s · {{ states('sensor.speedtest_ping') }} ms · {{ relative_time(states.sensor.speedtest_download.last_changed) }} ago
+              {%- else %}Tap to test{% endif %}
+            icon: mdi:speedometer
+            color: "{{ 'amber' if is_state(entity, 'on') else 'purple' }}"
+            tap_action:
+              action: perform-action
+              perform_action: script.speedtest_run
+            hold_action:
+              action: more-info
+              entity: sensor.speedtest_download
           - <<: *info
             entity: sensor.qbittorrent_status
             primary: qBittorrent

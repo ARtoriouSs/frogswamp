@@ -71,6 +71,7 @@ in
         description = "Source of the integration repo; tests read the parser from it";
       };
     };
+    speedtest = lib.mkEnableOption "Ookla's speedtest CLI in the container, run by HA on demand (packages/speedtest.yaml). Unfree: the host allows ookla-speedtest";
     recoverBluetooth = lib.mkOption {
       type = lib.types.bool;
       default = true;
@@ -101,6 +102,8 @@ in
         ]
         ++ map (name: "${configDir}/${name}:/config/${name}:ro") repoOwned
         ++ lib.optional cfg.hacs "${hacs}:/config/custom_components/hacs:ro"
+        # a static binary, so the file alone is enough
+        ++ lib.optional cfg.speedtest "${pkgs.ookla-speedtest}/bin/speedtest:/usr/local/bin/speedtest:ro"
         ++ lib.optionals cfg.cubematrix.enable [
           "${cfg.cubematrix.src}/custom_components/cubematrix:/config/custom_components/cubematrix:ro"
           "${./config/cubematrix}:/config/cubematrix:ro"

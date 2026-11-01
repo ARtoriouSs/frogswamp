@@ -1,0 +1,75 @@
+# Internet speed test on demand, with Ookla's own CLI (mounted into the container, see speedtest in
+# default.nix). It finds the closest server by itself, unlike the speedtest.net integration.
+# No schedule: script.speedtest_run is the button. A test moves ~150-250 MB and takes ~30 s
+shell_command:
+  speedtest: speedtest --accept-license --accept-gdpr --format=json --progress=no
+
+script:
+  speedtest_run:
+    alias: "Speedtest: run now"
+    icon: mdi:speedometer
+    # A second tap while it runs is ignored
+    mode: single
+    sequence:
+      - action: shell_command.speedtest
+        response_variable: result
+        continue_on_error: true
+      - if: "{{ result is defined and result.returncode == 0 }}"
+        then:
+          - variables:
+              test: "{{ result.stdout | from_json }}"
+          # bandwidth is in bytes per second
+          - event: frogswamp_speedtest
+            event_data:
+              download: "{{ (test.download.bandwidth * 8 / 1000000) | round(1) }}"
+              upload: "{{ (test.upload.bandwidth * 8 / 1000000) | round(1) }}"
+              ping: "{{ test.ping.latency | round(1) }}"
+              jitter: "{{ test.ping.jitter | round(1) }}"
+              server: "{{ test.server.name }}, {{ test.server.location }}"
+              isp: "{{ test.isp }}"
+              url: "{{ test.result.url }}"
+        else:
+          - action: persistent_notification.create
+            data:
+              notification_id: speedtest
+              title: Speed test failed
+              message: "{{ result.stderr if result is defined else 'The command did not run' }}"
+
+# The last result, kept across restarts. They change only when the test runs
+template:
+  - triggers:
+      - trigger: event
+        event_type: frogswamp_speedtest
+    sensor:
+      - name: Speedtest download
+        unique_id: repo_speedtest_download
+        default_entity_id: sensor.speedtest_download
+        icon: mdi:download
+        unit_of_measurement: Mbit/s
+        device_class: data_rate
+        state_class: measurement
+        state: "{{ trigger.event.data.download }}"
+        attributes: &speedtest_attributes
+          server: "{{ trigger.event.data.server }}"
+          isp: "{{ trigger.event.data.isp }}"
+          url: "{{ trigger.event.data.url }}"
+      - name: Speedtest upload
+        unique_id: repo_speedtest_upload
+        default_entity_id: sensor.speedtest_upload
+        icon: mdi:upload
+        unit_of_measurement: Mbit/s
+        device_class: data_rate
+        state_class: measurement
+        state: "{{ trigger.event.data.upload }}"
+        attributes: *speedtest_attributes
+      - name: Speedtest ping
+        unique_id: repo_speedtest_ping
+        default_entity_id: sensor.speedtest_ping
+        icon: mdi:timer-outline
+        unit_of_measurement: ms
+        device_class: duration
+        state_class: measurement
+        state: "{{ trigger.event.data.ping }}"
+        attributes:
+          jitter: "{{ trigger.event.data.jitter }}"
+          server: "{{ trigger.event.data.server }}"

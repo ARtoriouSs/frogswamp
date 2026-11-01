@@ -30,7 +30,12 @@
   # instead of depending on a screen being attached during install (needed for Jellyfin QSV)
   hardware.facter.detected.graphics.enable = true;
 
-  nixpkgs.config.allowUnfreePredicate = pkg: lib.getName pkg == "claude-code";
+  nixpkgs.config.allowUnfreePredicate =
+    pkg:
+    builtins.elem (lib.getName pkg) [
+      "claude-code"
+      "ookla-speedtest"
+    ];
 
   frogswamp = {
     adminUser = "pupsich";
@@ -47,6 +52,7 @@
       enable = true;
       hacs = true;
       cubematrix.enable = true;
+      speedtest = true;
     };
     # Matter devices in HA (Matter integration → ws://localhost:5580/ws)
     matterServer.enable = true;
