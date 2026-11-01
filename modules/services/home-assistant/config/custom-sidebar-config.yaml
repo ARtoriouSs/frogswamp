@@ -83,6 +83,14 @@ order:
 # Guest sees only Main, and inside it only the Guest view (see dashboards/main.yaml).
 # Matched by the user's name, not the username
 exceptions:
+  # The usual sidebar without To-do lists
+  - user: Natallia Radziuk
+    extend_from: base
+    order:
+      - item: /todo
+        match: href
+        hide: true
+
   - user: Guest
     order:
       - item: /main-yaml
