@@ -95,6 +95,8 @@ in
           "${cfg.secretsFile}:/config/secrets.yaml:ro"
           # a subfolder: integrations write their own files to www/
           "${configDir}/www:/config/www/frogswamp:ro"
+          # Custom Sidebar reads its config only from this path
+          "${configDir}/custom-sidebar-config.yaml:/config/www/custom-sidebar-config.yaml:ro"
         ]
         ++ map (name: "${configDir}/${name}:/config/${name}:ro") repoOwned
         ++ lib.optional cfg.hacs "${hacs}:/config/custom_components/hacs:ro"

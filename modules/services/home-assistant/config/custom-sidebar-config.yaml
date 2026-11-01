@@ -1,0 +1,81 @@
+# Custom Sidebar (HACS plugin, loaded by extra_module_url in configuration.yaml).
+# Mounted to /config/www/, where the plugin reads it from. Docs: https://elchininet.github.io/custom-sidebar/
+# Items are matched by href, so the Russian UI names don't matter. `divider` draws a line below the item.
+# Don't reorder or hide items in the HA profile as well: it clashes with this file
+
+# Selected item: a soft pill in the primary color instead of the grey block
+icon_color_selected: var(--primary-color)
+text_color_selected: var(--primary-color)
+selection_background: var(--primary-color)
+selection_opacity: 0.16
+item_background_hover_opacity: 0.06
+divider_color: var(--divider-color)
+
+order:
+  - item: /main-yaml
+    match: href
+    order: 1
+    divider: true
+
+  - item: /map
+    match: href
+    name: Map
+    order: 2
+  - item: /calendar
+    match: href
+    name: Calendar
+    order: 3
+    divider: true
+
+  - item: /energy
+    match: href
+    name: Energy
+    order: 4
+  - item: /logbook
+    match: href
+    name: Activity
+    order: 5
+  - item: /history
+    match: href
+    name: History
+    order: 6
+    divider: true
+
+  - item: /hacs
+    match: href
+    name: HACS
+    order: 7
+  - item: /neonplan3d
+    match: href
+    name: NeonPlan 3D
+    order: 8
+  - item: /media-browser
+    match: href
+    name: Media
+    order: 9
+  - item: /todo
+    match: href
+    name: To-do lists
+    order: 10
+
+  # Not in the list above. Main replaces the default dashboard
+  - item: /lovelace
+    match: href
+    exact: true
+    hide: true
+  - item: /home
+    match: href
+    exact: true
+    hide: true
+  - item: /light
+    match: href
+    hide: true
+  - item: /climate
+    match: href
+    hide: true
+  - item: /security
+    match: href
+    hide: true
+  - item: /maintenance
+    match: href
+    hide: true

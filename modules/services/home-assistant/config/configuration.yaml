@@ -23,6 +23,8 @@ recorder:
 frontend:
   extra_module_url:
     - /local/frogswamp/icons.js
+    # Installed through HACS, its config is custom-sidebar-config.yaml
+    - /hacsfiles/custom-sidebar/custom-sidebar-plugin.js
 
 lovelace:
   mode: storage
