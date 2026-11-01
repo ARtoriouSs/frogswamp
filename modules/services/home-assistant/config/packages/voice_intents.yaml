@@ -1,4 +1,5 @@
-# Actions for the voice phrases in custom_sentences/ru/voice.yaml
+# Actions for the voice phrases in custom_sentences/{ru,en}/voice.yaml. Each phrase file sets the `lang` slot,
+# so the answer comes in the language of the phrase
 intent_script:
   FrogBlindsOpen:
     action:
@@ -6,49 +7,49 @@ intent_script:
         target:
           entity_id: scene.living_room_blinds_open
     speech:
-      text: "Открываю жалюзи"
+      text: "{{ 'Opening the blinds' if lang == 'en' else 'Открываю жалюзи' }}"
   FrogBlindsClose:
     action:
       - action: scene.turn_on
         target:
           entity_id: scene.living_room_blinds_full_close
     speech:
-      text: "Закрываю жалюзи"
+      text: "{{ 'Closing the blinds' if lang == 'en' else 'Закрываю жалюзи' }}"
   FrogBalconyDoorOpen:
     action:
       - action: scene.turn_on
         target:
           entity_id: scene.living_room_blinds_full_open_door
     speech:
-      text: "Открываю дверь на балкон"
+      text: "{{ 'Opening the balcony door' if lang == 'en' else 'Открываю дверь на балкон' }}"
   FrogCurtainsOpen:
     action:
       - action: scene.turn_on
         target:
           entity_id: scene.bedroom_curtains_open
     speech:
-      text: "Открываю шторы"
+      text: "{{ 'Opening the curtains' if lang == 'en' else 'Открываю шторы' }}"
   FrogCurtainsClose:
     action:
       - action: scene.turn_on
         target:
           entity_id: scene.bedroom_curtains_close
     speech:
-      text: "Закрываю шторы"
+      text: "{{ 'Closing the curtains' if lang == 'en' else 'Закрываю шторы' }}"
   FrogFloorHeatingOn:
     action:
       - action: climate.turn_on
         target:
           entity_id: "{{ {'guest': 'climate.guest_bathroom_thermostat_guest', 'master': 'climate.master_bathroom_thermostat_master'}[bathroom] }}"
     speech:
-      text: "Включаю тёплый пол"
+      text: "{{ 'Turning on the floor heating' if lang == 'en' else 'Включаю тёплый пол' }}"
   FrogFloorHeatingOff:
     action:
       - action: climate.turn_off
         target:
           entity_id: "{{ {'guest': 'climate.guest_bathroom_thermostat_guest', 'master': 'climate.master_bathroom_thermostat_master'}[bathroom] }}"
     speech:
-      text: "Выключаю тёплый пол"
+      text: "{{ 'Turning off the floor heating' if lang == 'en' else 'Выключаю тёплый пол' }}"
   # guest towel heat is a Tuya climate, master one a Zigbee relay; homeassistant.turn_on/off works for both
   FrogTowelHeatOn:
     action:
@@ -56,21 +57,26 @@ intent_script:
         target:
           entity_id: "{{ {'guest': 'climate.guest_bathroom_towel_heat_guest', 'master': 'switch.master_bathroom_towel_heat_relay'}[bathroom] }}"
     speech:
-      text: "Включаю полотенцесушитель"
+      text: "{{ 'Turning on the towel heater' if lang == 'en' else 'Включаю полотенцесушитель' }}"
   FrogTowelHeatOff:
     action:
       - action: homeassistant.turn_off
         target:
           entity_id: "{{ {'guest': 'climate.guest_bathroom_towel_heat_guest', 'master': 'switch.master_bathroom_towel_heat_relay'}[bathroom] }}"
     speech:
-      text: "Выключаю полотенцесушитель"
+      text: "{{ 'Turning off the towel heater' if lang == 'en' else 'Выключаю полотенцесушитель' }}"
   FrogRoomTemperature:
     speech:
-      # 23.5 is said as "23,5 градуса"; whole numbers get the right form: 21 градус, 22 градуса, 25 градусов
+      # ru: 23.5 is said as "23,5 градуса"; whole numbers get the right form: 21 градус, 22 градуса, 25 градусов
       text: >-
         {% set t = states({'bedroom': 'sensor.bedroom_temperature', 'hall': 'sensor.hall_temperature'}[room]) %}
-        {% set where = {'bedroom': 'спальне', 'hall': 'прихожей'}[room] %}
-        {% if not is_number(t) %}Не знаю, датчик в {{ where }} сейчас недоступен
+        {% if lang == 'en' %}
+        {%- set where = {'bedroom': 'bedroom', 'hall': 'hall'}[room] %}
+        {%- if not is_number(t) %}I don't know, the {{ where }} sensor is unavailable right now
+        {%- else %}It's {{ t | float | round(1) | string | replace('.0', '') }} degrees in the {{ where }}{% endif %}
+        {%- else %}
+        {%- set where = {'bedroom': 'спальне', 'hall': 'прихожей'}[room] %}
+        {%- if not is_number(t) %}Не знаю, датчик в {{ where }} сейчас недоступен
         {%- else %}
         {%- set n = t | float | round(1) %}
         {%- if n == n | int %}
@@ -78,4 +84,5 @@ intent_script:
         {%- set form = 'градусов' if i % 100 in [11, 12, 13, 14] else {1: 'градус', 2: 'градуса', 3: 'градуса', 4: 'градуса'}.get(i % 10, 'градусов') %}
         В {{ where }} {{ i }} {{ form }}
         {%- else %}В {{ where }} {{ n | string | replace('.', ',') }} градуса{% endif %}
+        {%- endif %}
         {%- endif %}

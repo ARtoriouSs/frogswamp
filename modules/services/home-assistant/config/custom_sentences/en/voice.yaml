@@ -1,0 +1,84 @@
+# English versions of custom_sentences/ru/voice.yaml, same intents and actions (packages/voice_intents.yaml)
+language: en
+intents:
+  FrogBlindsOpen:
+    data:
+      - sentences:
+          - "(open|raise) [the] blinds [in the living room]"
+        slots:
+          lang: en
+  FrogBlindsClose:
+    data:
+      - sentences:
+          - "(close|lower) [the] blinds [in the living room] [(completely|fully|all the way)]"
+        slots:
+          lang: en
+  FrogBalconyDoorOpen:
+    data:
+      - sentences:
+          - "open [the] (balcony door|door to the balcony|way to the balcony)"
+        slots:
+          lang: en
+  FrogCurtainsOpen:
+    data:
+      - sentences:
+          - "open [the] curtains [in the bedroom]"
+        slots:
+          lang: en
+  FrogCurtainsClose:
+    data:
+      - sentences:
+          - "close [the] curtains [in the bedroom]"
+        slots:
+          lang: en
+  FrogFloorHeatingOn:
+    data:
+      - sentences:
+          - "(turn|switch) on [the] <floor_heating> in the {bathroom}"
+          - "(turn|switch) [the] <floor_heating> on in the {bathroom}"
+        slots:
+          lang: en
+  FrogFloorHeatingOff:
+    data:
+      - sentences:
+          - "(turn|switch) off [the] <floor_heating> in the {bathroom}"
+          - "(turn|switch) [the] <floor_heating> off in the {bathroom}"
+        slots:
+          lang: en
+  FrogTowelHeatOn:
+    data:
+      - sentences:
+          - "(turn|switch) on [the] <towel_heater> in the {bathroom}"
+          - "(turn|switch) [the] <towel_heater> on in the {bathroom}"
+        slots:
+          lang: en
+  FrogTowelHeatOff:
+    data:
+      - sentences:
+          - "(turn|switch) off [the] <towel_heater> in the {bathroom}"
+          - "(turn|switch) [the] <towel_heater> off in the {bathroom}"
+        slots:
+          lang: en
+  FrogRoomTemperature:
+    data:
+      - sentences:
+          - "(what is|what's) the temperature in the {room}"
+          - "how (warm|cold|hot) is [it in] the {room}"
+        slots:
+          lang: en
+lists:
+  bathroom:
+    values:
+      - in: "(guest bathroom|guest toilet)"
+        out: guest
+      - in: "(master bathroom|main bathroom|big bathroom)"
+        out: master
+  room:
+    values:
+      - in: "bedroom"
+        out: bedroom
+      - in: "(hall|hallway|corridor)"
+        out: hall
+expansion_rules:
+  floor_heating: "(floor heating|heated floor|underfloor heating)"
+  towel_heater: "(towel heater|towel warmer|towel rail|heated towel rail)"

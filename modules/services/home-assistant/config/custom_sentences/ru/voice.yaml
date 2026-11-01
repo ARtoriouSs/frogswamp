@@ -7,43 +7,63 @@ intents:
     data:
       - sentences:
           - "(открой|подними) жалюзи [в гостиной]"
+        slots:
+          lang: ru
   FrogBlindsClose:
     data:
       - sentences:
           - "(закрой|опусти) жалюзи [в гостиной] [полностью]"
+        slots:
+          lang: ru
   FrogBalconyDoorOpen:
     data:
       - sentences:
           - "открой (дверь|проход|выход) на балкон"
+        slots:
+          lang: ru
   FrogCurtainsOpen:
     data:
       - sentences:
           - "открой шторы [в спальне]"
+        slots:
+          lang: ru
   FrogCurtainsClose:
     data:
       - sentences:
           - "закрой шторы [в спальне]"
+        slots:
+          lang: ru
   FrogFloorHeatingOn:
     data:
       - sentences:
           - "включи (тёплый|теплый) пол в {bathroom}"
+        slots:
+          lang: ru
   FrogFloorHeatingOff:
     data:
       - sentences:
           - "выключи (тёплый|теплый) пол в {bathroom}"
+        slots:
+          lang: ru
   FrogTowelHeatOn:
     data:
       - sentences:
           - "включи полотенцесушитель в {bathroom}"
+        slots:
+          lang: ru
   FrogTowelHeatOff:
     data:
       - sentences:
           - "выключи полотенцесушитель в {bathroom}"
+        slots:
+          lang: ru
   FrogRoomTemperature:
     data:
       - sentences:
           - "(какая|сколько) [сейчас] температур(а|ы) в {room}"
           - "сколько [сейчас] градусов в {room}"
+        slots:
+          lang: ru
 lists:
   bathroom:
     values:
