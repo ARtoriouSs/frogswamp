@@ -53,7 +53,7 @@ DHCP reservations (router → DHCP → static leases), so HA finds these devices
 | Blinds - left / door | `192.168.101.112` | `80:64:7c:be:d5:16` | 3.5 |
 | Blinds - right | `192.168.101.113` | `80:64:7c:be:d0:dd` | 3.5 |
 | Desk | `192.168.101.117` | `38:2c:e5:80:ba:33` | 3.4 |
-| Towel heat - guest | not known yet (it was offline when the list was made) | | |
+| Towel heat - guest | `192.168.101.108` | `80:64:7c:46:81:20` | 3.5 |
 
 A device that gets a new Wi-Fi module (repair) gets a new MAC: update its row and the reservation.
 
