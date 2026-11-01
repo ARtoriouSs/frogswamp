@@ -10,7 +10,8 @@ from .const import DEFAULT_URL, DOMAIN
 
 
 class ClaudeBridgeConfigFlow(ConfigFlow, domain=DOMAIN):
-    VERSION = 1
+    # 2: the bridge moved to a Unix socket
+    VERSION = 2
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         await self.async_set_unique_id(DOMAIN)

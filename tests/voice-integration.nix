@@ -14,8 +14,8 @@ pkgs.runCommand "test-voice-integration"
     chmod -R u+w claude_bridge
     # history.py has no HA imports; outside the package pytest doesn't load __init__.py
     mkdir unit
-    cp claude_bridge/history.py claude_bridge/test_history.py unit/
-    (cd unit && python -m pytest -q -p no:cacheprovider test_history.py)
+    cp claude_bridge/history.py claude_bridge/test_history.py claude_bridge/const.py claude_bridge/test_const.py unit/
+    (cd unit && python -m pytest -q -p no:cacheprovider test_history.py test_const.py)
     cd claude_bridge
     python -m py_compile *.py
     for f in manifest.json strings.json translations/en.json; do jq empty "$f"; done

@@ -2,6 +2,9 @@
 
 POST /converse {"text", "language", "conversation_id", "earlier"} -> {"speech", "ok"}
 
+Listens on `host:port` or on `unix:/path`. The socket is only for the service user (and root,
+so HA's container), no other local program can talk to Claude through it.
+
 The answer comes from a backend (now only Claude Code run headless on the owner's
 subscription). Text and tokens never reach the log or the command line.
 """
@@ -15,6 +18,7 @@ import subprocess
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from socketserver import ThreadingMixIn, UnixStreamServer
 from typing import NamedTuple
 
 log = logging.getLogger("voice-bridge")
@@ -280,6 +284,29 @@ def make_handler(cfg, backend, system_prompt):
     return Handler
 
 
+class UnixHTTPServer(ThreadingMixIn, UnixStreamServer):
+    daemon_threads = True
+
+    def get_request(self):
+        conn, _ = super().get_request()
+        # BaseHTTPRequestHandler expects a (host, port) address
+        return conn, ("unix", 0)
+
+
+def make_server(listen, handler):
+    if listen.startswith("unix:"):
+        path = listen[len("unix:"):]
+        if os.path.exists(path):
+            os.unlink(path)
+        old_umask = os.umask(0o177)
+        try:
+            return UnixHTTPServer(path, handler)
+        finally:
+            os.umask(old_umask)
+    host, port = listen.rsplit(":", 1)
+    return ThreadingHTTPServer((host, int(port)), handler)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", required=True)
@@ -288,8 +315,7 @@ def main():
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     with open(cfg["system_prompt_file"]) as f:
         system_prompt = f.read()
-    host, port = cfg["listen"].rsplit(":", 1)
-    server = ThreadingHTTPServer((host, int(port)), make_handler(cfg, make_backend(cfg), system_prompt))
+    server = make_server(cfg["listen"], make_handler(cfg, make_backend(cfg), system_prompt))
     log.info("listening on %s, backend %s", cfg["listen"], cfg["backend"])
     server.serve_forever()
 

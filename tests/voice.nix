@@ -36,11 +36,12 @@ pkgs.testers.runNixOSTest {
     import json
 
     server.wait_for_unit("voice-bridge.service")
-    server.wait_for_open_port(8099)
+    sock = "/run/voice-bridge/bridge.sock"
+    server.wait_for_file(sock)
 
     def ask(text, conv="c1"):
         body = json.dumps({"text": text, "language": "ru", "conversation_id": conv, "earlier": []})
-        return json.loads(server.succeed(f"curl -s localhost:8099/converse -d '{body}'"))
+        return json.loads(server.succeed(f"curl -s --unix-socket {sock} http://localhost/converse -d '{body}'"))
 
     assert ask("привет") == {"speech": "Готово.", "ok": True}
 
@@ -82,8 +83,17 @@ pkgs.testers.runNixOSTest {
     for tool in ("Read", "Glob", "Grep", "Task", "Agent", "Bash"):
         assert tool in settings["permissions"]["deny"], settings
 
-    # only localhost, no text or tokens in the journal, token files only for the service
-    server.fail("ss -ltn | grep -E '0.0.0.0:8099|\\*:8099|\\[::\\]:8099'")
+    # no TCP port, only root and the service reach the socket; no text or tokens in the journal
+    server.fail("ss -ltn | grep -q 8099")
+    server.fail(f"runuser -u nobody -- curl -sf --unix-socket {sock} http://localhost/converse -d '{{}}'")
+    # DynamicUser keeps the folder in /run/private (root only) behind a symlink
+    assert server.succeed("stat -L -c %a /run/voice-bridge").strip() == "700"
+    # the socket folder survives a restart, HA's container keeps it mounted
+    inode = server.succeed("stat -L -c %i /run/voice-bridge")
+    server.succeed("systemctl restart voice-bridge")
+    # the old socket file stays until the bridge replaces it, so wait for an answer
+    server.wait_until_succeeds(f"curl -sf --unix-socket {sock} http://localhost/converse -d '{{\"text\": \"снова\"}}'")
+    assert server.succeed("stat -L -c %i /run/voice-bridge") == inode
     server.fail("journalctl -u voice-bridge | grep -E 'claude-secret|ha-secret|привет|Готово'")
     server.fail("cat /proc/*/cmdline 2>/dev/null | tr '\\0' ' ' | grep -q 'claude-secre[t]'")
     server.fail("runuser -u nobody -- cat /run/credentials/voice-bridge.service/claude_token")

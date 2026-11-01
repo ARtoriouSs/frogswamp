@@ -366,3 +366,29 @@ def test_no_text_in_logs(server, caplog):
     assert caplog.records, "one line per request is expected"
     assert "secret words" not in caplog.text
     assert "Hello" not in caplog.text
+
+
+# ---------- Unix socket ----------
+
+def test_unix_socket_server(tmp_path):
+    import os
+    import socket
+    import stat
+
+    path = tmp_path / "bridge.sock"
+    path.write_text("stale")
+    cfg = {"session_ttl": 300, "timeout": 20, "debug_log": False}
+    srv = bridge.make_server(f"unix:{path}", bridge.make_handler(cfg, FakeBackend(), "Be short."))
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    try:
+        assert stat.S_IMODE(os.stat(path).st_mode) == 0o600
+        body = json.dumps(request("hi")).encode()
+        with socket.socket(socket.AF_UNIX) as s:
+            s.connect(str(path))
+            s.sendall(b"POST /converse HTTP/1.0\r\nContent-Type: application/json\r\nContent-Length: %d\r\n\r\n" % len(body) + body)
+            raw = b"".join(iter(lambda: s.recv(4096), b""))
+        assert raw.startswith(b"HTTP/1.0 200")
+        assert json.loads(raw.split(b"\r\n\r\n", 1)[1]) == {"speech": "Hello.", "ok": True}
+    finally:
+        srv.shutdown()
+        srv.server_close()

@@ -8,7 +8,7 @@ Talk to the home in Russian or English. Speech-to-text and text-to-speech run on
 | Piper (TTS) | `127.0.0.1:10200` ru, `:10201` en | Text → speech. Voices are picked in the pipelines (ruslan, alan) |
 | Local phrases | `home-assistant/config/custom_sentences/{ru,en}/voice.yaml` | Blinds, curtains, heating, room temperature without Claude |
 | `claude_bridge` | HA custom integration (conversation entity *Claude*) | Hands the text and the turns HA handled itself to the bridge |
-| `voice-bridge` | `127.0.0.1:8099`, systemd, `DynamicUser` | Runs `claude -p` with HA's MCP server, keeps the session |
+| `voice-bridge` | Unix socket `/run/voice-bridge/bridge.sock`, systemd, `DynamicUser` | Runs `claude -p` with HA's MCP server, keeps the session |
 | Music Assistant | http://192.168.101.10:8095 | Spotify (librespot) on `media_player.tv_music` |
 
 ```
@@ -38,6 +38,7 @@ phone / Voice PE ─ wake word ─▶ HA pipeline ─▶ Whisper ─▶ local ph
 | No home data or credentials on the web | `WebFetch` only for URLs from the session's own `WebSearch` results (hook `web_guard.py fetch`). No http/ftp/rtsp links in any HA tool call, so Music Assistant can't be made to fetch one (`play_music` checks it too). The prompt forbids home or owner data in search text. Both hooks block on any error |
 | Web pages can't steer the home | After Claude read the web in a request, HA control tools are blocked until the owner's next request; reading the home stays allowed |
 | Tokens stay secret | sops → `LoadCredential`, passed to Claude by env only; no token in the Nix store, a command line or the log. HA's state and `/run/secrets` are hidden from the service |
+| Nothing else on the server can ask Claude | The bridge has no TCP port: its socket folder is `0700`, only the service and root (HA's container mounts it) can open it |
 | No local tools | `Bash`, `Edit`, `Write`, `NotebookEdit`, `Read`, `Glob`, `Grep`, `Task`, `Agent` are denied; the unit has the usual systemd hardening (`ProtectProc`, no capabilities, private devices) |
 | HA gets an answer in time | The bridge's 25 s budget includes waiting for a busy session; a failed or timed-out request is never run again, only a lost session is retried |
 
@@ -96,7 +97,7 @@ One named blind ("открой левые жалюзи", "open the left blind") 
 
 1. `claude setup-token` on the PC → sops `voice/claude_oauth_token`.
 2. HA user `voice-agent`: not an admin, local access only; its long-lived token → sops `voice/ha_token`. Then `just deploy`.
-3. HA integrations: *Model Context Protocol Server* (Assist API; "Require an administrator account" off), Wyoming ×4 on `localhost` with the ports above (renamed per language), *Claude bridge* (default URL).
+3. HA integrations: *Model Context Protocol Server* (Assist API; "Require an administrator account" off), Wyoming ×4 on `localhost` with the ports above (renamed per language), *Claude bridge* (default URL `unix:/run/voice-bridge/bridge.sock`; older entries with `http://127.0.0.1:8099` are switched to it automatically).
 4. Pipelines *Russian* (preferred) and *English*: STT Whisper ru/en, agent *Claude* with "Prefer handling commands locally", TTS Piper ru/en.
 5. Music Assistant: add Spotify (librespot engine), then HA's Music Assistant integration.
 

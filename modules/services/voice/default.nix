@@ -8,6 +8,8 @@ let
   cfg = config.frogswamp.voice;
   stateDir = "/var/lib/voice-agent";
   credentials = "/run/credentials/voice-bridge.service";
+  # the bridge's Unix socket; only its own user and root (HA's container) can open it
+  socketDir = "/run/voice-bridge";
 
   claudeSettings = pkgs.writeText "claude-settings.json" (
     builtins.toJSON {
@@ -66,7 +68,7 @@ let
   );
   bridgeConfig = pkgs.writeText "voice-bridge.json" (
     builtins.toJSON {
-      listen = "127.0.0.1:${toString cfg.port}";
+      listen = "unix:${socketDir}/bridge.sock";
       backend = "claude-code";
       # web search plus reading a page takes 10-15 s; HA waits 30 s
       timeout = 25;
@@ -89,7 +91,9 @@ let
   );
   integration = lib.fileset.toSource {
     root = ./claude_bridge;
-    fileset = lib.fileset.difference ./claude_bridge ./claude_bridge/test_history.py;
+    fileset = lib.fileset.difference ./claude_bridge (
+      lib.fileset.fileFilter (file: lib.hasPrefix "test_" file.name) ./claude_bridge
+    );
   };
   languages = {
     ru = {
@@ -105,10 +109,6 @@ in
 {
   options.frogswamp.voice = {
     enable = lib.mkEnableOption "voice assistant: local STT/TTS and a bridge to Claude Code";
-    port = lib.mkOption {
-      type = lib.types.port;
-      default = 8099;
-    };
     model = lib.mkOption {
       type = lib.types.str;
       default = "haiku";
@@ -171,7 +171,16 @@ in
 
     # the conversation agent HA uses to reach the bridge
     virtualisation.oci-containers.containers = lib.mkIf config.frogswamp.homeAssistant.enable {
-      home-assistant.volumes = [ "${integration}:/config/custom_components/claude_bridge:ro" ];
+      home-assistant.volumes = [
+        "${integration}:/config/custom_components/claude_bridge:ro"
+        "${socketDir}:${socketDir}"
+      ];
+    };
+    # with DynamicUser the socket folder is /run/private/voice-bridge behind a symlink, made when the
+    # bridge starts; HA's container must mount it after that
+    systemd.services.podman-home-assistant = lib.mkIf config.frogswamp.homeAssistant.enable {
+      after = [ "voice-bridge.service" ];
+      wants = [ "voice-bridge.service" ];
     };
 
     systemd.services.voice-bridge = {
@@ -188,6 +197,10 @@ in
         Restart = "on-failure";
         DynamicUser = true;
         StateDirectory = "voice-agent";
+        RuntimeDirectory = "voice-bridge";
+        RuntimeDirectoryMode = "0700";
+        # HA's container keeps the folder mounted, it must stay the same folder across restarts
+        RuntimeDirectoryPreserve = true;
         LoadCredential = [
           "claude_token:${cfg.claudeTokenFile}"
           "ha_token:${cfg.haTokenFile}"

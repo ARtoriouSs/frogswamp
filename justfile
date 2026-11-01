@@ -243,7 +243,7 @@ voice-ask $text $lang="ru":
     #!/usr/bin/env bash
     set -euo pipefail
     body="$(jq -nc --arg t "$text" --arg l "$lang" '{text: $t, language: $l, conversation_id: null, earlier: []}')"
-    ssh pupsich@{{host}} "curl -s 127.0.0.1:8099/converse -d $(printf '%q' "$body")"
+    ssh root@{{host}} "curl -s --unix-socket /run/voice-bridge/bridge.sock http://localhost/converse -d $(printf '%q' "$body")"
     echo
 
 # Pin the Music Assistant image (default: current stable) by version + digest

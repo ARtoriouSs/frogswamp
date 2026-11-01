@@ -10,7 +10,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-from .const import SESSION_TTL, TIMEOUT, error_speech
+from .const import SESSION_TTL, TIMEOUT, endpoint, error_speech
 from .history import Forwarded, pending_turns
 
 _LOGGER = logging.getLogger(__name__)
@@ -31,6 +31,7 @@ class ClaudeBridgeEntity(conversation.ConversationEntity, conversation.AbstractC
         self.entry = entry
         self._attr_unique_id = entry.entry_id
         self.forwarded = Forwarded(SESSION_TTL)
+        self.socket_session: aiohttp.ClientSession | None = None
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
@@ -38,6 +39,8 @@ class ClaudeBridgeEntity(conversation.ConversationEntity, conversation.AbstractC
 
     async def async_will_remove_from_hass(self) -> None:
         conversation.async_unset_agent(self.hass, self.entry)
+        if self.socket_session:
+            await self.socket_session.close()
         await super().async_will_remove_from_hass()
 
     @property
@@ -65,10 +68,16 @@ class ClaudeBridgeEntity(conversation.ConversationEntity, conversation.AbstractC
         return conversation.async_get_result_from_chat_log(user_input, chat_log)
 
     async def _ask(self, payload: dict) -> str:
-        session = async_get_clientsession(self.hass)
+        socket_path, base_url = endpoint(self.entry.data[CONF_URL])
+        if socket_path is None:
+            session = async_get_clientsession(self.hass)
+        else:
+            if self.socket_session is None:
+                self.socket_session = aiohttp.ClientSession(connector=aiohttp.UnixConnector(path=socket_path))
+            session = self.socket_session
         try:
             async with session.post(
-                self.entry.data[CONF_URL] + "/converse",
+                base_url + "/converse",
                 json=payload,
                 timeout=aiohttp.ClientTimeout(total=TIMEOUT),
             ) as resp:
