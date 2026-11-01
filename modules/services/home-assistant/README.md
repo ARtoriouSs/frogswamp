@@ -11,6 +11,17 @@ Runs the official image in Podman (`podman-home-assistant.service`), host networ
 
 Integrations added in the UI (MQTT, Hue, …) always live in `.storage/`. HA doesn't support declaring them in YAML.
 
+## UI integrations with keys that expire
+
+These stop working when their key runs out. HA then shows a *Repair* or asks to re-authenticate on the integration's card.
+
+| Integration | Key | Lifetime | Added | Renew by | How to renew |
+|---|---|---|---|---|---|
+| Spotify | the login made with the Spotify developer app (`Frogswamp HA`, redirect URI `https://my.home-assistant.io/redirect/oauth`, Web API) | 180 days | 2026-11-01 | 2027-04-30 | Settings → Devices & services → Spotify → *Reconfigure*, log in to Spotify again. The app's Client ID / secret stay the same (Settings → Application credentials) |
+| Tailscale | API access token (admin console → Settings → Keys → *Generate access token*, not an auth key) | up to 90 days, set when made | 2026-11-01 | 2027-01-30 | Make a new access token, then Tailscale → *Reconfigure* and paste it. Tailnet name: `-` or `taila39d1b.ts.net` |
+
+Update the *Added* and *Renew by* dates when you renew.
+
 ## Promote a UI automation into the repo
 
 1. Build it in the UI, open it → ⋮ → *Edit in YAML*, copy.
