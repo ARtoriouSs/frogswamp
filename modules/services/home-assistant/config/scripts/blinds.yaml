@@ -1,5 +1,6 @@
 # Living room blinds and bedroom curtains through Tuya Local, in place of the Tuya cloud scenes.
-# The blinds' position: 100 = drawn across the window, 0 = gathered at the side (HA calls 100 "open").
+# The blinds' position in HA: 0 = drawn across the window (closed), 100 = gathered at the side (open).
+# The Tuya app and its scenes count the other way (100% = drawn), Tuya Local's config inverts it.
 # An open/close command without a position only turns the slats.
 # The button scripts below start blinds_run and return at once; it runs in restart mode, so a new
 # command stops the one still running (e.g. Full close during Close + open's 47 s wait)
@@ -25,7 +26,7 @@ blinds_run:
               target:
                 entity_id: "{{ blinds }}"
               data:
-                position: 100
+                position: 0
             - if: "{{ move == 'full_close_open' }}"
               then:
                 # the time the blinds need to draw across from fully gathered
@@ -46,7 +47,7 @@ blinds_run:
               target:
                 entity_id: cover.blinds_left_door_local
               data:
-                position: 0
+                position: 100
         - conditions: "{{ move in ['slats_open', 'slats_close'] }}"
           sequence:
             - action: "cover.{{ 'open' if move == 'slats_open' else 'close' }}_cover"

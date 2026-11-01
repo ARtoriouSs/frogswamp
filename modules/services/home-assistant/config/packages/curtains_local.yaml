@@ -1,6 +1,6 @@
-# The bedroom curtains through Tuya Local. Its config doesn't know the motor's "reverse" setting, so
-# cover.curtains_local is upside down: its "open" closes the curtains and its position 100 means closed.
-# This cover turns it the right way round; automations and the dashboard use this one, not curtains_local.
+# The bedroom curtains through Tuya Local. With the motor's "reverse" setting on, its config reads the
+# position upside down: cover.curtains_local shows 100 when the curtains are closed. Its open and close
+# commands are right. This cover turns the position round; automations and the dashboard use this one.
 # Part of the Tuya Local migration (docs/superpowers/plans/2026-10-31-tuya-local-migration.md)
 template:
   - cover:
@@ -13,11 +13,11 @@ template:
           {% set p = state_attr('cover.curtains_local', 'current_position') %}
           {{ 100 - p | int if p is number else none }}
         open_cover:
-          - action: cover.close_cover
+          - action: cover.open_cover
             target:
               entity_id: cover.curtains_local
         close_cover:
-          - action: cover.open_cover
+          - action: cover.close_cover
             target:
               entity_id: cover.curtains_local
         stop_cover:
