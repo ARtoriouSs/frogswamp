@@ -1921,6 +1921,11 @@ views:
           - type: heading
             heading: Bedroom
             icon: mdi:bed
+          - <<: *temperature
+            entity: sensor.bedroom_temperature
+            primary: Temperature
+            secondary: "{{ 'Unavailable' if states(entity) in ['unavailable', 'unknown'] else states(entity) ~ ' °C' }}"
+            icon: mdi:thermometer
           - <<: *cover
             entity: cover.bedroom_curtains_local
             primary: Curtains
@@ -2164,6 +2169,11 @@ views:
           - type: heading
             heading: Hall
             icon: mdi:wardrobe-outline
+          - <<: *temperature
+            entity: sensor.hall_temperature
+            primary: Temperature
+            secondary: "{{ 'Unavailable' if states(entity) in ['unavailable', 'unknown'] else states(entity) ~ ' °C' }}"
+            icon: mdi:thermometer
           - *info
           - *hall_router
           - *hall_speedtest
@@ -2172,6 +2182,16 @@ views:
           - *hall_zigbee_pairing
           - *hall_restart_bridge
           - *hall_failed_integrations
+
+  - title: Balcony
+    path: balcony
+    visible:
+      - user: 276c6c52cb474dd9bdf6dac5ca4fad31 # Aleksander
+      - user: 06ec04272df9426db1d4322dfc5bda92 # Natallia
+    icon: mdi:balcony
+    type: sections
+    max_columns: 2
+    sections: []
 
   - title: Garage
     path: garage
@@ -2187,6 +2207,12 @@ views:
           - type: heading
             heading: Garage
             icon: mdi:car
+          - <<: *temperature
+            entity: sensor.garage_audi_a5_sportback_outside_temperature
+            primary: Outside
+            secondary: "{{ 'Unavailable' if states(entity) in ['unavailable', 'unknown'] else states(entity) ~ ' °C' }}"
+            icon: mdi:thermometer
+            color: light-blue
           - <<: *info
             entity: binary_sensor.garage_audi_a5_sportback_doors_open
             primary: Audi A5
@@ -2209,15 +2235,9 @@ views:
             icon: mdi:gas-station
             color: "{{ 'red' if states(entity) | int(100) < 15 else 'amber' }}"
             grid_options:
-              columns: 6
+              columns: 4
               rows: 2
             vertical: true
-          - <<: *car
-            entity: sensor.garage_audi_a5_sportback_outside_temperature
-            primary: Outside
-            secondary: "{{ states(entity) }} °C"
-            icon: mdi:thermometer
-            color: light-blue
           - <<: *car
             entity: sensor.garage_audi_a5_sportback_odometer
             primary: Odometer
@@ -2248,16 +2268,6 @@ views:
               perform_action: button.press
               target:
                 entity_id: button.garage_audi_a5_sportback_refresh_data
-
-  - title: Balcony
-    path: balcony
-    visible:
-      - user: 276c6c52cb474dd9bdf6dac5ca4fad31 # Aleksander
-      - user: 06ec04272df9426db1d4322dfc5bda92 # Natallia
-    icon: mdi:balcony
-    type: sections
-    max_columns: 2
-    sections: []
 
   # Guests see only this view (custom-sidebar-config.yaml hides the rest of the sidebar for them).
   # It hides things, it doesn't block them: a guest can still reach any entity through the API
