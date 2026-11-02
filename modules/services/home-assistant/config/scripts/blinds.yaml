@@ -49,16 +49,16 @@ blind_run_left_door:
                 position: 0
             # One slat step after arriving: a blind that was already down barely moves, so its slats
             # stop a step short. The step stops a blind still on its way, and a report of 0 alone doesn't
-            # prove arrival, so first wait the time this run needs: 0.47 s per percent, a full run is 40-47 s.
-            # Close + open waits 2 s instead of 0.75 s, to be sure the blind has settled
+            # prove arrival, so first wait the time this run needs: 3 s for the slats to turn before it
+            # travels, then 0.47 s per percent (a full run is 40-47 s)
             - if: "{{ move in ['full_close', 'full_close_open'] }}"
               then:
                 - delay:
-                    milliseconds: "{{ start * 470 }}"
+                    milliseconds: "{{ 3000 + start * 470 }}"
                 # No report of 0 means the motor may have ignored the command, e.g. if it was still
                 # busy with slat steps, so it gets the command once more
                 - wait_template: "{{ state_attr(blind, 'current_position') == 0 }}"
-                  timeout: "00:00:03"
+                  timeout: "00:00:10"
                   continue_on_timeout: true
                 - if: "{{ not wait.completed }}"
                   then:
@@ -70,24 +70,22 @@ blind_run_left_door:
                     - wait_template: "{{ state_attr(blind, 'current_position') == 0 }}"
                       timeout: "00:00:15"
                       continue_on_timeout: true
-                - delay:
-                    milliseconds: "{{ 2000 if move == 'full_close_open' else 750 }}"
+                - delay: "00:00:01"
                 - action: cover.close_cover
                   target:
                     entity_id: "{{ blind }}"
-            # Open: five slat steps, 0.75 s apart
+            # Open: five slat steps, 1 s apart
             - if: "{{ move in ['open', 'full_close_open'] }}"
               then:
                 - repeat:
                     count: 5
                     sequence:
-                      - delay:
-                          milliseconds: 750
+                      - delay: "00:00:01"
                       - action: cover.open_cover
                         target:
                           entity_id: "{{ blind }}"
-        # From closed the first command may only turn the slats, so it's sent again until the blind
-        # really travels. Slat steps change the position by 1 or so. The position is reported every few s
+        # From closed the slats turn first, and the blind may ignore the command, so it's sent again
+        # if the position shows no travel. Slat steps change it by 1 or so, it's reported every few s
         - conditions: "{{ move == 'open_door' }}"
           sequence:
             - variables:
@@ -103,7 +101,7 @@ blind_run_left_door:
                   - wait_template: >-
                       {% set position = state_attr(blind, 'current_position') | int(0) %}
                       {{ position > start + 3 or position >= 99 }}
-                    timeout: "00:00:08"
+                    timeout: "00:00:15"
                     continue_on_timeout: true
                   - if: "{{ wait.completed }}"
                     then:
@@ -139,11 +137,16 @@ blind_run_right:
   sequence: *blind_sequence
 
 # The balcony button: an open door blind gets a Reset of its own (closes, then the slats open),
-# otherwise it opens fully, also from the middle
+# otherwise it opens fully, also from the middle. Right after a command the position shows the target,
+# not where the blind is, so a tap within 10 s of the last one is ignored: it would go the wrong way
 blinds_balcony_toggle:
   alias: "Blinds: toggle balcony"
   icon: mdi:door-open
   sequence:
+    - condition: template
+      value_template: >-
+        {{ now().timestamp() - [as_timestamp(state_attr('script.blinds_open_door', 'last_triggered'), 0),
+                                as_timestamp(state_attr('script.blinds_close_door', 'last_triggered'), 0)] | max >= 10 }}
     - if: "{{ state_attr('cover.blinds_left_door_local', 'current_position') | int(0) >= 95 }}"
       then:
         - action: script.blinds_close_door
