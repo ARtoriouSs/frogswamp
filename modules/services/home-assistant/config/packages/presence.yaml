@@ -4,6 +4,10 @@ input_boolean:
   nobody_home:
     name: Nobody home
     icon: mdi:home-export-outline
+  # The Location card on the Schedule tab
+  location_paused:
+    name: Location paused
+    icon: mdi:map-marker-off
 
 timer:
   nobody_home:

@@ -268,64 +268,6 @@ views:
       - type: custom:neonplan3d-card
         fill: true
 
-  # Weather, voice and modes. Rooms have their own tabs. Mushroom cards (HACS, www/community): tap toggles, hold opens details
-  - title: Home
-    path: home
-    visible:
-      - user: 276c6c52cb474dd9bdf6dac5ca4fad31 # Aleksander
-      - user: 06ec04272df9426db1d4322dfc5bda92 # Natallia
-    icon: mdi:home-heart
-    type: sections
-    max_columns: 2
-    sections:
-      - type: grid
-        cards:
-          - type: heading
-            heading: Home
-            icon: frog:frog-face
-          - type: weather-forecast
-            entity: weather.forecast_home_assistant
-            forecast_type: daily
-          - &assist
-            type: custom:mushroom-template-card
-            primary: Claude RU
-            icon: mdi:robot-outline
-            color: purple
-            grid_options:
-              columns: 6
-              rows: 1
-            tap_action:
-              action: assist
-              pipeline_id: 01m5zm9azpze6aa3t4z44wmh41
-              start_listening: false
-          - <<: *assist
-            primary: Claude EN
-            tap_action:
-              action: assist
-              pipeline_id: 01m5zme405yy9kmsr49dbazjpq
-              start_listening: false
-
-          - type: heading
-            heading: Modes
-            heading_style: subtitle
-          - *toggle
-          - <<: *toggle
-            entity: input_boolean.vacation
-            primary: Vacation
-            icon: mdi:airplane
-            tap_action:
-              action: toggle
-              confirmation:
-                text: "Switch Vacation mode?"
-          - <<: *toggle
-            entity: input_boolean.tuya_mode
-            primary: Tuya rules
-            icon: mdi:cellphone-cog
-            tap_action:
-              action: toggle
-              confirmation:
-                text: "Switch Tuya rule mode? HA automations that move Tuya devices stop while it is on"
-
   # Room temperatures and heating per bathroom. Humidity and fans go here later
   - title: Climate
     path: climate
@@ -785,7 +727,18 @@ views:
               - volume_mute
               - volume_set
           # Ask Claude to play something, e.g. "play Metallica"
-          - *assist
+          - &assist
+            type: custom:mushroom-template-card
+            primary: Claude RU
+            icon: mdi:robot-outline
+            color: purple
+            grid_options:
+              columns: 6
+              rows: 1
+            tap_action:
+              action: assist
+              pipeline_id: 01m5zm9azpze6aa3t4z44wmh41
+              start_listening: false
           - <<: *assist
             primary: Claude EN
             tap_action:
@@ -801,7 +754,7 @@ views:
       - user: 06ec04272df9426db1d4322dfc5bda92 # Natallia
     icon: mdi:calendar-clock
     type: sections
-    max_columns: 3
+    max_columns: 4
     sections:
       - type: grid
         cards:
@@ -842,6 +795,40 @@ views:
               action: toggle
               confirmation:
                 text: "Switch Vacation mode?"
+          - type: heading
+            heading: ""
+          - type: heading
+            heading: Location
+            icon: mdi:map-marker
+          - <<: *sched_toggle
+            entity: input_boolean.location_paused
+            primary: Location automations
+            secondary: "{{ 'Paused' if is_state(entity, 'on') else 'Running' }}"
+            icon: "{{ 'mdi:map-marker-off' if is_state(entity, 'on') else 'mdi:map-marker-check' }}"
+            color: "{{ 'amber' if is_state(entity, 'on') else 'green' }}"
+          # Only shows the state, the presence automations set it
+          - <<: *sched_toggle
+            entity: input_boolean.nobody_home
+            primary: "{{ 'Nobody home' if is_state(entity, 'on') else 'Someone home' }}"
+            secondary: Home state
+            icon: "{{ 'mdi:home-export-outline' if is_state(entity, 'on') else 'mdi:home-account' }}"
+            color: "{{ 'orange' if is_state(entity, 'on') else 'green' }}"
+            tap_action:
+              action: more-info
+            hold_action:
+              action: none
+
+      - type: grid
+        column_span: 2
+        cards:
+          - type: heading
+            heading: Workdays
+            icon: mdi:calendar-month
+          # Workday's calendar has an event on each workday, so a weekday without one is a holiday
+          - type: calendar
+            initial_view: dayGridMonth
+            entities:
+              - calendar.workday_sensor_pl_calendar
 
       - type: grid
         cards:
@@ -922,17 +909,6 @@ views:
             secondary: End
             icon: mdi:stop
             color: blue
-
-      - type: grid
-        cards:
-          - type: heading
-            heading: Workdays
-            icon: mdi:calendar-month
-          # Workday's calendar has an event on each workday, so a weekday without one is a holiday
-          - type: calendar
-            initial_view: dayGridMonth
-            entities:
-              - calendar.workday_sensor_pl_calendar
 
   # Range, timelines (two columns wide) and the % per device (sensors in packages/uptime.yaml)
   - title: Monitor

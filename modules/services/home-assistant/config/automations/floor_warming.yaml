@@ -2,7 +2,7 @@
 # from 1 h before wakeup and from 1 h before bedtime, 3 h each. The schedule only asks for a lease (script.heat_lease)
 # and never turns the floor off, the end of the lease does.
 # sensor.wakeup already knows its day. Night timings are picked by the Workday integration, so holidays get the weekend ones.
-# Vacation and Tuya rule mode stop it. One automation per bathroom (each has its own area),
+# Vacation stops it. One automation per bathroom (each has its own area),
 # the second one reuses the first one's schedule
 - id: repo_floor_warming_guest_schedule
   alias: "Floor warming: guest schedule"
@@ -28,9 +28,7 @@
     bathroom: guest
   conditions: &floor_warming_conditions
     - condition: state
-      entity_id:
-        - input_boolean.vacation
-        - input_boolean.tuya_mode
+      entity_id: input_boolean.vacation
       state: "off"
   actions: &floor_warming_actions
     # A night goes by the day after the one it started on

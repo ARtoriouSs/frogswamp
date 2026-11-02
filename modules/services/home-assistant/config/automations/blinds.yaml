@@ -1,5 +1,5 @@
 # Curtains and blinds on a schedule, through the scripts in scripts/blinds.yaml (Tuya Local).
-# Vacation and Tuya rule mode stop all of them; Guests in the living room stops the morning opening
+# Vacation stops all of them; Guests in the living room stops the morning opening
 - id: repo_curtains_close_sunset
   alias: "Curtains: close at sunset"
   triggers:
@@ -7,9 +7,7 @@
       event: sunset
   conditions:
     - condition: state
-      entity_id:
-        - input_boolean.vacation
-        - input_boolean.tuya_mode
+      entity_id: input_boolean.vacation
       state: "off"
   actions:
     - action: script.curtains_close
@@ -22,9 +20,7 @@
       offset: "02:00:00"
   conditions:
     - condition: state
-      entity_id:
-        - input_boolean.vacation
-        - input_boolean.tuya_mode
+      entity_id: input_boolean.vacation
       state: "off"
   actions:
     - action: script.blinds_full_close
@@ -37,9 +33,7 @@
       at: "01:00:00"
   conditions:
     - condition: state
-      entity_id:
-        - input_boolean.vacation
-        - input_boolean.tuya_mode
+      entity_id: input_boolean.vacation
       state: "off"
   actions:
     - action: script.blinds_full_close
@@ -55,7 +49,6 @@
       entity_id:
         - input_boolean.vacation
         - input_boolean.guests_in_living_room
-        - input_boolean.tuya_mode
       state: "off"
   actions:
     - action: script.blinds_full_close_open

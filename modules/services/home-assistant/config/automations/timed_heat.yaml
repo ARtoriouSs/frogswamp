@@ -1,4 +1,4 @@
-# Timed runs of the heaters, see scripts/timed_heat.yaml. Tuya rule mode doesn't stop these:
+# Timed runs of the heaters, see scripts/timed_heat.yaml. Nothing stops these:
 # they only finish a run started by hand, and a heater must not stay on
 
 - id: repo_timed_heat_finished

@@ -76,18 +76,18 @@ Workdays come from the **Workday** integration (`binary_sensor.workday_sensor_pl
 
 Workday can only be added in the UI (once, it is kept in HA's state dir): **Settings → Devices & services → Add integration → Workday**. Country Poland (the entity becomes `binary_sensor.workday_sensor_pl`), workdays Monday–Friday, excludes Saturday, Sunday and Holidays, offset 0. Without it the floors, the towel heat nights and the desk don't run (Vacation still works).
 
-## Modes (General actions card)
+## Modes
 
 Switches in `config/packages/modes.yaml`. Automations check them in their conditions, so modes can be on together.
 
-| Mode | Stops | When turned on, also runs the Tuya scene |
-|---|---|---|
-| Day off | desk schedule. Also counts the day as a weekend day for the schedule (late wakeup and bedtime) | `Days off - on` |
-| Vacation | desk, floor warming, blinds, curtains. Also turns off both floors, guest towel heat and the master towel heat relay, and puts the cube in quiet mode. Nothing turns on again when Vacation ends, everything waits for its next scheduled time (the cube comes back at once, unless it is night) | `Vacation - on` |
-| Guests in the living room | blinds opening in the morning | `Guests in the living room - on` |
-| Tuya rule mode | every HA automation that moves Tuya devices (alerts keep running) | none |
+| Mode | Stops |
+|---|---|
+| Day off | desk schedule. Also counts the day as a weekend day for the schedule (late wakeup and bedtime) |
+| Vacation | desk, floor warming, blinds, curtains. Also turns off both floors, guest towel heat and the master towel heat relay, and puts the cube in quiet mode. Nothing turns on again when Vacation ends, everything waits for its next scheduled time (the cube comes back at once, unless it is night) |
+| Guests in the living room | blinds opening in the morning |
+| Location paused | the nobody-home quiet mode and the count to the Vacation suggestion. Turning it on also ends a running away state |
 
-Turning a mode off runs no Tuya scene, so the Tuya app's own automations stay off. **TV mode** (`script.tv_mode`) turns the TV on and opens YouTube by its link.
+**TV mode** (`script.tv_mode`) turns the TV on and opens YouTube by its link.
 
 ## Room temperatures
 

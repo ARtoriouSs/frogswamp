@@ -3,13 +3,14 @@
 
 # Both people must really be out. Unknown or unavailable makes this false and starts the 10 min again.
 # Any state other than home counts as out, so future zones like work work too.
-# Guest mode blocks it, and turning Guest mode off starts the 10 min if both are out
+# Guest mode and Location paused block it, and turning them off starts the 10 min if both are out
 - id: repo_presence_last_left
   alias: "Presence: last person left"
   triggers:
     - trigger: template
       value_template: >-
         {{ is_state('input_boolean.guests_in_living_room', 'off')
+           and is_state('input_boolean.location_paused', 'off')
            and [states('person.aleksander_cieslowski'), states('person.natallia_radziuk')]
            | reject('in', ['home', 'unknown', 'unavailable']) | list | count == 2 }}
       for: "00:10:00"
@@ -31,7 +32,8 @@
   triggers:
     - trigger: template
       value_template: >-
-        {{ [states('person.aleksander_cieslowski'), states('person.natallia_radziuk')]
+        {{ is_state('input_boolean.location_paused', 'off')
+           and [states('person.aleksander_cieslowski'), states('person.natallia_radziuk')]
            | reject('in', ['home', 'unknown', 'unavailable']) | list | count == 2 }}
       for: "00:10:00"
   conditions:
@@ -71,6 +73,22 @@
       target:
         entity_id: timer.nobody_home
 
+# A pause also ends the away state, so nothing stays dimmed or counting until someone comes back
+- id: repo_presence_paused
+  alias: "Presence: pause ends the away state"
+  triggers:
+    - trigger: state
+      entity_id: input_boolean.location_paused
+      from: "off"
+      to: "on"
+  actions:
+    - action: input_boolean.turn_off
+      target:
+        entity_id: input_boolean.nobody_home
+    - action: timer.cancel
+      target:
+        entity_id: timer.nobody_home
+
 - id: repo_presence_suggest_vacation
   alias: "Presence: suggest Vacation after a day away"
   triggers:
@@ -86,7 +104,7 @@
     - action: notify.mobile_app_pixel_7
       data:
         title: Nobody home for 24 h
-        message: Turn on Vacation mode? Tap to open Home
+        message: Turn on Vacation mode? Tap to open Schedule
         data:
           tag: suggest-vacation
-          clickAction: /main-yaml/home
+          clickAction: /main-yaml/schedule

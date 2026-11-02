@@ -2,8 +2,7 @@
 # Nights only: from 1 h before bedtime, like the floor warming, for 3 h (packages/schedule.yaml). The schedule
 # only asks for a lease (script.heat_lease) and never turns the heater off, the end of the lease does.
 # Workday or weekend bedtime is picked by the Workday integration for the next day.
-# Vacation on turns it off. Vacation off doesn't turn it on, the next night does. Tuya rule mode doesn't stop it,
-# the relay isn't a Tuya device
+# Vacation on turns it off. Vacation off doesn't turn it on, the next night does.
 - id: repo_towel_heat_master_schedule
   alias: "Towel heat: master schedule"
   description: Master bathroom towel heat relay, 3 h from 1 h before bedtime, off during Vacation

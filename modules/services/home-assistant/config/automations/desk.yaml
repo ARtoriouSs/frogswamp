@@ -1,4 +1,4 @@
-# Standing breaks: desk up for 30 minutes three times a day on workdays (Workday integration, no holidays). Day off, Vacation and Tuya rule mode stop it
+# Standing breaks: desk up for 30 minutes three times a day on workdays (Workday integration, no holidays). Day off and Vacation stop it
 - id: repo_desk_schedule
   alias: "Desk: schedule"
   description: Workdays, up at 13:00, 15:00 and 17:00, down 30 minutes later
@@ -21,7 +21,6 @@
       entity_id:
         - input_boolean.day_off
         - input_boolean.vacation
-        - input_boolean.tuya_mode
       state: "off"
     # Workday integration: weekdays without holidays
     - condition: state
