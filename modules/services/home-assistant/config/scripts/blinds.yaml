@@ -23,7 +23,7 @@ blinds_run:
               entity_id: "script.blind_run_{{ repeat.item }}"
             data:
               variables:
-                move: "{{ 'full_close' if move == 'close_door' else move }}"
+                move: "{{ 'full_close_open' if move == 'close_door' else move }}"
 
 blind_run_left_door:
   alias: "Blinds: run a move on left / door"
@@ -121,7 +121,8 @@ blind_run_right:
     blind: cover.blinds_right_local
   sequence: *blind_sequence
 
-# The balcony button: closes the door blind if it's open, otherwise opens it, also from the middle
+# The balcony button: an open door blind gets a Reset of its own (closes, then the slats open),
+# otherwise it opens fully, also from the middle
 blinds_balcony_toggle:
   alias: "Blinds: toggle balcony"
   icon: mdi:door-open
@@ -133,7 +134,7 @@ blinds_balcony_toggle:
         - action: script.blinds_open_door
 
 blinds_close_door:
-  alias: "Blinds: close door"
+  alias: "Blinds: close door, slats open"
   icon: mdi:door-closed
   sequence:
     - action: script.turn_on
