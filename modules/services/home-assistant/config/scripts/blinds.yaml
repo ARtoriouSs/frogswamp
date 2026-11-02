@@ -50,15 +50,26 @@ blind_run_left_door:
             # One slat step after arriving: a blind that was already down barely moves, so its slats
             # stop a step short. The step stops a blind still on its way, and a report of 0 alone doesn't
             # prove arrival, so first wait the time this run needs: 0.47 s per percent, a full run is 40-47 s.
-            # The timeout covers a blind that doesn't report 0.
             # Close + open waits 2 s instead of 0.75 s, to be sure the blind has settled
             - if: "{{ move in ['full_close', 'full_close_open'] }}"
               then:
                 - delay:
                     milliseconds: "{{ start * 470 }}"
+                # No report of 0 means the motor may have ignored the command, e.g. if it was still
+                # busy with slat steps, so it gets the command once more
                 - wait_template: "{{ state_attr(blind, 'current_position') == 0 }}"
-                  timeout: "00:00:15"
+                  timeout: "00:00:03"
                   continue_on_timeout: true
+                - if: "{{ not wait.completed }}"
+                  then:
+                    - action: cover.set_cover_position
+                      target:
+                        entity_id: "{{ blind }}"
+                      data:
+                        position: 0
+                    - wait_template: "{{ state_attr(blind, 'current_position') == 0 }}"
+                      timeout: "00:00:15"
+                      continue_on_timeout: true
                 - delay:
                     milliseconds: "{{ 2000 if move == 'full_close_open' else 750 }}"
                 - action: cover.close_cover
