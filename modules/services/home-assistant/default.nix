@@ -113,6 +113,8 @@ in
           "--network=host"
           "--cap-add=NET_ADMIN"
           "--cap-add=NET_RAW"
+          # podman kills after 10 s by default: HA loses its last saved states and leaves the database unclean
+          "--stop-timeout=90"
         ];
       };
     };
