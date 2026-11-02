@@ -1031,7 +1031,7 @@ views:
           - type: heading
             heading: ""
           - type: heading
-            heading: Hall
+            heading: Server
             icon: mdi:wardrobe-outline
           - *info
           - &hall_router
@@ -1393,7 +1393,7 @@ views:
           - type: heading
             heading: ""
           - type: heading
-            heading: Hall
+            heading: Server
             icon: mdi:wardrobe-outline
           - type: conditional
             conditions:
@@ -1648,7 +1648,7 @@ views:
             tap_action:
               action: more-info
           - type: heading
-            heading: Hall
+            heading: Server
             heading_style: subtitle
           - type: custom:mushroom-template-card
             entity: binary_sensor.router_online
