@@ -50,6 +50,7 @@ template:
           {{ door > 0 and door > [
                as_timestamp(state_attr('script.blinds_open', 'last_triggered'), 0),
                as_timestamp(state_attr('script.blinds_full_close', 'last_triggered'), 0),
+               as_timestamp(state_attr('script.blinds_close_door', 'last_triggered'), 0),
                as_timestamp(state_attr('script.blinds_full_close_open', 'last_triggered'), 0)
              ] | max }}
         turn_on:

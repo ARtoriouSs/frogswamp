@@ -160,6 +160,7 @@
     - trigger: state
       entity_id:
         - script.blinds_full_close
+        - script.blinds_close_door
         - script.curtains_close
       to: "on"
       id: blinds_close

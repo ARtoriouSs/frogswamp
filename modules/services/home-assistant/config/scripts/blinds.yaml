@@ -2,45 +2,62 @@
 # The blinds' position in HA: 0 = drawn across the window (closed), 100 = gathered at the side (open).
 # The Tuya app and its scenes count the other way (100% = drawn), Tuya Local's config inverts it.
 # An open/close command without a position only turns the slats.
-# The button scripts below start blinds_run and return at once; it runs in restart mode, so a new
-# command stops the one still running (e.g. Full close while Close + open waits for the blinds)
+# The button scripts below start blinds_run and return at once. It starts one script per blind, each in
+# restart mode: a new command stops only what its own blind is doing, and the blinds don't wait for each other
+# (with the door open, the other two finish Reset long before it does)
 blinds_run:
   alias: "Blinds: run a move"
+  icon: mdi:blinds
+  mode: parallel
+  fields:
+    move:
+      description: full_close, open, full_close_open, open_door, close_door, slats_open or slats_close
+      required: true
+      example: full_close
+  sequence:
+    - repeat:
+        for_each: "{{ ['left_door'] if move in ['open_door', 'close_door'] else ['left_door', 'middle', 'right'] }}"
+        sequence:
+          - action: script.turn_on
+            target:
+              entity_id: "script.blind_run_{{ repeat.item }}"
+            data:
+              variables:
+                move: "{{ 'full_close' if move == 'close_door' else move }}"
+
+blind_run_left_door:
+  alias: "Blinds: run a move on left / door"
   icon: mdi:blinds
   mode: restart
   fields:
     move:
-      description: full_close, open, full_close_open, open_door, slats_open or slats_close
       required: true
       example: full_close
   variables:
-    blinds:
-      - cover.blinds_left_door_local
-      - cover.blinds_middle_local
-      - cover.blinds_right_local
-  sequence:
+    blind: cover.blinds_left_door_local
+  sequence: &blind_sequence
     - choose:
         - conditions: "{{ move in ['full_close', 'open', 'full_close_open'] }}"
           sequence:
             - action: cover.set_cover_position
               target:
-                entity_id: "{{ blinds }}"
+                entity_id: "{{ blind }}"
               data:
                 position: 0
             # One slat step after arriving: a blind that was already down barely moves, so its slats
-            # stop a step short. The step could interrupt a blind still on its way, so it waits for them
+            # stop a step short. The step could interrupt a blind still on its way, so it waits for it
             # (a full run takes 47 s). The timeout covers a blind that doesn't report 0.
-            # Close + open waits 2 s instead of 0.75 s, to be sure all three have settled
+            # Close + open waits 2 s instead of 0.75 s, to be sure the blind has settled
             - if: "{{ move in ['full_close', 'full_close_open'] }}"
               then:
-                - wait_template: "{{ blinds | map('state_attr', 'current_position') | reject('eq', 0) | list | count == 0 }}"
+                - wait_template: "{{ state_attr(blind, 'current_position') == 0 }}"
                   timeout: "00:01:00"
                   continue_on_timeout: true
                 - delay:
                     milliseconds: "{{ 2000 if move == 'full_close_open' else 750 }}"
                 - action: cover.close_cover
                   target:
-                    entity_id: "{{ blinds }}"
+                    entity_id: "{{ blind }}"
             # Open: five slat steps, 0.75 s apart
             - if: "{{ move in ['open', 'full_close_open'] }}"
               then:
@@ -51,19 +68,80 @@ blinds_run:
                           milliseconds: 750
                       - action: cover.open_cover
                         target:
-                          entity_id: "{{ blinds }}"
+                          entity_id: "{{ blind }}"
+        # From closed the first command may only turn the slats, so it's sent again until the blind
+        # really travels. Slat steps change the position by 1 or so. The position is reported every few s
         - conditions: "{{ move == 'open_door' }}"
           sequence:
-            - action: cover.set_cover_position
-              target:
-                entity_id: cover.blinds_left_door_local
-              data:
-                position: 100
+            - variables:
+                start: "{{ state_attr(blind, 'current_position') | int(0) }}"
+            - repeat:
+                count: 3
+                sequence:
+                  - action: cover.set_cover_position
+                    target:
+                      entity_id: "{{ blind }}"
+                    data:
+                      position: 100
+                  - wait_template: >-
+                      {% set position = state_attr(blind, 'current_position') | int(0) %}
+                      {{ position > start + 3 or position >= 99 }}
+                    timeout: "00:00:08"
+                    continue_on_timeout: true
+                  - if: "{{ wait.completed }}"
+                    then:
+                      - stop: The blind is travelling
         - conditions: "{{ move in ['slats_open', 'slats_close'] }}"
           sequence:
             - action: "cover.{{ 'open' if move == 'slats_open' else 'close' }}_cover"
               target:
-                entity_id: "{{ blinds }}"
+                entity_id: "{{ blind }}"
+
+blind_run_middle:
+  alias: "Blinds: run a move on middle"
+  icon: mdi:blinds
+  mode: restart
+  fields:
+    move:
+      required: true
+      example: full_close
+  variables:
+    blind: cover.blinds_middle_local
+  sequence: *blind_sequence
+
+blind_run_right:
+  alias: "Blinds: run a move on right"
+  icon: mdi:blinds
+  mode: restart
+  fields:
+    move:
+      required: true
+      example: full_close
+  variables:
+    blind: cover.blinds_right_local
+  sequence: *blind_sequence
+
+# The balcony button: closes the door blind if it's open, otherwise opens it, also from the middle
+blinds_balcony_toggle:
+  alias: "Blinds: toggle balcony"
+  icon: mdi:door-open
+  sequence:
+    - if: "{{ state_attr('cover.blinds_left_door_local', 'current_position') | int(0) >= 95 }}"
+      then:
+        - action: script.blinds_close_door
+      else:
+        - action: script.blinds_open_door
+
+blinds_close_door:
+  alias: "Blinds: close door"
+  icon: mdi:door-closed
+  sequence:
+    - action: script.turn_on
+      target:
+        entity_id: script.blinds_run
+      data:
+        variables:
+          move: close_door
 
 blinds_full_close:
   alias: "Blinds: full close"
