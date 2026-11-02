@@ -31,13 +31,25 @@ blinds_run:
               then:
                 # the time the blinds need to draw across from fully gathered
                 - delay: "00:00:47"
-            # Open: five slat steps, 2 s apart, the same as the Tuya scene
+            # One slat step after arriving: a blind that was already down barely moves, so its slats
+            # stop a step short. The step could interrupt a blind still on its way, so it waits for them
+            # (a full run takes 47 s). The timeout covers a blind that doesn't report 0
+            - if: "{{ move == 'full_close' }}"
+              then:
+                - wait_template: "{{ blinds | map('state_attr', 'current_position') | reject('eq', 0) | list | count == 0 }}"
+                  timeout: "00:01:00"
+                  continue_on_timeout: true
+                - delay: "00:00:01"
+                - action: cover.close_cover
+                  target:
+                    entity_id: "{{ blinds }}"
+            # Open: five slat steps, 1 s apart
             - if: "{{ move in ['open', 'full_close_open'] }}"
               then:
                 - repeat:
                     count: 5
                     sequence:
-                      - delay: "00:00:02"
+                      - delay: "00:00:01"
                       - action: cover.open_cover
                         target:
                           entity_id: "{{ blinds }}"
