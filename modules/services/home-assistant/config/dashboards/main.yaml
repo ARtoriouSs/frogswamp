@@ -1032,7 +1032,7 @@ views:
             heading: ""
           - type: heading
             heading: Server
-            icon: mdi:wardrobe-outline
+            icon: mdi:server
           - *info
           - &hall_router
             <<: *info
@@ -1394,7 +1394,7 @@ views:
             heading: ""
           - type: heading
             heading: Server
-            icon: mdi:wardrobe-outline
+            icon: mdi:server
           - type: conditional
             conditions:
               - condition: state
