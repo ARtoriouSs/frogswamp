@@ -21,12 +21,27 @@
     - action: input_boolean.turn_on
       target:
         entity_id: input_boolean.nobody_home
-    - action: timer.start
-      target:
-        entity_id: timer.nobody_home
     - action: remote.turn_off
       target:
         entity_id: remote.living_room_philips_tv
+
+# Counts the day away for the Vacation suggestion. Unlike the one above it ignores Guest mode
+- id: repo_presence_start_day_timer
+  alias: "Presence: start counting a day away"
+  triggers:
+    - trigger: template
+      value_template: >-
+        {{ [states('person.aleksander_cieslowski'), states('person.natallia_radziuk')]
+           | reject('in', ['home', 'unknown', 'unavailable']) | list | count == 2 }}
+      for: "00:10:00"
+  conditions:
+    - condition: state
+      entity_id: timer.nobody_home
+      state: idle
+  actions:
+    - action: timer.start
+      target:
+        entity_id: timer.nobody_home
 
 # Only a real "home" ends it: a phone going unavailable while out changes nothing.
 # The start trigger catches someone who came back while HA was down
@@ -42,9 +57,6 @@
     - trigger: homeassistant
       event: start
   conditions:
-    - condition: state
-      entity_id: input_boolean.nobody_home
-      state: "on"
     - condition: state
       entity_id:
         - person.aleksander_cieslowski
@@ -68,9 +80,7 @@
         entity_id: timer.nobody_home
   conditions:
     - condition: state
-      entity_id:
-        - input_boolean.vacation
-        - input_boolean.guests_in_living_room
+      entity_id: input_boolean.vacation
       state: "off"
   actions:
     - action: notify.mobile_app_pixel_7
