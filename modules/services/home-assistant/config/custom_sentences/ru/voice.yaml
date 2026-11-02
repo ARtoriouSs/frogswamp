@@ -21,6 +21,12 @@ intents:
           - "открой (дверь|проход|выход) на балкон"
         slots:
           lang: ru
+  FrogBalconyDoorClose:
+    data:
+      - sentences:
+          - "закрой (дверь|проход|выход) на балкон"
+        slots:
+          lang: ru
   FrogCurtainsOpen:
     data:
       - sentences:

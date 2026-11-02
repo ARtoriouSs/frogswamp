@@ -19,6 +19,12 @@ intents:
           - "open [the] (balcony door|door to the balcony|way to the balcony)"
         slots:
           lang: en
+  FrogBalconyDoorClose:
+    data:
+      - sentences:
+          - "close [the] (balcony door|door to the balcony|way to the balcony)"
+        slots:
+          lang: en
   FrogCurtainsOpen:
     data:
       - sentences:

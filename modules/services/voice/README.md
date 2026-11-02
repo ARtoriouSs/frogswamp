@@ -61,6 +61,7 @@ Every exposed entity has Russian aliases, often also English ones (*Settings →
 | открой / подними / сбрось жалюзи | open / raise / reset the blinds | script *Blinds: full close + open* |
 | закрой / опусти жалюзи [полностью] | close / lower the blinds [all the way] | script *Blinds: full close* |
 | открой дверь / проход на балкон | open the balcony door | script *Blinds: open door* |
+| закрой дверь / проход на балкон | close the balcony door | script *Blinds: close door, slats open* |
 | открой / закрой шторы | open / close the curtains | scenes *Curtains - open / close* |
 | включи / выключи тёплый пол в гостевом санузле … | turn on / off the floor heating in the guest bathroom … | the guest or master thermostat |
 | включи / выключи полотенцесушитель в … | turn on / off the towel heater in the … | guest towel heat or master relay |

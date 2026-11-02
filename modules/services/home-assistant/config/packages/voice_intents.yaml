@@ -16,6 +16,12 @@ intent_script:
       - action: script.blinds_open_door
     speech:
       text: "{{ 'Opening the balcony door' if lang == 'en' else 'Открываю дверь на балкон' }}"
+  # Closes the door blind, then its slats open, like Toggle balcony
+  FrogBalconyDoorClose:
+    action:
+      - action: script.blinds_close_door
+    speech:
+      text: "{{ 'Closing the balcony door' if lang == 'en' else 'Закрываю дверь на балкон' }}"
   FrogCurtainsOpen:
     action:
       - action: script.curtains_open
