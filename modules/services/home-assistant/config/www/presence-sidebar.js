@@ -37,7 +37,18 @@ class FrogPresence extends HTMLElement {
           margin-bottom: 8px;
           border-bottom: 1px solid var(--divider-color);
         }
-        .person { width: 48px; text-align: center; font-size: 11px; line-height: 16px; }
+        .person {
+          width: 48px;
+          padding: 0;
+          border: 0;
+          background: none;
+          color: inherit;
+          cursor: pointer;
+          font: inherit;
+          font-size: 11px;
+          line-height: 16px;
+          text-align: center;
+        }
         .avatar {
           width: 36px;
           height: 36px;
@@ -70,8 +81,18 @@ class FrogPresence extends HTMLElement {
   personAt(index) {
     let person = this.shadowRoot.querySelectorAll(".person")[index];
     if (!person) {
-      person = document.createElement("div");
+      person = document.createElement("button");
       person.className = "person";
+      // HA's own person dialog, its map shows the person even at home. The /map page has no link to one person and hides people at home
+      person.addEventListener("click", () =>
+        this.dispatchEvent(
+          new CustomEvent("hass-more-info", {
+            detail: { entityId: PEOPLE[index] },
+            bubbles: true,
+            composed: true,
+          })
+        )
+      );
       person.avatar = person.appendChild(document.createElement("div"));
       person.avatar.className = "avatar";
       person.label = person.appendChild(document.createElement("div"));
