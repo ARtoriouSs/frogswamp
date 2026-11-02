@@ -1,0 +1,82 @@
+# The Cube follows input_boolean.nobody_home in automations/cube.yaml: the lamp can't stay off, so its
+# "off" is the green dot at 0%, and it wakes only if it isn't night or Vacation
+
+# Both people must really be out. Unknown or unavailable makes this false and starts the 10 min again.
+# Any state other than home counts as out, so future zones like work work too.
+# Guest mode blocks it, and turning Guest mode off starts the 10 min if both are out
+- id: repo_presence_last_left
+  alias: "Presence: last person left"
+  triggers:
+    - trigger: template
+      value_template: >-
+        {{ is_state('input_boolean.guests_in_living_room', 'off')
+           and [states('person.aleksander_cieslowski'), states('person.natallia_radziuk')]
+           | reject('in', ['home', 'unknown', 'unavailable']) | list | count == 2 }}
+      for: "00:10:00"
+  conditions:
+    - condition: state
+      entity_id: input_boolean.nobody_home
+      state: "off"
+  actions:
+    - action: input_boolean.turn_on
+      target:
+        entity_id: input_boolean.nobody_home
+    - action: timer.start
+      target:
+        entity_id: timer.nobody_home
+    - action: remote.turn_off
+      target:
+        entity_id: remote.living_room_philips_tv
+
+# Only a real "home" ends it: a phone going unavailable while out changes nothing.
+# The start trigger catches someone who came back while HA was down
+- id: repo_presence_first_back
+  alias: "Presence: first person back"
+  mode: queued
+  triggers:
+    - trigger: state
+      entity_id:
+        - person.aleksander_cieslowski
+        - person.natallia_radziuk
+      to: home
+    - trigger: homeassistant
+      event: start
+  conditions:
+    - condition: state
+      entity_id: input_boolean.nobody_home
+      state: "on"
+    - condition: state
+      entity_id:
+        - person.aleksander_cieslowski
+        - person.natallia_radziuk
+      match: any
+      state: home
+  actions:
+    - action: input_boolean.turn_off
+      target:
+        entity_id: input_boolean.nobody_home
+    - action: timer.cancel
+      target:
+        entity_id: timer.nobody_home
+
+- id: repo_presence_suggest_vacation
+  alias: "Presence: suggest Vacation after a day away"
+  triggers:
+    - trigger: event
+      event_type: timer.finished
+      event_data:
+        entity_id: timer.nobody_home
+  conditions:
+    - condition: state
+      entity_id:
+        - input_boolean.vacation
+        - input_boolean.guests_in_living_room
+      state: "off"
+  actions:
+    - action: notify.mobile_app_pixel_7
+      data:
+        title: Nobody home for 24 h
+        message: Turn on Vacation mode? Tap to open Home
+        data:
+          tag: suggest-vacation
+          clickAction: /main-yaml/home

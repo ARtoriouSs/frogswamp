@@ -1,0 +1,12 @@
+# Set by automations/presence.yaml. The flag and the timer keep their state over HA restarts,
+# a plain `for: 24:00:00` would start again after every deploy
+input_boolean:
+  nobody_home:
+    name: Nobody home
+    icon: mdi:home-export-outline
+
+timer:
+  nobody_home:
+    name: Nobody home for a day
+    duration: "24:00:00"
+    restore: true

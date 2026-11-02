@@ -4,6 +4,7 @@ default_config:
 homeassistant:
   latitude: !secret latitude
   longitude: !secret longitude
+  radius: 150
   packages: !include_dir_named packages
 
 automation manual: !include_dir_merge_list automations
