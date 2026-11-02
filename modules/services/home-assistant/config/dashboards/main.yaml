@@ -107,6 +107,62 @@ views:
             grid_options:
               columns: 6
               rows: 2
+          # The timed buttons: 3 h on, a tap while it runs ends it (scripts/timed_heat.yaml)
+          - &timed_towel_master
+            type: custom:mushroom-template-card
+            entity: timer.heat_towel_master
+            primary: Towel 3 h
+            secondary: >-
+              {% set off = 'binary_sensor.heat_off_' ~ entity | replace('timer.heat_', '') %}
+              {%- if is_state(entity, 'active') %}
+                {%- set left = (as_datetime(state_attr(entity, 'finishes_at')) - now()).total_seconds() | int(0) %}
+                {{- left // 3600 }} h {{ left % 3600 // 60 }} min left
+              {%- elif states(off) in ['unavailable', 'unknown'] %}Offline
+              {%- else %}Tap to start{% endif %}
+            icon: "{{ 'mdi:timer-sand' if is_state(entity, 'active') else 'mdi:timer-outline' }}"
+            color: "{{ 'deep-orange' if is_state(entity, 'active') else 'disabled' }}"
+            vertical: true
+            grid_options:
+              columns: 6
+              rows: 2
+            tap_action:
+              action: perform-action
+              perform_action: script.heat_timed_press
+              data:
+                device: towel_master
+            hold_action:
+              action: more-info
+          - &timed_floor_master
+            <<: *timed_towel_master
+            entity: timer.heat_floor_master
+            primary: Floor 3 h
+            tap_action:
+              action: perform-action
+              perform_action: script.heat_timed_press
+              data:
+                device: floor_master
+
+          - type: heading
+            heading: Guest bathroom
+            icon: mdi:shower
+          - &timed_towel_guest
+            <<: *timed_towel_master
+            entity: timer.heat_towel_guest
+            primary: Towel 3 h
+            tap_action:
+              action: perform-action
+              perform_action: script.heat_timed_press
+              data:
+                device: towel_guest
+          - &timed_floor_guest
+            <<: *timed_towel_master
+            entity: timer.heat_floor_guest
+            primary: Floor 3 h
+            tap_action:
+              action: perform-action
+              perform_action: script.heat_timed_press
+              data:
+                device: floor_guest
 
   # NeonPlan 3D model of the flat. It's drawn in NeonPlan's own editor and kept in its .storage, not in the repo
   - title: NeonPlan
@@ -721,6 +777,11 @@ views:
             grid_options:
               columns: 6
               rows: 2
+          - <<: *timed_floor_master
+            vertical: false
+            grid_options:
+              columns: 12
+              rows: 1
           - <<: *toggle
             entity: switch.master_bathroom_towel_heat_relay
             primary: Towel heat
@@ -736,6 +797,11 @@ views:
             grid_options:
               columns: 6
               rows: 2
+          - <<: *timed_towel_master
+            vertical: false
+            grid_options:
+              columns: 12
+              rows: 1
 
           # empty heading: a gap before the next room
           - type: heading
@@ -774,6 +840,11 @@ views:
             grid_options:
               columns: 6
               rows: 2
+          - <<: *timed_floor_guest
+            vertical: false
+            grid_options:
+              columns: 12
+              rows: 1
           - <<: *thermostat
             entity: climate.guest_bathroom_towel_heat_guest
             primary: Towel heat
@@ -782,6 +853,11 @@ views:
               action: toggle
             hold_action:
               action: more-info
+          - <<: *timed_towel_guest
+            vertical: false
+            grid_options:
+              columns: 12
+              rows: 1
 
   # Room temperatures and heating per bathroom. Humidity and fans go here later
   - title: Climate
@@ -981,6 +1057,11 @@ views:
             grid_options:
               columns: 6
               rows: 2
+          - <<: *timed_floor_master
+            vertical: false
+            grid_options:
+              columns: 12
+              rows: 1
           - <<: *toggle
             entity: switch.master_bathroom_towel_heat_relay
             primary: Towel heat
@@ -996,6 +1077,11 @@ views:
             grid_options:
               columns: 6
               rows: 2
+          - <<: *timed_towel_master
+            vertical: false
+            grid_options:
+              columns: 12
+              rows: 1
 
       - type: grid
         cards:
@@ -1026,6 +1112,11 @@ views:
             grid_options:
               columns: 6
               rows: 2
+          - <<: *timed_floor_guest
+            vertical: false
+            grid_options:
+              columns: 12
+              rows: 1
           - <<: *thermostat
             entity: climate.guest_bathroom_towel_heat_guest
             primary: Towel heat
@@ -1034,6 +1125,11 @@ views:
               action: toggle
             hold_action:
               action: more-info
+          - <<: *timed_towel_guest
+            vertical: false
+            grid_options:
+              columns: 12
+              rows: 1
 
   # Lights and players. The Cube Matrix is the only smart light for now
   - title: Light & media
@@ -2148,6 +2244,7 @@ views:
             grid_options:
               columns: 6
               rows: 2
+          - *timed_floor_guest
           - <<: *toggle
             entity: switch.guest_towel_heat
             primary: Towel heat
@@ -2156,6 +2253,7 @@ views:
             grid_options:
               columns: 6
               rows: 2
+          - *timed_towel_guest
 
       - type: grid
         cards:

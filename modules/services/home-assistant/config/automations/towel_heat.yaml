@@ -64,6 +64,10 @@
                    != trigger.id.endswith('workday') }}
           then:
             - stop: Not this night's bedtime
+    # Timed runs read this to know if the schedule wants the heater on (packages/timed_heat.yaml)
+    - action: "input_boolean.turn_{{ 'on' if trigger.id.startswith('on') else 'off' }}"
+      target:
+        entity_id: input_boolean.heat_schedule_towel_master
     - action: "switch.turn_{{ 'on' if trigger.id.startswith('on') else 'off' }}"
       target:
         entity_id: switch.master_bathroom_towel_heat_relay

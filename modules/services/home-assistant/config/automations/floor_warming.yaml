@@ -69,6 +69,10 @@
       value_template: >-
         {{ (workday['binary_sensor.workday_sensor_pl'].workday and is_state('input_boolean.day_off', 'off'))
            == trigger.id.endswith('workday') }}
+    # Timed runs read this to know if the schedule wants the heater on (packages/timed_heat.yaml)
+    - action: "input_boolean.turn_{{ 'on' if trigger.id.startswith('on') else 'off' }}"
+      target:
+        entity_id: "input_boolean.heat_schedule_floor_{{ bathroom }}"
     - action: script.floor_warming_set
       data:
         bathroom: "{{ bathroom }}"

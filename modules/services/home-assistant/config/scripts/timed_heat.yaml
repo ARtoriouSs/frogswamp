@@ -1,0 +1,124 @@
+# `device` is towel_master, towel_guest, floor_master or floor_guest
+
+# The button. Starts a run, or ends the one in progress
+heat_timed_press:
+  alias: "Timed heat: button"
+  icon: mdi:timer-outline
+  mode: parallel
+  fields:
+    device:
+      required: true
+      example: towel_master
+  sequence:
+    - if: "{{ is_state('timer.heat_' ~ device, 'active') }}"
+      then:
+        - action: timer.cancel
+          target:
+            entity_id: "timer.heat_{{ device }}"
+        - action: script.turn_on
+          target:
+            entity_id: script.heat_timed_end
+          data:
+            variables:
+              device: "{{ device }}"
+      else:
+        # An offline heater wouldn't start, so no countdown for it. The card says Offline
+        - condition: template
+          value_template: "{{ states('binary_sensor.heat_off_' ~ device) not in ['unavailable', 'unknown'] }}"
+        - action: input_boolean.turn_on
+          target:
+            entity_id: "input_boolean.heat_run_{{ device }}"
+        - action: switch.turn_on
+          target:
+            entity_id: >-
+              {{ {'towel_master': 'switch.master_bathroom_towel_heat_relay',
+                  'towel_guest': 'switch.guest_towel_heat',
+                  'floor_master': 'switch.master_floor_warming',
+                  'floor_guest': 'switch.guest_floor_warming'}[device] }}
+        - action: timer.start
+          target:
+            entity_id: "timer.heat_{{ device }}"
+
+# The end of a run. The schedule wins: inside its on-window the heater stays on and the schedule turns it off
+heat_timed_end:
+  alias: "Timed heat: end of a run"
+  icon: mdi:timer-off-outline
+  mode: parallel
+  fields:
+    device:
+      required: true
+      example: towel_master
+  sequence:
+    - if: >-
+        {{ is_state('input_boolean.heat_schedule_' ~ device, 'on')
+           and is_state('input_boolean.vacation', 'off')
+           and (device.startswith('towel') or is_state('input_boolean.tuya_mode', 'off')) }}
+      then:
+        - action: input_boolean.turn_off
+          target:
+            entity_id: "input_boolean.heat_run_{{ device }}"
+      else:
+        - action: script.heat_timed_off
+          data:
+            device: "{{ device }}"
+
+# Tries every 5 min for a day until the device confirms it. Tells the phone after 30 min, and again when it worked
+heat_timed_off:
+  alias: "Timed heat: turn off with retries"
+  icon: mdi:radiator-off
+  mode: parallel
+  fields:
+    device:
+      required: true
+      example: towel_master
+  variables:
+    heater: >-
+      {{ {'towel_master': 'switch.master_bathroom_towel_heat_relay',
+          'towel_guest': 'switch.guest_towel_heat',
+          'floor_master': 'switch.master_floor_warming',
+          'floor_guest': 'switch.guest_floor_warming'}[device] }}
+    label: >-
+      {{ {'towel_master': 'Master towel heat',
+          'towel_guest': 'Guest towel heat',
+          'floor_master': 'Master floor warming',
+          'floor_guest': 'Guest floor warming'}[device] }}
+    confirmed: "binary_sensor.heat_off_{{ device }}"
+  sequence:
+    - repeat:
+        count: 288
+        sequence:
+          - action: switch.turn_off
+            continue_on_error: true
+            target:
+              entity_id: "{{ heater }}"
+          - wait_template: "{{ is_state(confirmed, 'on') }}"
+            timeout: "00:05:00"
+            continue_on_timeout: true
+          - if: "{{ wait.completed }}"
+            then:
+              - action: input_boolean.turn_off
+                target:
+                  entity_id: "input_boolean.heat_run_{{ device }}"
+              - if: "{{ repeat.index > 6 }}"
+                then:
+                  - action: notify.mobile_app_pixel_7
+                    data:
+                      title: "{{ label }} is off now"
+                      message: The timed run ended earlier, the device confirmed only now
+                      data:
+                        tag: "heat-off-{{ device }}"
+              - stop: Confirmed off
+          - if: "{{ repeat.index == 6 }}"
+            then:
+              - action: notify.mobile_app_pixel_7
+                data:
+                  title: "{{ label }} didn't turn off"
+                  message: "Its timed run ended, but it's {{ 'offline' if states(confirmed) in ['unavailable', 'unknown'] else 'still on' }} after 30 min of tries. Still trying for a day, check it"
+                  data:
+                    tag: "heat-off-{{ device }}"
+    - action: notify.mobile_app_pixel_7
+      data:
+        title: "{{ label }} still not off"
+        message: A day of tries didn't help, HA stopped trying. Turn it off by hand
+        data:
+          tag: "heat-off-{{ device }}"

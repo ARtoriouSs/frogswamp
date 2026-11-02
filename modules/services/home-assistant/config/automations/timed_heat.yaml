@@ -1,0 +1,102 @@
+# Timed runs of the heaters, see scripts/timed_heat.yaml. Tuya rule mode doesn't stop these:
+# they only finish a run started by hand, and a heater must not stay on
+
+- id: repo_timed_heat_finished
+  alias: "Timed heat: run finished"
+  mode: parallel
+  triggers:
+    - trigger: event
+      event_type: timer.finished
+      event_data:
+        entity_id: timer.heat_towel_master
+    - trigger: event
+      event_type: timer.finished
+      event_data:
+        entity_id: timer.heat_towel_guest
+    - trigger: event
+      event_type: timer.finished
+      event_data:
+        entity_id: timer.heat_floor_master
+    - trigger: event
+      event_type: timer.finished
+      event_data:
+        entity_id: timer.heat_floor_guest
+  actions:
+    - action: script.heat_timed_end
+      data:
+        device: "{{ trigger.event.data.entity_id | replace('timer.heat_', '') }}"
+
+# Turned off another way (by hand, voice or the schedule): the run is over, so the schedule wins here too
+- id: repo_timed_heat_turned_off
+  alias: "Timed heat: heater turned off"
+  mode: parallel
+  triggers:
+    - trigger: state
+      entity_id:
+        - binary_sensor.heat_off_towel_master
+        - binary_sensor.heat_off_towel_guest
+        - binary_sensor.heat_off_floor_master
+        - binary_sensor.heat_off_floor_guest
+      to: "on"
+  variables:
+    device: "{{ trigger.entity_id | replace('binary_sensor.heat_off_', '') }}"
+  actions:
+    - action: timer.cancel
+      target:
+        entity_id: "timer.heat_{{ device }}"
+    - action: input_boolean.turn_off
+      target:
+        entity_id: "input_boolean.heat_run_{{ device }}"
+
+# Vacation ends every run. Its own automations turn the heaters off, this adds the retries
+- id: repo_timed_heat_vacation
+  alias: "Timed heat: Vacation ends the runs"
+  triggers:
+    - trigger: state
+      entity_id: input_boolean.vacation
+      from: "off"
+      to: "on"
+  actions:
+    - repeat:
+        for_each:
+          - towel_master
+          - towel_guest
+          - floor_master
+          - floor_guest
+        sequence:
+          - if: "{{ is_state('input_boolean.heat_run_' ~ repeat.item, 'on') }}"
+            then:
+              - action: timer.cancel
+                target:
+                  entity_id: "timer.heat_{{ repeat.item }}"
+              - action: script.turn_on
+                target:
+                  entity_id: script.heat_timed_end
+                data:
+                  variables:
+                    device: "{{ repeat.item }}"
+
+# A run whose timer ended while HA was down, or whose retries a restart stopped.
+# The delay gives the integrations time to load
+- id: repo_timed_heat_after_restart
+  alias: "Timed heat: finish runs after a restart"
+  triggers:
+    - trigger: homeassistant
+      event: start
+  actions:
+    - delay: "00:01:00"
+    - repeat:
+        for_each:
+          - towel_master
+          - towel_guest
+          - floor_master
+          - floor_guest
+        sequence:
+          - if: "{{ is_state('input_boolean.heat_run_' ~ repeat.item, 'on') and not is_state('timer.heat_' ~ repeat.item, 'active') }}"
+            then:
+              - action: script.turn_on
+                target:
+                  entity_id: script.heat_timed_end
+                data:
+                  variables:
+                    device: "{{ repeat.item }}"

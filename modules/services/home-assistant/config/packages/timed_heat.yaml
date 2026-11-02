@@ -1,0 +1,71 @@
+# Timed runs of the towel heaters and floors: a button turns the heater on for 3 h.
+# Logic is in automations/timed_heat.yaml and scripts/timed_heat.yaml
+timer:
+  heat_towel_master:
+    name: Master towel heat, timed
+    duration: "03:00:00"
+    restore: true
+  heat_towel_guest:
+    name: Guest towel heat, timed
+    duration: "03:00:00"
+    restore: true
+  heat_floor_master:
+    name: Master floor warming, timed
+    duration: "03:00:00"
+    restore: true
+  heat_floor_guest:
+    name: Guest floor warming, timed
+    duration: "03:00:00"
+    restore: true
+
+input_boolean:
+  # On from the button until the heater is confirmed off, so a restart can finish the job
+  heat_run_towel_master:
+    name: Master towel heat run
+    icon: mdi:timer-outline
+  heat_run_towel_guest:
+    name: Guest towel heat run
+    icon: mdi:timer-outline
+  heat_run_floor_master:
+    name: Master floor warming run
+    icon: mdi:timer-outline
+  heat_run_floor_guest:
+    name: Guest floor warming run
+    icon: mdi:timer-outline
+  # Set by the schedules: on while the schedule wants the heater on. The guest towel heat has no schedule
+  heat_schedule_towel_master:
+    name: Master towel heat schedule on
+    icon: mdi:calendar-clock
+  heat_schedule_floor_master:
+    name: Master floor warming schedule on
+    icon: mdi:calendar-clock
+  heat_schedule_floor_guest:
+    name: Guest floor warming schedule on
+    icon: mdi:calendar-clock
+
+# On = the heater is really off. The switches read "off" when the device is offline too, these go unavailable.
+# Floors: off is the manual mode at 5 °C (script.floor_warming_set)
+template:
+  - binary_sensor:
+      - name: Heat off towel master
+        unique_id: repo_heat_off_towel_master
+        state: "{{ is_state('switch.master_bathroom_towel_heat_relay', 'off') }}"
+        availability: "{{ states('switch.master_bathroom_towel_heat_relay') not in ['unavailable', 'unknown'] }}"
+      - name: Heat off towel guest
+        unique_id: repo_heat_off_towel_guest
+        state: "{{ is_state('climate.guest_bathroom_towel_heat_guest', 'off') }}"
+        availability: "{{ states('climate.guest_bathroom_towel_heat_guest') not in ['unavailable', 'unknown'] }}"
+      - name: Heat off floor master
+        unique_id: repo_heat_off_floor_master
+        state: >-
+          {{ is_state('climate.thermostat_master_local', 'off')
+             or (is_state('climate.thermostat_master_local', 'heat')
+                 and state_attr('climate.thermostat_master_local', 'temperature') | float(99) <= 5) }}
+        availability: "{{ states('climate.thermostat_master_local') not in ['unavailable', 'unknown'] }}"
+      - name: Heat off floor guest
+        unique_id: repo_heat_off_floor_guest
+        state: >-
+          {{ is_state('climate.thermostat_guest_local', 'off')
+             or (is_state('climate.thermostat_guest_local', 'heat')
+                 and state_attr('climate.thermostat_guest_local', 'temperature') | float(99) <= 5) }}
+        availability: "{{ states('climate.thermostat_guest_local') not in ['unavailable', 'unknown'] }}"
