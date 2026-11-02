@@ -1,6 +1,58 @@
 # `device` is towel_master, towel_guest, floor_master or floor_guest
+#
+# A run is a lease: a timer that turns the heater off when it ends. Automations only ever ask for one, so they
+# can't turn off a heater someone else is using. A heater turned on by hand has no lease and runs until it is
+# turned off by hand. Only the end of a lease, the button, a manual off and Vacation turn a heater off
 
-# The button. Starts a run, or ends the one in progress
+# For automations. Starts a lease if the heater is off, extends a running one if this one ends later,
+# never shortens it. A heater that is on without a lease was turned on by hand, so it's left alone
+heat_lease:
+  alias: "Timed heat: ask for a lease"
+  icon: mdi:timer-plus-outline
+  mode: parallel
+  fields:
+    device:
+      required: true
+      example: floor_master
+    duration:
+      description: Length of the lease, 3 h if not set
+      example: "03:00:00"
+  variables:
+    length: "{{ duration | default('03:00:00') }}"
+    timer_id: "timer.heat_{{ device }}"
+    off_sensor: "binary_sensor.heat_off_{{ device }}"
+  sequence:
+    - choose:
+        - conditions: "{{ is_state(timer_id, 'active') }}"
+          sequence:
+            - if: >-
+                {{ (as_datetime(state_attr(timer_id, 'finishes_at')) - now()).total_seconds()
+                   < as_timedelta(length).total_seconds() }}
+              then:
+                - action: timer.start
+                  target:
+                    entity_id: "{{ timer_id }}"
+                  data:
+                    duration: "{{ length }}"
+        - conditions: "{{ is_state(off_sensor, 'on') }}"
+          sequence:
+            - action: input_boolean.turn_on
+              target:
+                entity_id: "input_boolean.heat_run_{{ device }}"
+            - action: switch.turn_on
+              target:
+                entity_id: >-
+                  {{ {'towel_master': 'switch.master_bathroom_towel_heat_relay',
+                      'towel_guest': 'switch.guest_towel_heat',
+                      'floor_master': 'switch.master_floor_warming',
+                      'floor_guest': 'switch.guest_floor_warming'}[device] }}
+            - action: timer.start
+              target:
+                entity_id: "{{ timer_id }}"
+              data:
+                duration: "{{ length }}"
+
+# The button. Starts a lease even if the heater is on by hand, or ends the one in progress and turns it off
 heat_timed_press:
   alias: "Timed heat: button"
   icon: mdi:timer-outline
@@ -17,7 +69,7 @@ heat_timed_press:
             entity_id: "timer.heat_{{ device }}"
         - action: script.turn_on
           target:
-            entity_id: script.heat_timed_end
+            entity_id: script.heat_timed_off
           data:
             variables:
               device: "{{ device }}"
@@ -38,29 +90,6 @@ heat_timed_press:
         - action: timer.start
           target:
             entity_id: "timer.heat_{{ device }}"
-
-# The end of a run. The schedule wins: inside its on-window the heater stays on and the schedule turns it off
-heat_timed_end:
-  alias: "Timed heat: end of a run"
-  icon: mdi:timer-off-outline
-  mode: parallel
-  fields:
-    device:
-      required: true
-      example: towel_master
-  sequence:
-    - if: >-
-        {{ is_state('input_boolean.heat_schedule_' ~ device, 'on')
-           and is_state('input_boolean.vacation', 'off')
-           and (device.startswith('towel') or is_state('input_boolean.tuya_mode', 'off')) }}
-      then:
-        - action: input_boolean.turn_off
-          target:
-            entity_id: "input_boolean.heat_run_{{ device }}"
-      else:
-        - action: script.heat_timed_off
-          data:
-            device: "{{ device }}"
 
 # Tries every 5 min for a day until the device confirms it. Tells the phone after 30 min, and again when it worked
 heat_timed_off:

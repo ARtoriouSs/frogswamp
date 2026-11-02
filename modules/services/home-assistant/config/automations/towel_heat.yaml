@@ -1,11 +1,12 @@
 # Master bathroom towel heat, through its Zigbee relay (the heater itself stays on, the relay gives it power).
-# Nights only: from 1 h before bedtime, like the floor warming, to 1 h after bedtime (packages/schedule.yaml).
+# Nights only: from 1 h before bedtime, like the floor warming, for 3 h (packages/schedule.yaml). The schedule
+# only asks for a lease (script.heat_lease) and never turns the heater off, the end of the lease does.
 # Workday or weekend bedtime is picked by the Workday integration for the next day.
 # Vacation on turns it off. Vacation off doesn't turn it on, the next night does. Tuya rule mode doesn't stop it,
 # the relay isn't a Tuya device
 - id: repo_towel_heat_master_schedule
   alias: "Towel heat: master schedule"
-  description: Master bathroom towel heat relay, bedtime ± 1 h, off during Vacation
+  description: Master bathroom towel heat relay, 3 h from 1 h before bedtime, off during Vacation
   mode: queued
   triggers:
     - trigger: time
@@ -14,20 +15,10 @@
         entity_id: input_datetime.bedtime_workday
         offset: "-01:00:00"
     - trigger: time
-      id: off_night_workday
-      at:
-        entity_id: input_datetime.bedtime_workday
-        offset: "01:00:00"
-    - trigger: time
       id: on_night_weekend
       at:
         entity_id: input_datetime.bedtime_weekend
         offset: "-01:00:00"
-    - trigger: time
-      id: off_night_weekend
-      at:
-        entity_id: input_datetime.bedtime_weekend
-        offset: "01:00:00"
     - trigger: state
       id: off_vacation_start
       entity_id: input_boolean.vacation
@@ -64,10 +55,12 @@
                    != trigger.id.endswith('workday') }}
           then:
             - stop: Not this night's bedtime
-    # Timed runs read this to know if the schedule wants the heater on (packages/timed_heat.yaml)
-    - action: "input_boolean.turn_{{ 'on' if trigger.id.startswith('on') else 'off' }}"
-      target:
-        entity_id: input_boolean.heat_schedule_towel_master
-    - action: "switch.turn_{{ 'on' if trigger.id.startswith('on') else 'off' }}"
-      target:
-        entity_id: switch.master_bathroom_towel_heat_relay
+    - if: "{{ trigger.id == 'off_vacation_start' }}"
+      then:
+        - action: switch.turn_off
+          target:
+            entity_id: switch.master_bathroom_towel_heat_relay
+      else:
+        - action: script.heat_lease
+          data:
+            device: towel_master

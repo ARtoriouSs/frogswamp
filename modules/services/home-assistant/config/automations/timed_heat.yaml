@@ -22,11 +22,12 @@
       event_data:
         entity_id: timer.heat_floor_guest
   actions:
-    - action: script.heat_timed_end
+    - action: script.heat_timed_off
       data:
         device: "{{ trigger.event.data.entity_id | replace('timer.heat_', '') }}"
 
-# Turned off another way (by hand, voice or the schedule): the run is over, so the schedule wins here too
+# Turned off another way (by hand, voice or on the device): the lease is over. Only a real change from on to off
+# counts, a device coming back from offline already off doesn't end it
 - id: repo_timed_heat_turned_off
   alias: "Timed heat: heater turned off"
   mode: parallel
@@ -37,6 +38,7 @@
         - binary_sensor.heat_off_towel_guest
         - binary_sensor.heat_off_floor_master
         - binary_sensor.heat_off_floor_guest
+      from: "off"
       to: "on"
   variables:
     device: "{{ trigger.entity_id | replace('binary_sensor.heat_off_', '') }}"
@@ -71,7 +73,7 @@
                   entity_id: "timer.heat_{{ repeat.item }}"
               - action: script.turn_on
                 target:
-                  entity_id: script.heat_timed_end
+                  entity_id: script.heat_timed_off
                 data:
                   variables:
                     device: "{{ repeat.item }}"
@@ -96,7 +98,7 @@
             then:
               - action: script.turn_on
                 target:
-                  entity_id: script.heat_timed_end
+                  entity_id: script.heat_timed_off
                 data:
                   variables:
                     device: "{{ repeat.item }}"

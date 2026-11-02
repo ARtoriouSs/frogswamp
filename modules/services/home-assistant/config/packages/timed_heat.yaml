@@ -1,4 +1,4 @@
-# Timed runs of the towel heaters and floors: a button turns the heater on for 3 h.
+# Leases of the towel heaters and floors: a button or a schedule turns the heater on for 3 h.
 # Logic is in automations/timed_heat.yaml and scripts/timed_heat.yaml
 timer:
   heat_towel_master:
@@ -19,7 +19,7 @@ timer:
     restore: true
 
 input_boolean:
-  # On from the button until the heater is confirmed off, so a restart can finish the job
+  # On from the start of a lease until the heater is confirmed off, so a restart can finish the job
   heat_run_towel_master:
     name: Master towel heat run
     icon: mdi:timer-outline
@@ -32,16 +32,6 @@ input_boolean:
   heat_run_floor_guest:
     name: Guest floor warming run
     icon: mdi:timer-outline
-  # Set by the schedules: on while the schedule wants the heater on. The guest towel heat has no schedule
-  heat_schedule_towel_master:
-    name: Master towel heat schedule on
-    icon: mdi:calendar-clock
-  heat_schedule_floor_master:
-    name: Master floor warming schedule on
-    icon: mdi:calendar-clock
-  heat_schedule_floor_guest:
-    name: Guest floor warming schedule on
-    icon: mdi:calendar-clock
 
 # On = the heater is really off. The switches read "off" when the device is offline too, these go unavailable.
 # Floors: off is the manual mode at 5 °C (script.floor_warming_set)

@@ -1,5 +1,6 @@
 # Both bathroom floors, through script.floor_warming_set (Tuya Local). Timings come from packages/schedule.yaml:
-# mornings from 1 h before wakeup to 1 h after it, nights from 1 h before bedtime to bedtime.
+# from 1 h before wakeup and from 1 h before bedtime, 3 h each. The schedule only asks for a lease (script.heat_lease)
+# and never turns the floor off, the end of the lease does.
 # sensor.wakeup already knows its day. Night timings are picked by the Workday integration, so holidays get the weekend ones.
 # Vacation and Tuya rule mode stop it. One automation per bathroom (each has its own area),
 # the second one reuses the first one's schedule
@@ -14,26 +15,15 @@
         entity_id: sensor.wakeup
         offset: "-01:00:00"
     - trigger: time
-      id: off_morning
-      at:
-        entity_id: sensor.wakeup
-        offset: "01:00:00"
-    - trigger: time
       id: on_night_workday
       at:
         entity_id: input_datetime.bedtime_workday
         offset: "-01:00:00"
     - trigger: time
-      id: off_night_workday
-      at: input_datetime.bedtime_workday
-    - trigger: time
       id: on_night_weekend
       at:
         entity_id: input_datetime.bedtime_weekend
         offset: "-01:00:00"
-    - trigger: time
-      id: off_night_weekend
-      at: input_datetime.bedtime_weekend
   variables:
     bathroom: guest
   conditions: &floor_warming_conditions
@@ -59,14 +49,9 @@
           value_template: >-
             {{ (workday['binary_sensor.workday_sensor_pl'].workday and is_state('input_boolean.day_off', 'off'))
                == trigger.id.endswith('workday') }}
-    # Timed runs read this to know if the schedule wants the heater on (packages/timed_heat.yaml)
-    - action: "input_boolean.turn_{{ 'on' if trigger.id.startswith('on') else 'off' }}"
-      target:
-        entity_id: "input_boolean.heat_schedule_floor_{{ bathroom }}"
-    - action: script.floor_warming_set
+    - action: script.heat_lease
       data:
-        bathroom: "{{ bathroom }}"
-        state: "{{ 'on' if trigger.id.startswith('on') else 'off' }}"
+        device: "floor_{{ bathroom }}"
 
 - id: repo_floor_warming_master_schedule
   alias: "Floor warming: master schedule"
