@@ -96,7 +96,7 @@ views:
             icon: "{{ 'mdi:curtains-closed' if is_state(entity, 'on') else 'mdi:curtains' }}"
             color: "{{ 'indigo' if is_state(entity, 'on') else 'amber' }}"
             grid_options:
-              columns: 6
+              columns: 12
               rows: 2
           - <<: *remote_toggle
             entity: switch.master_bathroom_towel_heat_relay
@@ -132,37 +132,6 @@ views:
                 device: towel_master
             hold_action:
               action: more-info
-          - &timed_floor_master
-            <<: *timed_towel_master
-            entity: timer.heat_floor_master
-            primary: Floor 3 h
-            tap_action:
-              action: perform-action
-              perform_action: script.heat_timed_press
-              data:
-                device: floor_master
-
-          - type: heading
-            heading: Guest bathroom
-            icon: mdi:shower
-          - &timed_towel_guest
-            <<: *timed_towel_master
-            entity: timer.heat_towel_guest
-            primary: Towel 3 h
-            tap_action:
-              action: perform-action
-              perform_action: script.heat_timed_press
-              data:
-                device: towel_guest
-          - &timed_floor_guest
-            <<: *timed_towel_master
-            entity: timer.heat_floor_guest
-            primary: Floor 3 h
-            tap_action:
-              action: perform-action
-              perform_action: script.heat_timed_press
-              data:
-                device: floor_guest
 
   # NeonPlan 3D model of the flat. It's drawn in NeonPlan's own editor and kept in its .storage, not in the repo
   - title: NeonPlan
@@ -768,40 +737,47 @@ views:
             icon: mdi:heating-coil
             color: "{{ 'deep-orange' if is_state(entity, 'on') else 'disabled' }}"
             grid_options:
-              columns: 6
+              columns: 4
               rows: 2
           - <<: *toggle
             entity: automation.floor_warming_master_schedule
             primary: Floor schedule
             icon: mdi:calendar-clock
             grid_options:
-              columns: 6
+              columns: 4
               rows: 2
-          - <<: *timed_floor_master
-            vertical: false
+          - &timed_floor_master
+            <<: *timed_towel_master
+            entity: timer.heat_floor_master
+            primary: Floor 3 h
             grid_options:
-              columns: 12
-              rows: 1
+              columns: 4
+              rows: 2
+            tap_action:
+              action: perform-action
+              perform_action: script.heat_timed_press
+              data:
+                device: floor_master
           - <<: *toggle
             entity: switch.master_bathroom_towel_heat_relay
             primary: Towel heat
             icon: mdi:radiator
             color: "{{ 'deep-orange' if is_state(entity, 'on') else 'disabled' }}"
             grid_options:
-              columns: 6
+              columns: 4
               rows: 2
           - <<: *toggle
             entity: automation.towel_heat_master_schedule
             primary: Towel schedule
             icon: mdi:calendar-clock
             grid_options:
-              columns: 6
+              columns: 4
               rows: 2
-          - <<: *timed_towel_master
-            vertical: false
+          - &timed_towel_master_row
+            <<: *timed_towel_master
             grid_options:
-              columns: 12
-              rows: 1
+              columns: 4
+              rows: 2
 
           # empty heading: a gap before the next room
           - type: heading
@@ -831,20 +807,27 @@ views:
             icon: mdi:heating-coil
             color: "{{ 'deep-orange' if is_state(entity, 'on') else 'disabled' }}"
             grid_options:
-              columns: 6
+              columns: 4
               rows: 2
           - <<: *toggle
             entity: automation.floor_warming_guest_schedule
             primary: Floor schedule
             icon: mdi:calendar-clock
             grid_options:
-              columns: 6
+              columns: 4
               rows: 2
-          - <<: *timed_floor_guest
-            vertical: false
+          - &timed_floor_guest
+            <<: *timed_towel_master
+            entity: timer.heat_floor_guest
+            primary: Floor 3 h
             grid_options:
-              columns: 12
-              rows: 1
+              columns: 4
+              rows: 2
+            tap_action:
+              action: perform-action
+              perform_action: script.heat_timed_press
+              data:
+                device: floor_guest
           - <<: *thermostat
             entity: climate.guest_bathroom_towel_heat_guest
             primary: Towel heat
@@ -853,11 +836,21 @@ views:
               action: toggle
             hold_action:
               action: more-info
-          - <<: *timed_towel_guest
-            vertical: false
             grid_options:
-              columns: 12
-              rows: 1
+              columns: 8
+              rows: 2
+          - &timed_towel_guest
+            <<: *timed_towel_master
+            entity: timer.heat_towel_guest
+            primary: Towel 3 h
+            grid_options:
+              columns: 4
+              rows: 2
+            tap_action:
+              action: perform-action
+              perform_action: script.heat_timed_press
+              data:
+                device: towel_guest
 
   # Room temperatures and heating per bathroom. Humidity and fans go here later
   - title: Climate
@@ -897,7 +890,7 @@ views:
             icon: mdi:bed
             vertical: true
             grid_options:
-              columns: 3
+              columns: 4
               rows: 2
             tap_action:
               action: more-info
@@ -910,16 +903,22 @@ views:
             primary: Guest bath
             icon: mdi:shower
           - <<: *room_temperature
+            entity: sensor.garage_audi_a5_sportback_outside_temperature
+            primary: Car
+            icon: mdi:car
+            color: light-blue
+            grid_options:
+              columns: 6
+              rows: 2
+          - <<: *room_temperature
             entity: weather.forecast_home_assistant
             primary: Outside
             secondary: "{{ state_attr(entity, 'temperature') }} °C"
             icon: mdi:weather-partly-cloudy
             color: light-blue
-          - <<: *room_temperature
-            entity: sensor.garage_audi_a5_sportback_outside_temperature
-            primary: Car
-            icon: mdi:car
-            color: light-blue
+            grid_options:
+              columns: 6
+              rows: 2
           - type: history-graph
             hours_to_show: 24
             entities:
@@ -1016,19 +1015,6 @@ views:
             primary: NO₂
             icon: mdi:car-side
 
-          - type: heading
-            heading: Fridge
-            heading_style: subtitle
-          - *fridge
-          - <<: *fridge
-            entity: number.living_room_refrigerator_freezer_temperature
-            primary: Freezer
-            secondary: >-
-              {{ states('sensor.living_room_refrigerator_freezer_temperature') }} °C · target {{ states(entity) }} °C
-              {{- ' · door open' if is_state('binary_sensor.living_room_refrigerator_freezer_door', 'on') }}
-            icon: mdi:fridge-top
-            color: "{{ 'red' if is_state('binary_sensor.living_room_refrigerator_freezer_door', 'on') else 'blue' }}"
-
       - type: grid
         cards:
           - type: heading
@@ -1048,40 +1034,48 @@ views:
             icon: mdi:heating-coil
             color: "{{ 'deep-orange' if is_state(entity, 'on') else 'disabled' }}"
             grid_options:
-              columns: 6
+              columns: 4
               rows: 2
           - <<: *toggle
             entity: automation.floor_warming_master_schedule
             primary: Floor schedule
             icon: mdi:calendar-clock
             grid_options:
-              columns: 6
+              columns: 4
               rows: 2
-          - <<: *timed_floor_master
-            vertical: false
-            grid_options:
-              columns: 12
-              rows: 1
+          - *timed_floor_master
           - <<: *toggle
             entity: switch.master_bathroom_towel_heat_relay
             primary: Towel heat
             icon: mdi:radiator
             color: "{{ 'deep-orange' if is_state(entity, 'on') else 'disabled' }}"
             grid_options:
-              columns: 6
+              columns: 4
               rows: 2
           - <<: *toggle
             entity: automation.towel_heat_master_schedule
             primary: Towel schedule
             icon: mdi:calendar-clock
             grid_options:
-              columns: 6
+              columns: 4
               rows: 2
-          - <<: *timed_towel_master
-            vertical: false
-            grid_options:
-              columns: 12
-              rows: 1
+          - *timed_towel_master_row
+
+          # empty heading: a gap before the next room
+          - type: heading
+            heading: ""
+          - type: heading
+            heading: Living room
+            icon: mdi:sofa
+          - *fridge
+          - <<: *fridge
+            entity: number.living_room_refrigerator_freezer_temperature
+            primary: Freezer
+            secondary: >-
+              {{ states('sensor.living_room_refrigerator_freezer_temperature') }} °C · target {{ states(entity) }} °C
+              {{- ' · door open' if is_state('binary_sensor.living_room_refrigerator_freezer_door', 'on') }}
+            icon: mdi:fridge-top
+            color: "{{ 'red' if is_state('binary_sensor.living_room_refrigerator_freezer_door', 'on') else 'blue' }}"
 
       - type: grid
         cards:
@@ -1103,20 +1097,16 @@ views:
             icon: mdi:heating-coil
             color: "{{ 'deep-orange' if is_state(entity, 'on') else 'disabled' }}"
             grid_options:
-              columns: 6
+              columns: 4
               rows: 2
           - <<: *toggle
             entity: automation.floor_warming_guest_schedule
             primary: Floor schedule
             icon: mdi:calendar-clock
             grid_options:
-              columns: 6
+              columns: 4
               rows: 2
-          - <<: *timed_floor_guest
-            vertical: false
-            grid_options:
-              columns: 12
-              rows: 1
+          - *timed_floor_guest
           - <<: *thermostat
             entity: climate.guest_bathroom_towel_heat_guest
             primary: Towel heat
@@ -1125,11 +1115,10 @@ views:
               action: toggle
             hold_action:
               action: more-info
-          - <<: *timed_towel_guest
-            vertical: false
             grid_options:
-              columns: 12
-              rows: 1
+              columns: 8
+              rows: 2
+          - *timed_towel_guest
 
   # Lights and players. The Cube Matrix is the only smart light for now
   - title: Light & media
@@ -2244,7 +2233,10 @@ views:
             grid_options:
               columns: 6
               rows: 2
-          - *timed_floor_guest
+          - <<: *timed_floor_guest
+            grid_options:
+              columns: 6
+              rows: 2
           - <<: *toggle
             entity: switch.guest_towel_heat
             primary: Towel heat
@@ -2253,7 +2245,10 @@ views:
             grid_options:
               columns: 6
               rows: 2
-          - *timed_towel_guest
+          - <<: *timed_towel_guest
+            grid_options:
+              columns: 6
+              rows: 2
 
       - type: grid
         cards:
