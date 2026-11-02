@@ -1121,6 +1121,47 @@ views:
             grid_options:
               columns: 12
               rows: 1
+          - type: heading
+            heading: Watchman
+            heading_style: subtitle
+          # A tap on the first two shows the list of items and where they are used
+          - &watchman_missing
+            <<: *info
+            entity: sensor.watchman_missing_entities
+            primary: Missing entities
+            secondary: "{{ states(entity) }}"
+            icon: mdi:shield-search
+            color: "{{ 'disabled' if not has_value(entity) else ('green' if states(entity) | int(0) == 0 else 'amber') }}"
+            grid_options:
+              columns: 6
+              rows: 1
+          - <<: *watchman_missing
+            entity: sensor.watchman_missing_actions
+            primary: Missing actions
+            icon: mdi:shield-alert-outline
+          - <<: *watchman_missing
+            entity: sensor.watchman_status
+            primary: Status
+            secondary: >-
+              {{ states(entity) | replace('_', ' ') | capitalize }}
+              {%- if has_value('sensor.watchman_last_parse') %} · {{ relative_time(states('sensor.watchman_last_parse') | as_datetime) }} ago{% endif %}
+            icon: mdi:shield-sync-outline
+            color: "{{ 'disabled' if not has_value(entity) else ('green' if is_state(entity, 'idle') else 'amber') }}"
+          # The file is /config/watchman_report.txt, the button shows the time of the last report
+          - <<: *watchman_missing
+            entity: button.watchman_create_report_file
+            primary: Create report
+            secondary: >-
+              {{ relative_time(states(entity) | as_datetime) ~ ' ago' if has_value(entity) else 'Tap to create' }}
+            icon: mdi:file-document-outline
+            color: blue
+            tap_action:
+              action: perform-action
+              perform_action: button.press
+              target:
+                entity_id: button.watchman_create_report_file
+            hold_action:
+              action: none
       - type: grid
         column_span: 2
         cards:
