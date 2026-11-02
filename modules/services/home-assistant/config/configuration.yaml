@@ -24,6 +24,7 @@ recorder:
 frontend:
   extra_module_url:
     - /local/frogswamp/icons.js
+    - /local/frogswamp/presence-sidebar.js
     # Installed through HACS, its config is custom-sidebar-config.yaml
     - /hacsfiles/custom-sidebar/custom-sidebar-plugin.js
   themes: !include_dir_merge_named themes

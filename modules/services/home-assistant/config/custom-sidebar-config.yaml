@@ -17,15 +17,15 @@ order:
     order: 1
     divider: true
 
-  - item: /map
-    match: href
-    name: Map
-    order: 2
   - item: /calendar
     match: href
     name: Calendar
+    order: 2
+  # No divider: www/presence-sidebar.js adds the statuses under Map and draws the line below them
+  - item: /map
+    match: href
+    name: Map
     order: 3
-    divider: true
 
   - item: /energy
     match: href
