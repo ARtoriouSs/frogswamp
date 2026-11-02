@@ -1,0 +1,115 @@
+# Estimated power and energy (HACS integration Powercalc, needs an HA restart to change). These are not
+# measurements: rated power while a device is on, nothing more. Counting starts when a sensor is first created.
+# Floors: 170 W/m², master 2 m², guest 1 m², counted only while the thermostat really heats
+powercalc:
+  sensors:
+    - create_group: Heating
+      unique_id: repo_powercalc_heating
+      entities:
+        - entity_id: climate.thermostat_master_local
+          unique_id: repo_powercalc_floor_master
+          name: Master floor warming
+          fixed:
+            power: 340
+          calculation_enabled_condition: "{{ state_attr('climate.thermostat_master_local', 'hvac_action') == 'heating' }}"
+        - entity_id: climate.thermostat_guest_local
+          unique_id: repo_powercalc_floor_guest
+          name: Guest floor warming
+          fixed:
+            power: 170
+          calculation_enabled_condition: "{{ state_attr('climate.thermostat_guest_local', 'hvac_action') == 'heating' }}"
+        # 400 W on high, 300 W on moderate, its usual mode. The relay can't tell which
+        - entity_id: switch.master_bathroom_towel_heat_relay
+          unique_id: repo_powercalc_towel_master
+          name: Master towel heat
+          fixed:
+            power: 300
+        # This heater doesn't report when it heats, so: on and below its target
+        - entity_id: climate.guest_bathroom_towel_heat_guest
+          unique_id: repo_powercalc_towel_guest
+          name: Guest towel heat
+          fixed:
+            power: 300
+          calculation_enabled_condition: >-
+            {{ is_state('climate.guest_bathroom_towel_heat_guest', 'heat')
+               and state_attr('climate.guest_bathroom_towel_heat_guest', 'current_temperature') | float(99)
+                 < state_attr('climate.guest_bathroom_towel_heat_guest', 'temperature') | float(0) }}
+
+    # Philips 65PUS7956: no figure found for this exact model. Its neighbours in the range use 95-116 W
+    - entity_id: media_player.living_room_philips_tv
+      unique_id: repo_powercalc_tv
+      name: TV
+      standby_power: 0.3
+      fixed:
+        power: 100
+
+    # HP Tango X, always plugged in. HP gives 2.7 W ready and 1.5 W asleep, 15 W printing is from a third party.
+    # It goes unavailable when asleep, so that counts as asleep
+    - entity_id: sensor.office_printer
+      unique_id: repo_powercalc_printer
+      name: Printer
+      standby_power: 1.5
+      ignore_unavailable_state: true
+      fixed:
+        states_power:
+          idle: 2.7
+          stopped: 2.7
+          printing: 15
+
+    # One 5x5 cube on its base. Yeelight rates one module at 2.5 W at most. Follows the brightness,
+    # the 0.5 W for the dim green dot is a guess
+    - entity_id: light.cube_matrix_192_168_101_121
+      unique_id: repo_powercalc_cube
+      name: Cube Matrix
+      linear:
+        min_power: 0.5
+        max_power: 2.5
+
+    # No published figures for these motors, so typical ones: about 1 W idle for the Wi-Fi, 100 W for a
+    # tubular blind motor and 50 W for a curtain motor while moving. Neither reports moving. The blinds
+    # count while their script runs, so a few seconds too long. The curtains count while between open and closed
+    - create_group: Blinds
+      unique_id: repo_powercalc_blinds
+      entities:
+        - entity_id: script.blind_run_left_door
+          unique_id: repo_powercalc_blind_left_door
+          name: Blind left door
+          standby_power: 1
+          fixed:
+            power: 100
+        - entity_id: script.blind_run_middle
+          unique_id: repo_powercalc_blind_middle
+          name: Blind middle
+          standby_power: 1
+          fixed:
+            power: 100
+        - entity_id: script.blind_run_right
+          unique_id: repo_powercalc_blind_right
+          name: Blind right
+          standby_power: 1
+          fixed:
+            power: 100
+    - entity_id: binary_sensor.curtains_moving
+      unique_id: repo_powercalc_curtains
+      name: Curtains
+      standby_power: 1
+      fixed:
+        power: 50
+
+    # Always on. Router: Huawei FG630, 12 W at most. Server: N100 mini PC, 6-10 W idle, 25 W at full load
+    - name: Router
+      unique_id: repo_powercalc_router
+      daily_fixed_energy:
+        value: 10
+        unit_of_measurement: W
+    - name: Server
+      unique_id: repo_powercalc_server
+      daily_fixed_energy:
+        value: 12
+        unit_of_measurement: W
+
+template:
+  - binary_sensor:
+      - name: Curtains moving
+        unique_id: repo_curtains_moving
+        state: "{{ is_state('cover.curtains_local', 'unknown') }}"
