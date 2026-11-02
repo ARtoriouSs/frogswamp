@@ -164,9 +164,12 @@ in
     systemd.services = {
       # The folder is also in tmpfiles, but a deploy can remove it while HA restarts,
       # and podman does not start a container with a missing volume. So make it right before the start
-      podman-home-assistant.preStart = lib.mkIf cfg.recoverBluetooth (
-        lib.mkBefore "mkdir -p ${usbWatchDir}"
-      );
+      podman-home-assistant.preStart = lib.mkMerge [
+        (lib.mkIf cfg.recoverBluetooth (lib.mkBefore "mkdir -p ${usbWatchDir}"))
+        # Files from the Nix store are always dated 1970, so Watchman thinks they never change.
+        # Without its scan cache it reads them again after each deploy. Its settings are not in this file
+        "rm -f ${stateDir}/.storage/watchman_v2.db*"
+      ];
       home-assistant-bluetooth-recover = lib.mkIf cfg.recoverBluetooth {
         description = "Reload Home Assistant's Bluetooth integration after the adapter re-appears";
         path = [
