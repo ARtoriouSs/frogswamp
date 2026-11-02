@@ -1,4 +1,4 @@
-# Device uptime for the Uptime tab of the Main dashboard. A device is offline while its main entity is
+# Device uptime for the Monitor tab of the Main dashboard. A device is offline while its main entity is
 # unavailable (HA can't reach it), being off or closed still counts as online.
 # history_stats reads the source entity's recorded history, so the numbers include the days before this file.
 # The `<device> online` binary sensors draw the timelines, so their history starts when they were added.
