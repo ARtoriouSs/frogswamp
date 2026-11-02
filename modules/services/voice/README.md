@@ -58,9 +58,9 @@ Every exposed entity has Russian aliases, often also English ones (*Settings →
 
 | Russian | English | Does |
 |---|---|---|
-| открой / подними жалюзи | open / raise the blinds | scene *Blinds - open* |
-| закрой / опусти жалюзи [полностью] | close / lower the blinds [all the way] | scene *Blinds - full close* |
-| открой дверь / проход на балкон | open the balcony door | scene *Blinds - full open door* |
+| открой / подними / сбрось жалюзи | open / raise / reset the blinds | script *Blinds: full close + open* |
+| закрой / опусти жалюзи [полностью] | close / lower the blinds [all the way] | script *Blinds: full close* |
+| открой дверь / проход на балкон | open the balcony door | script *Blinds: open door* |
 | открой / закрой шторы | open / close the curtains | scenes *Curtains - open / close* |
 | включи / выключи тёплый пол в гостевом санузле … | turn on / off the floor heating in the guest bathroom … | the guest or master thermostat |
 | включи / выключи полотенцесушитель в … | turn on / off the towel heater in the … | guest towel heat or master relay |

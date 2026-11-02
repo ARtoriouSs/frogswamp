@@ -38,7 +38,7 @@ template:
         turn_on:
           - action: script.blinds_full_close
         turn_off:
-          - action: script.blinds_open
+          - action: script.blinds_full_close_open
 
       # On while Open door is the last blinds script. Reset closes the door again: full close, then the slats open
       - name: Living room blinds open door

@@ -1,0 +1,7 @@
+# Runs for 10 s after a door blind command. Toggle balcony ignores taps meanwhile and its card goes grey,
+# because the position shows the target at first and a second tap would go the wrong way
+timer:
+  blinds_toggle_lock:
+    name: Toggle balcony lock
+    icon: mdi:timer-lock-outline
+    duration: "00:00:10"

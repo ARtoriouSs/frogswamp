@@ -3,8 +3,8 @@
 # The Tuya app and its scenes count the other way (100% = drawn), Tuya Local's config inverts it.
 # An open/close command without a position only turns the slats.
 # The button scripts below start blinds_run and return at once. It starts one script per blind, each in
-# restart mode: a new command first stops what its own blind is doing, in HA and in the motor. Door commands
-# touch only the door blind, and the blinds don't wait for each other
+# restart mode: a new command cancels what is left of its own blind's previous one. Door commands touch only
+# the door blind, and the blinds don't wait for each other
 # (with the door open, the other two finish Reset long before it does)
 blinds_run:
   alias: "Blinds: run a move"
@@ -12,7 +12,7 @@ blinds_run:
   mode: parallel
   fields:
     move:
-      description: full_close, open, full_close_open, open_door, close_door, slats_open or slats_close
+      description: full_close, open, full_close_open, open_door, close_door, slats_open, slats_close or stop
       required: true
       example: full_close
   sequence:
@@ -37,12 +37,6 @@ blind_run_left_door:
   variables:
     blind: cover.blinds_left_door_local
   sequence: &blind_sequence
-    # Restart mode has already ended this blind's previous command in HA, this ends it in the motor.
-    # The pause lets the motor take it before the next command, and the position is read only after it
-    - action: cover.stop_cover
-      target:
-        entity_id: "{{ blind }}"
-    - delay: "00:00:01"
     - choose:
         - conditions: "{{ move in ['full_close', 'open', 'full_close_open'] }}"
           sequence:
@@ -57,11 +51,11 @@ blind_run_left_door:
             # One slat step after arriving: a blind that was already down barely moves, so its slats
             # stop a step short. The step stops a blind still on its way, and the motors can't tell when
             # they stop (the position can jump to the target at once), so this waits the time the run
-            # needs: 5 s for the slats to turn before it travels, then 0.47 s per percent
+            # needs: 3 s for the slats to turn before it travels, then 0.47 s per percent
             - if: "{{ move in ['full_close', 'full_close_open'] }}"
               then:
                 - delay:
-                    milliseconds: "{{ 5000 + start * 470 }}"
+                    milliseconds: "{{ 3000 + start * 470 }}"
                 - delay: "00:00:01"
                 - action: cover.close_cover
                   target:
@@ -87,7 +81,13 @@ blind_run_left_door:
               data:
                 position: 100
             - delay:
-                milliseconds: "{{ 5000 + (100 - start) * 470 }}"
+                milliseconds: "{{ 3000 + (100 - start) * 470 }}"
+        # The Stop button. A position command right after a stop may be ignored by the motor
+        - conditions: "{{ move == 'stop' }}"
+          sequence:
+            - action: cover.stop_cover
+              target:
+                entity_id: "{{ blind }}"
         - conditions: "{{ move in ['slats_open', 'slats_close'] }}"
           sequence:
             - action: "cover.{{ 'open' if move == 'slats_open' else 'close' }}_cover"
@@ -119,16 +119,14 @@ blind_run_right:
   sequence: *blind_sequence
 
 # The balcony button: an open door blind gets a Reset of its own (closes, then the slats open),
-# otherwise it opens fully, also from the middle. Right after a command the position shows the target,
-# not where the blind is, so a tap within 10 s of the last one is ignored: it would go the wrong way
+# otherwise it opens fully, also from the middle. Ignored while packages/blinds.yaml's lock runs
 blinds_balcony_toggle:
   alias: "Blinds: toggle balcony"
   icon: mdi:door-open
   sequence:
-    - condition: template
-      value_template: >-
-        {{ now().timestamp() - [as_timestamp(state_attr('script.blinds_open_door', 'last_triggered'), 0),
-                                as_timestamp(state_attr('script.blinds_close_door', 'last_triggered'), 0)] | max >= 10 }}
+    - condition: state
+      entity_id: timer.blinds_toggle_lock
+      state: idle
     - if: "{{ state_attr('cover.blinds_left_door_local', 'current_position') | int(0) >= 95 }}"
       then:
         - action: script.blinds_close_door
@@ -139,6 +137,9 @@ blinds_close_door:
   alias: "Blinds: close door, slats open"
   icon: mdi:door-closed
   sequence:
+    - action: timer.start
+      target:
+        entity_id: timer.blinds_toggle_lock
     - action: script.turn_on
       target:
         entity_id: script.blinds_run
@@ -183,12 +184,26 @@ blinds_open_door:
   alias: "Blinds: open door"
   icon: mdi:door-open
   sequence:
+    - action: timer.start
+      target:
+        entity_id: timer.blinds_toggle_lock
     - action: script.turn_on
       target:
         entity_id: script.blinds_run
       data:
         variables:
           move: open_door
+
+blinds_stop:
+  alias: "Blinds: stop"
+  icon: mdi:stop
+  sequence:
+    - action: script.turn_on
+      target:
+        entity_id: script.blinds_run
+      data:
+        variables:
+          move: stop
 
 blinds_slats_open:
   alias: "Blinds: slats ^"

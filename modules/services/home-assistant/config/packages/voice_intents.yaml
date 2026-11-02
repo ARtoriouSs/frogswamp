@@ -3,7 +3,7 @@
 intent_script:
   FrogBlindsOpen:
     action:
-      - action: script.blinds_open
+      - action: script.blinds_full_close_open
     speech:
       text: "{{ 'Opening the blinds' if lang == 'en' else 'Открываю жалюзи' }}"
   FrogBlindsClose:

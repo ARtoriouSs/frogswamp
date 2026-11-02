@@ -33,17 +33,8 @@ views:
               target:
                 entity_id: script.blinds_full_close
           - <<: *remote
-            entity: script.blinds_open
-            primary: Open
-            icon: mdi:roller-shade
-            tap_action:
-              action: perform-action
-              perform_action: script.turn_on
-              target:
-                entity_id: script.blinds_open
-          - <<: *remote
             entity: script.blinds_full_close_open
-            primary: Reset
+            primary: Open/Reset
             icon: mdi:roller-shade
             tap_action:
               action: perform-action
@@ -54,11 +45,23 @@ views:
             entity: script.blinds_balcony_toggle
             primary: Toggle balcony
             icon: mdi:door-open
+            secondary: "{{ 'Wait 10 s' if is_state('timer.blinds_toggle_lock', 'active') else '' }}"
+            color: "{{ 'disabled' if is_state('timer.blinds_toggle_lock', 'active') else 'teal' }}"
             tap_action:
               action: perform-action
               perform_action: script.turn_on
               target:
                 entity_id: script.blinds_balcony_toggle
+          - <<: *remote
+            entity: script.blinds_stop
+            primary: Stop
+            icon: mdi:stop
+            color: red
+            tap_action:
+              action: perform-action
+              perform_action: script.turn_on
+              target:
+                entity_id: script.blinds_stop
           - <<: *remote
             entity: script.blinds_slats_open
             primary: Blinds ↑
@@ -509,17 +512,8 @@ views:
               target:
                 entity_id: script.blinds_full_close
           - <<: *scene
-            entity: script.blinds_open
-            primary: Open
-            icon: mdi:roller-shade
-            tap_action:
-              action: perform-action
-              perform_action: script.turn_on
-              target:
-                entity_id: script.blinds_open
-          - <<: *scene
             entity: script.blinds_full_close_open
-            primary: Full close + open
+            primary: Open/Reset
             icon: mdi:roller-shade
             tap_action:
               action: perform-action
@@ -530,11 +524,23 @@ views:
             entity: script.blinds_balcony_toggle
             primary: Toggle balcony
             icon: mdi:door-open
+            secondary: "{{ 'Wait 10 s' if is_state('timer.blinds_toggle_lock', 'active') else '' }}"
+            color: "{{ 'disabled' if is_state('timer.blinds_toggle_lock', 'active') else 'teal' }}"
             tap_action:
               action: perform-action
               perform_action: script.turn_on
               target:
                 entity_id: script.blinds_balcony_toggle
+          - <<: *scene
+            entity: script.blinds_stop
+            primary: Stop
+            icon: mdi:stop
+            color: red
+            tap_action:
+              action: perform-action
+              perform_action: script.turn_on
+              target:
+                entity_id: script.blinds_stop
           - <<: *scene
             entity: script.blinds_slats_open
             primary: Blinds ^
@@ -2165,17 +2171,8 @@ views:
             entity: script.blinds_full_close
             primary: Full close
           - <<: *remote
-            entity: script.blinds_open
-            primary: Open
-            icon: mdi:roller-shade
-            tap_action:
-              action: perform-action
-              perform_action: script.turn_on
-              target:
-                entity_id: script.blinds_open
-          - <<: *remote
             entity: script.blinds_full_close_open
-            primary: Reset
+            primary: Open/Reset
             icon: mdi:roller-shade
             tap_action:
               action: perform-action
@@ -2186,11 +2183,23 @@ views:
             entity: script.blinds_balcony_toggle
             primary: Toggle balcony
             icon: mdi:door-open
+            secondary: "{{ 'Wait 10 s' if is_state('timer.blinds_toggle_lock', 'active') else '' }}"
+            color: "{{ 'disabled' if is_state('timer.blinds_toggle_lock', 'active') else 'teal' }}"
             tap_action:
               action: perform-action
               perform_action: script.turn_on
               target:
                 entity_id: script.blinds_balcony_toggle
+          - <<: *remote
+            entity: script.blinds_stop
+            primary: Stop
+            icon: mdi:stop
+            color: red
+            tap_action:
+              action: perform-action
+              perform_action: script.turn_on
+              target:
+                entity_id: script.blinds_stop
           - <<: *remote
             entity: script.blinds_slats_open
             primary: Blinds ↑

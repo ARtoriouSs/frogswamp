@@ -58,4 +58,4 @@
         - input_boolean.tuya_mode
       state: "off"
   actions:
-    - action: script.blinds_open
+    - action: script.blinds_full_close_open

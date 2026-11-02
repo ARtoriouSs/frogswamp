@@ -20,6 +20,7 @@ let
     expected = {
         "открой жалюзи": ("FrogBlindsOpen", {"lang": "ru"}),
         "подними жалюзи в гостиной": ("FrogBlindsOpen", {"lang": "ru"}),
+        "сбрось жалюзи": ("FrogBlindsOpen", {"lang": "ru"}),
         "закрой жалюзи": ("FrogBlindsClose", {"lang": "ru"}),
         "закрой жалюзи в гостиной полностью": ("FrogBlindsClose", {"lang": "ru"}),
         "открой дверь на балкон": ("FrogBalconyDoorOpen", {"lang": "ru"}),
@@ -38,6 +39,7 @@ let
     expected_en = {
         "open the blinds": ("FrogBlindsOpen", {}),
         "raise the blinds in the living room": ("FrogBlindsOpen", {}),
+        "reset the blinds": ("FrogBlindsOpen", {}),
         "close the blinds": ("FrogBlindsClose", {}),
         "lower the blinds all the way": ("FrogBlindsClose", {}),
         "open the balcony door": ("FrogBalconyDoorOpen", {}),

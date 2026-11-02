@@ -4,7 +4,7 @@ intents:
   FrogBlindsOpen:
     data:
       - sentences:
-          - "(open|raise) [the] blinds [in the living room]"
+          - "(open|raise|reset) [the] blinds [in the living room]"
         slots:
           lang: en
   FrogBlindsClose:

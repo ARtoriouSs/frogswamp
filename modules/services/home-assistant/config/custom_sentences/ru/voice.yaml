@@ -6,7 +6,7 @@ intents:
   FrogBlindsOpen:
     data:
       - sentences:
-          - "(открой|подними) жалюзи [в гостиной]"
+          - "(открой|подними|сбрось) жалюзи [в гостиной]"
         slots:
           lang: ru
   FrogBlindsClose:
