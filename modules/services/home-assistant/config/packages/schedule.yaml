@@ -5,15 +5,17 @@
 # weekend days. Wakeup depends on the day itself, bedtime on the next day: an early bedtime before
 # a workday, a late one before a weekend day or a holiday. Day off on counts as a weekend day.
 # Work is only on workdays
+#
+# Automations use sensor.wakeup below for wakeup, the two wakeup helpers are only its fallback
 input_datetime:
   wakeup_workday:
-    name: Wakeup on workdays
+    name: Fallback wakeup on workdays
     icon: mdi:alarm
     has_date: false
     has_time: true
     initial: "09:30:00"
   wakeup_weekend:
-    name: Wakeup on weekends and holidays
+    name: Fallback wakeup on weekends and holidays
     icon: mdi:alarm
     has_date: false
     has_time: true
@@ -42,3 +44,54 @@ input_datetime:
     has_date: false
     has_time: true
     initial: "19:00:00"
+
+# The wakeup of the coming morning: the phone alarm if it rings on that morning from 04:00 to before 12:00,
+# otherwise the fallback for that day. The morning changes at 13:00, after the last possible "wakeup + 1 h" trigger.
+# The phone moves on to its next alarm as soon as one rings, so a wakeup that has passed is kept until 13:00.
+# Without this the fallback would become the wakeup and fire its triggers a second time that morning.
+# An afternoon alarm hides a later morning one until it rings, because the phone reports only the closest alarm
+template:
+  - triggers:
+      - trigger: state
+        entity_id:
+          - sensor.pixel_7_next_alarm
+          - input_datetime.wakeup_workday
+          - input_datetime.wakeup_weekend
+          - input_boolean.day_off
+      - trigger: time
+        at: "13:00:00"
+      - trigger: homeassistant
+        event: start
+      - trigger: event
+        event_type: event_template_reloaded
+    actions:
+      - variables:
+          morning: "{{ ((now() - timedelta(hours=13)).date() + timedelta(days=1)) | string }}"
+      - action: workday.check_date
+        target:
+          entity_id: binary_sensor.workday_sensor_pl
+        data:
+          check_date: "{{ morning }}"
+        response_variable: workday
+    sensor:
+      - name: Wakeup
+        unique_id: repo_wakeup
+        icon: mdi:weather-sunset-up
+        device_class: timestamp
+        state: >-
+          {% set phone_state = states('sensor.pixel_7_next_alarm') %}
+          {% set alarm = as_datetime(phone_state, none) %}
+          {% set alarm = as_local(alarm) if alarm else none %}
+          {% set current = as_datetime(this.state, none) %}
+          {% set current = as_local(current) if current else none %}
+          {% set current_is_this_morning = current is not none and current.date() | string == morning %}
+          {% set is_workday = workday['binary_sensor.workday_sensor_pl'].workday and is_state('input_boolean.day_off', 'off') %}
+          {% set fallback = states('input_datetime.wakeup_workday' if is_workday else 'input_datetime.wakeup_weekend') %}
+          {% if alarm and alarm.date() | string == morning and 4 <= alarm.hour < 12 and alarm > now() %}
+            {{ alarm.isoformat() }}
+          {# 1 minute of margin, in case the phone reports its next alarm just before this one rings #}
+          {% elif current_is_this_morning and (current <= now() + timedelta(minutes=1) or phone_state == 'unavailable') %}
+            {{ current.isoformat() }}
+          {% else %}
+            {{ as_local(as_datetime(morning ~ ' ' ~ fallback)).isoformat() }}
+          {% endif %}

@@ -1392,12 +1392,25 @@ views:
           - type: heading
             heading: Wakeup
             icon: mdi:weather-sunset-up
+          - type: custom:mushroom-template-card
+            entity: sensor.wakeup
+            primary: Next wakeup
+            secondary: >-
+              {% set t = as_timestamp(states(entity), none) %}
+              {{ t | timestamp_custom('%a %d.%m, %H:%M') if t else 'Unknown' }}
+            icon: mdi:weather-sunset-up
+            color: amber
+            grid_options:
+              columns: 12
+              rows: 1
+            tap_action:
+              action: more-info
           # input_datetime holds "07:30:00": the card shows hours and minutes
           - &time
             type: custom:mushroom-template-card
             entity: input_datetime.wakeup_workday
             primary: "{{ states(entity)[:5] }}"
-            secondary: Workday
+            secondary: Workday fallback
             icon: mdi:briefcase-outline
             color: amber
             vertical: true
@@ -1408,7 +1421,7 @@ views:
               action: more-info
           - <<: *time
             entity: input_datetime.wakeup_weekend
-            secondary: Weekend or holiday
+            secondary: Weekend or holiday fallback
             icon: mdi:beach
           - type: heading
             heading: ""

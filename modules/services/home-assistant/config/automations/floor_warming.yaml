@@ -1,6 +1,6 @@
 # Both bathroom floors, through script.floor_warming_set (Tuya Local). Timings come from packages/schedule.yaml:
 # mornings from 1 h before wakeup to 1 h after it, nights from 1 h before bedtime to bedtime.
-# Workday or weekend timings are picked by the Workday integration, so holidays get the weekend ones.
+# sensor.wakeup already knows its day. Night timings are picked by the Workday integration, so holidays get the weekend ones.
 # Vacation and Tuya rule mode stop it. One automation per bathroom (each has its own area),
 # the second one reuses the first one's schedule
 - id: repo_floor_warming_guest_schedule
@@ -9,24 +9,14 @@
   mode: queued
   triggers: &floor_warming_triggers
     - trigger: time
-      id: on_morning_workday
+      id: on_morning
       at:
-        entity_id: input_datetime.wakeup_workday
+        entity_id: sensor.wakeup
         offset: "-01:00:00"
     - trigger: time
-      id: off_morning_workday
+      id: off_morning
       at:
-        entity_id: input_datetime.wakeup_workday
-        offset: "01:00:00"
-    - trigger: time
-      id: on_morning_weekend
-      at:
-        entity_id: input_datetime.wakeup_weekend
-        offset: "-01:00:00"
-    - trigger: time
-      id: off_morning_weekend
-      at:
-        entity_id: input_datetime.wakeup_weekend
+        entity_id: sensor.wakeup
         offset: "01:00:00"
     - trigger: time
       id: on_night_workday
@@ -53,22 +43,22 @@
         - input_boolean.tuya_mode
       state: "off"
   actions: &floor_warming_actions
-    # A morning goes by its own day, a night by the day after the one it started on
+    # A night goes by the day after the one it started on
     # (12 h back from any time between noon and the next noon is that start day)
-    - action: workday.check_date
-      target:
-        entity_id: binary_sensor.workday_sensor_pl
-      data:
-        check_date: >-
-          {% if 'night' in trigger.id %}{{ (now() - timedelta(hours=12)).date() + timedelta(days=1) }}
-          {%- else %}{{ now().date() }}{% endif %}
-      response_variable: workday
-    # Workday timings run only for a workday, weekend ones only for a weekend day or a holiday.
-    # Day off on counts as a weekend day: late wakeup and late bedtime
-    - condition: template
-      value_template: >-
-        {{ (workday['binary_sensor.workday_sensor_pl'].workday and is_state('input_boolean.day_off', 'off'))
-           == trigger.id.endswith('workday') }}
+    - if: "{{ 'night' in trigger.id }}"
+      then:
+        - action: workday.check_date
+          target:
+            entity_id: binary_sensor.workday_sensor_pl
+          data:
+            check_date: "{{ (now() - timedelta(hours=12)).date() + timedelta(days=1) }}"
+          response_variable: workday
+        # Workday timings run only before a workday, weekend ones only before a weekend day or a holiday.
+        # Day off on counts as a weekend day: late bedtime
+        - condition: template
+          value_template: >-
+            {{ (workday['binary_sensor.workday_sensor_pl'].workday and is_state('input_boolean.day_off', 'off'))
+               == trigger.id.endswith('workday') }}
     # Timed runs read this to know if the schedule wants the heater on (packages/timed_heat.yaml)
     - action: "input_boolean.turn_{{ 'on' if trigger.id.startswith('on') else 'off' }}"
       target:
