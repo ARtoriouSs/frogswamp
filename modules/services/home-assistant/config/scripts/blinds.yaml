@@ -39,19 +39,25 @@ blind_run_left_door:
     - choose:
         - conditions: "{{ move in ['full_close', 'open', 'full_close_open'] }}"
           sequence:
+            # Read before the command: the position data point is also the target, so it can jump to 0 at once
+            - variables:
+                start: "{{ state_attr(blind, 'current_position') | int(100) }}"
             - action: cover.set_cover_position
               target:
                 entity_id: "{{ blind }}"
               data:
                 position: 0
             # One slat step after arriving: a blind that was already down barely moves, so its slats
-            # stop a step short. The step could interrupt a blind still on its way, so it waits for it
-            # (a full run takes 47 s). The timeout covers a blind that doesn't report 0.
+            # stop a step short. The step stops a blind still on its way, and a report of 0 alone doesn't
+            # prove arrival, so first wait the time this run needs: 0.47 s per percent, a full run is 40-47 s.
+            # The timeout covers a blind that doesn't report 0.
             # Close + open waits 2 s instead of 0.75 s, to be sure the blind has settled
             - if: "{{ move in ['full_close', 'full_close_open'] }}"
               then:
+                - delay:
+                    milliseconds: "{{ start * 470 }}"
                 - wait_template: "{{ state_attr(blind, 'current_position') == 0 }}"
-                  timeout: "00:01:00"
+                  timeout: "00:00:15"
                   continue_on_timeout: true
                 - delay:
                     milliseconds: "{{ 2000 if move == 'full_close_open' else 750 }}"
