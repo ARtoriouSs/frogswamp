@@ -91,7 +91,9 @@ const refresh = () => {
   const sidebar = home?.shadowRoot
     ?.querySelector("home-assistant-main")
     ?.shadowRoot?.querySelector("ha-sidebar");
-  const mapItem = sidebar?.shadowRoot?.querySelector('[href="/map"]');
+  // href is a property on these items, not an attribute, so a CSS selector can't match it
+  const items = sidebar?.shadowRoot?.querySelectorAll("ha-list-item-base, ha-list-item-button") ?? [];
+  const mapItem = Array.from(items).find((item) => item.href === "/map");
   if (!hass?.user || !mapItem || HIDDEN_FOR_USERS.includes(hass.user.name)) {
     widget.remove();
     return;
