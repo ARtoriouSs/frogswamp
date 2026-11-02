@@ -1372,24 +1372,6 @@ views:
       - type: grid
         cards:
           - type: heading
-            heading: Alarm
-            icon: mdi:alarm
-          - type: custom:mushroom-template-card
-            entity: sensor.pixel_7_next_alarm
-            primary: Next phone alarm
-            secondary: >-
-              {% set t = as_timestamp(states(entity), none) %}
-              {{ t | timestamp_custom('%a %d.%m, %H:%M') if t else 'None set' }}
-            icon: mdi:alarm
-            color: "{{ 'amber' if as_timestamp(states(entity), none) else 'disabled' }}"
-            grid_options:
-              columns: 12
-              rows: 1
-            tap_action:
-              action: more-info
-          - type: heading
-            heading: ""
-          - type: heading
             heading: Wakeup
             icon: mdi:weather-sunset-up
           - type: custom:mushroom-template-card
@@ -1423,6 +1405,19 @@ views:
             entity: input_datetime.wakeup_weekend
             secondary: Weekend or holiday fallback
             icon: mdi:beach
+          - type: custom:mushroom-template-card
+            entity: sensor.pixel_7_next_alarm
+            primary: Next phone alarm
+            secondary: >-
+              {% set t = as_timestamp(states(entity), none) %}
+              {{ t | timestamp_custom('%a %d.%m, %H:%M') if t else 'None set' }}
+            icon: mdi:alarm
+            color: "{{ 'amber' if as_timestamp(states(entity), none) else 'disabled' }}"
+            grid_options:
+              columns: 12
+              rows: 1
+            tap_action:
+              action: more-info
           - type: heading
             heading: ""
           - type: heading
