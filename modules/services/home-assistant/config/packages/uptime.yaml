@@ -4,6 +4,20 @@
 # The `<device> online` binary sensors draw the timelines, so their history starts when they were added.
 # The blinds, curtains and thermostats watch their Tuya Local entities since 2026-11-01, so their offline %
 # count from that day (the cloud entities before it are disabled)
+
+# HA has no integration for the PC, so it only sees whether the PC answers. Two tries: one lost packet
+# on a busy network is not an outage. The address is a DHCP reservation, see README
+command_line:
+  - binary_sensor:
+      name: PC ping
+      unique_id: repo_pc_ping
+      command: ping -c 2 -W 1 192.168.101.127 >/dev/null && echo on || echo off
+      payload_on: "on"
+      payload_off: "off"
+      device_class: connectivity
+      scan_interval: 30
+      command_timeout: 10
+
 input_select:
   uptime_range:
     name: Uptime range
@@ -60,6 +74,11 @@ template:
         unique_id: repo_uptime_cube
         device_class: connectivity
         state: "{{ not is_state('light.cube_matrix_192_168_101_121', 'unavailable') }}"
+        attributes: *uptime_attributes
+      - name: PC online
+        unique_id: repo_uptime_pc
+        device_class: connectivity
+        state: "{{ is_state('binary_sensor.pc_ping', 'on') }}"
         attributes: *uptime_attributes
       - name: Printer online
         unique_id: repo_uptime_printer
@@ -315,6 +334,33 @@ sensor:
     unique_id: repo_uptime_cube_offline_month
     entity_id: light.cube_matrix_192_168_101_121
     state: unavailable
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 744
+  - platform: history_stats
+    name: PC offline day
+    unique_id: repo_uptime_pc_offline_day
+    entity_id: binary_sensor.pc_ping
+    state: "off"
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 24
+  - platform: history_stats
+    name: PC offline week
+    unique_id: repo_uptime_pc_offline_week
+    entity_id: binary_sensor.pc_ping
+    state: "off"
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 168
+  - platform: history_stats
+    name: PC offline month
+    unique_id: repo_uptime_pc_offline_month
+    entity_id: binary_sensor.pc_ping
+    state: "off"
     type: ratio
     end: *uptime_end
     duration:

@@ -41,11 +41,12 @@ Port forwarding (51413 for torrents, 8621 for Ace Stream) only helps with a publ
 
 Fixed addresses below `.100`: the server (`.10`) and the TV (`.20`, static IP set on the TV, see the [football README](modules/services/football/README.md#one-time-setup)).
 
-DHCP reservations (router → DHCP → static leases), so HA finds these devices at the same address: the Tuya devices for Tuya Local, and the cube, which the cubematrix integration reaches by IP. They are inside the pool, the reservation keeps them there:
+DHCP reservations (router → DHCP → static leases), so HA finds these devices at the same address: the Tuya devices for Tuya Local, the cube, which the cubematrix integration reaches by IP, and the management PC, which HA pings for the Monitor tab. They are inside the pool, the reservation keeps them there:
 
 | Device | IP | MAC | Tuya protocol |
 |---|---|---|---|
 | Yeelight Cube Matrix (office) | `192.168.101.121` | `c0:4e:30:ee:72:54` | not Tuya |
+| Management PC (wired) | `192.168.101.127` | `9c:6b:00:b7:6a:6a` | not Tuya |
 | Curtains | `192.168.101.101` | `bc:35:1e:d1:ff:80` | 3.5 |
 | Blinds - middle | `192.168.101.104` | `80:64:7c:be:b6:fa` | 3.5 |
 | Thermostat - Guest | `192.168.101.110` | `bc:35:1e:19:dc:f5` | 3.5 |

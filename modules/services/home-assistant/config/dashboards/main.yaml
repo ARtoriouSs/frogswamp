@@ -1271,6 +1271,8 @@ views:
                   name: "Cube\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A"
                 - entity: binary_sensor.printer_online
                   name: "Printer\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A"
+                - entity: binary_sensor.pc_online
+                  name: "PC\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
             grid_options:
               columns: full
           - type: conditional
@@ -1288,6 +1290,8 @@ views:
                   name: "Cube\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A"
                 - entity: binary_sensor.printer_online
                   name: "Printer\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A"
+                - entity: binary_sensor.pc_online
+                  name: "PC\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
             grid_options:
               columns: full
           - type: conditional
@@ -1305,6 +1309,8 @@ views:
                   name: "Cube\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A"
                 - entity: binary_sensor.printer_online
                   name: "Printer\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A"
+                - entity: binary_sensor.pc_online
+                  name: "PC\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
             grid_options:
               columns: full
           - type: heading
@@ -1609,6 +1615,18 @@ views:
             secondary: "{% set u = state_attr(entity, 'uptime') %}{{ (u ~ ' %') if u is not none else '—' }} · {{ 'online' if is_state(entity, 'on') else 'offline' }}"
             icon: mdi:printer
             color: "{% set u = state_attr(entity, 'uptime') %}{{ 'red' if is_state(entity, 'off') else ('disabled' if u is none else ('green' if u >= 99 else ('amber' if u >= 95 else 'red'))) }}"
+            grid_options:
+              columns: 6
+              rows: 1
+            tap_action:
+              action: more-info
+          # A PC that is off is normal, so no red and no uptime colours here
+          - type: custom:mushroom-template-card
+            entity: binary_sensor.pc_online
+            primary: PC
+            secondary: "{% set u = state_attr(entity, 'uptime') %}{{ (u ~ ' %') if u is not none else '—' }} · {{ 'online' if is_state(entity, 'on') else 'offline' }}"
+            icon: mdi:desktop-tower-monitor
+            color: "{{ 'green' if is_state(entity, 'on') else 'disabled' }}"
             grid_options:
               columns: 6
               rows: 1
@@ -2005,6 +2023,20 @@ views:
           - *ink
           - *printer_black
           - *printer_colour
+          - type: heading
+            heading: PC
+            heading_style: subtitle
+          - type: custom:mushroom-template-card
+            entity: binary_sensor.pc_online
+            primary: PC
+            secondary: "{{ 'Online' if is_state(entity, 'on') else 'Offline' }}"
+            icon: mdi:desktop-tower-monitor
+            color: "{{ 'green' if is_state(entity, 'on') else 'disabled' }}"
+            grid_options:
+              columns: 12
+              rows: 1
+            tap_action:
+              action: more-info
 
       - type: grid
         cards:

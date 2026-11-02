@@ -96,6 +96,17 @@ powercalc:
       fixed:
         power: 50
 
+    # Ryzen 7 9700X + RTX 5070 Ti in light use, no gaming. On: about 110 W for the tower (reviews and users
+    # report 80-100 W idle at the wall), 45 W for the Dell U4025QW (ENERGY STAR test), about 20 W for the
+    # soundbar, charging station, audio interface, mic, webcam, keyboard and mouse.
+    # Off or asleep: about 8 W for the same devices on standby, a guess
+    - entity_id: binary_sensor.pc_ping
+      unique_id: repo_powercalc_pc
+      name: PC
+      standby_power: 8
+      fixed:
+        power: 175
+
     # Always on. Router: Huawei FG630, 12 W at most. Server: N100 mini PC, 6-10 W idle, 25 W at full load
     - name: Router
       unique_id: repo_powercalc_router
