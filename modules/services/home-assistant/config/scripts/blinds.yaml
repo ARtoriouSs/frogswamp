@@ -3,7 +3,8 @@
 # The Tuya app and its scenes count the other way (100% = drawn), Tuya Local's config inverts it.
 # An open/close command without a position only turns the slats.
 # The button scripts below start blinds_run and return at once. It starts one script per blind, each in
-# restart mode: a new command stops only what its own blind is doing, and the blinds don't wait for each other
+# restart mode: a new command first stops what its own blind is doing, in HA and in the motor. Door commands
+# touch only the door blind, and the blinds don't wait for each other
 # (with the door open, the other two finish Reset long before it does)
 blinds_run:
   alias: "Blinds: run a move"
@@ -36,6 +37,12 @@ blind_run_left_door:
   variables:
     blind: cover.blinds_left_door_local
   sequence: &blind_sequence
+    # Restart mode has already ended this blind's previous command in HA, this ends it in the motor.
+    # The pause lets the motor take it before the next command, and the position is read only after it
+    - action: cover.stop_cover
+      target:
+        entity_id: "{{ blind }}"
+    - delay: "00:00:01"
     - choose:
         - conditions: "{{ move in ['full_close', 'open', 'full_close_open'] }}"
           sequence:
