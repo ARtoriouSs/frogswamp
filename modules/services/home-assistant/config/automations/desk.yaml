@@ -1,21 +1,15 @@
-# Standing breaks: desk up for 30 minutes three times a day on workdays (Workday integration, no holidays). Day off and Vacation stop it
+# Standing breaks: three leases of 30 minutes a day on workdays (Workday integration, no holidays).
+# Day off and Vacation stop it, and script.desk_lease skips it while Aleksander is away
 - id: repo_desk_schedule
   alias: "Desk: schedule"
-  description: Workdays, up at 13:00, 15:00 and 17:00, down 30 minutes later
+  description: Workdays, a 30 minute lease at 13:00, 15:00 and 17:00
   mode: queued
   triggers:
     - trigger: time
-      id: up
       at:
         - "13:00:00"
         - "15:00:00"
         - "17:00:00"
-    - trigger: time
-      id: down
-      at:
-        - "13:30:00"
-        - "15:30:00"
-        - "17:30:00"
   conditions:
     - condition: state
       entity_id:
@@ -27,4 +21,44 @@
       entity_id: binary_sensor.workday_sensor_pl
       state: "on"
   actions:
-    - action: "script.desk_{{ trigger.id }}"
+    - action: script.desk_lease
+
+# The desk doesn't move while Aleksander is away, so a lease that ended then finishes on the way back
+# (or the location rule is paused). The start trigger catches a lease that ended while HA was down
+- id: repo_desk_lease_ended
+  alias: "Desk: lease ended"
+  description: Sends the desk down at the end of a lease
+  mode: single
+  max_exceeded: silent
+  triggers:
+    - trigger: event
+      id: finished
+      event_type: timer.finished
+      event_data:
+        entity_id: timer.desk_lease
+    - trigger: state
+      id: allowed
+      entity_id: binary_sensor.desk_automations_allowed
+      from: "off"
+      to: "on"
+    - trigger: homeassistant
+      id: start
+      event: start
+  actions:
+    - if: "{{ trigger.id == 'start' }}"
+      then:
+        - delay: "00:01:00"
+    - condition: state
+      entity_id:
+        - input_boolean.desk_lease_run
+        - binary_sensor.desk_automations_allowed
+      state: "on"
+    # timer.finished can come before the timer's state changes
+    - condition: template
+      value_template: "{{ trigger.id == 'finished' or not is_state('timer.desk_lease', 'active') }}"
+    - action: input_boolean.turn_off
+      target:
+        entity_id: input_boolean.desk_lease_run
+    - action: script.desk_move_with_unlock
+      data:
+        direction: down

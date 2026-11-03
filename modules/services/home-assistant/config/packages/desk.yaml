@@ -1,0 +1,27 @@
+# Desk lease: see scripts/desk.yaml and automations/desk.yaml
+timer:
+  desk_lease:
+    name: Desk up, timed
+    duration: "00:30:00"
+    restore: true
+
+input_boolean:
+  # On from the start of a lease until the desk is sent down, so a lease can end later:
+  # after a restart, or when Aleksander is back home
+  desk_lease_run:
+    name: Desk lease run
+    icon: mdi:timer-outline
+  desk_location_paused:
+    name: Desk location rule paused
+    icon: mdi:map-marker-off
+
+# Only Aleksander's location counts, nobody else uses the desk. Like in the presence automations,
+# unknown and unavailable don't count as away
+template:
+  - binary_sensor:
+      - name: Desk automations allowed
+        unique_id: repo_desk_automations_allowed
+        icon: mdi:desk
+        state: >-
+          {{ is_state('input_boolean.desk_location_paused', 'on')
+             or states('person.aleksander_cieslowski') in ['home', 'unknown', 'unavailable'] }}

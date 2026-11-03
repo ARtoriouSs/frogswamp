@@ -798,45 +798,6 @@ views:
           - type: heading
             heading: ""
           - type: heading
-            heading: Location
-            icon: mdi:map-marker
-          - <<: *sched_toggle
-            entity: input_boolean.location_paused
-            primary: Location automations
-            secondary: "{{ 'Paused' if is_state(entity, 'on') else 'Running' }}"
-            icon: "{{ 'mdi:map-marker-off' if is_state(entity, 'on') else 'mdi:map-marker-check' }}"
-            color: "{{ 'amber' if is_state(entity, 'on') else 'green' }}"
-          # Only shows the state, the presence automations set it
-          - <<: *sched_toggle
-            entity: input_boolean.nobody_home
-            primary: "{{ 'Nobody home' if is_state(entity, 'on') else 'Someone home' }}"
-            secondary: Home state
-            icon: "{{ 'mdi:home-export-outline' if is_state(entity, 'on') else 'mdi:home-account' }}"
-            color: "{{ 'orange' if is_state(entity, 'on') else 'green' }}"
-            tap_action:
-              action: more-info
-            hold_action:
-              action: none
-
-      - type: grid
-        column_span: 2
-        cards:
-          - type: heading
-            heading: Calendar
-            icon: mdi:calendar-month
-          # Public holidays, and the days off and vacations
-          - type: calendar
-            initial_view: dayGridMonth
-            entities:
-              - calendar.holidays_in_poland
-              - calendar.home_assistant_events
-            grid_options:
-              columns: full
-              rows: 10
-
-      - type: grid
-        cards:
-          - type: heading
             heading: Wakeup
             icon: mdi:weather-sunset-up
           - type: custom:mushroom-template-card
@@ -913,6 +874,116 @@ views:
             secondary: End
             icon: mdi:stop
             color: blue
+
+      - type: grid
+        column_span: 2
+        cards:
+          - type: heading
+            heading: Calendar
+            icon: mdi:calendar-month
+          # Public holidays, and the days off and vacations
+          - type: calendar
+            initial_view: dayGridMonth
+            entities:
+              - calendar.holidays_in_poland
+              - calendar.home_assistant_events
+            grid_options:
+              columns: full
+              rows: 10
+
+      - type: grid
+        cards:
+          - type: heading
+            heading: Location
+            icon: mdi:map-marker
+          - <<: *sched_toggle
+            entity: input_boolean.location_paused
+            primary: Nobody home automations
+            secondary: "{{ 'Paused' if is_state(entity, 'on') else 'Running' }}"
+            icon: "{{ 'mdi:map-marker-off' if is_state(entity, 'on') else 'mdi:map-marker-check' }}"
+            color: "{{ 'amber' if is_state(entity, 'on') else 'green' }}"
+          - &desk_location
+            <<: *sched_toggle
+            entity: input_boolean.desk_location_paused
+            primary: Desk location rule
+            secondary: "{{ 'Paused' if is_state(entity, 'on') else ('Running, away' if is_state('binary_sensor.desk_automations_allowed', 'off') else 'Running') }}"
+            icon: "{{ 'mdi:map-marker-off' if is_state(entity, 'on') else 'mdi:map-marker-check' }}"
+            color: "{{ 'amber' if is_state(entity, 'on') else 'green' }}"
+          # Only shows the state, the presence automations set it
+          - <<: *sched_toggle
+            entity: input_boolean.nobody_home
+            primary: "{{ 'Nobody home' if is_state(entity, 'on') else 'Someone home' }}"
+            secondary: Home state
+            icon: "{{ 'mdi:home-export-outline' if is_state(entity, 'on') else 'mdi:home-account' }}"
+            color: "{{ 'orange' if is_state(entity, 'on') else 'green' }}"
+            tap_action:
+              action: more-info
+            hold_action:
+              action: none
+          - type: heading
+            heading: ""
+          - type: heading
+            heading: Schedules
+            icon: mdi:clock-outline
+          - type: heading
+            heading: Desk
+            heading_style: subtitle
+          - <<: *sched_toggle
+            entity: automation.desk_schedule
+            primary: Standing breaks
+            icon: mdi:desk
+            grid_options:
+              columns: 12
+              rows: 1
+          - type: heading
+            heading: Heating
+            heading_style: subtitle
+          - <<: *sched_toggle
+            entity: automation.floor_warming_master_schedule
+            primary: Master floor
+            icon: mdi:heating-coil
+          - <<: *sched_toggle
+            entity: automation.floor_warming_guest_schedule
+            primary: Guest floor
+            icon: mdi:heating-coil
+          - <<: *sched_toggle
+            entity: automation.towel_heat_master_schedule
+            primary: Master towel heat
+            icon: mdi:radiator
+          - type: heading
+            heading: Curtains and blinds
+            heading_style: subtitle
+          - <<: *sched_toggle
+            entity: automation.curtains_close_at_sunset
+            primary: Curtains at sunset
+            icon: mdi:curtains-closed
+          - <<: *sched_toggle
+            entity: automation.blinds_open_2_h_after_sunrise
+            primary: Blinds morning open
+            icon: mdi:blinds-open
+          - <<: *sched_toggle
+            entity: automation.blinds_full_close_2_h_after_sunset
+            primary: Blinds evening close
+            icon: mdi:blinds
+          - <<: *sched_toggle
+            entity: automation.blinds_full_close_at_01_00
+            primary: Blinds night close
+            icon: mdi:blinds
+          - type: heading
+            heading: Cube
+            heading_style: subtitle
+          - <<: *sched_toggle
+            entity: automation.cube_coffee_at_work_start_moon_at_work_end
+            primary: Coffee and moon
+            icon: mdi:coffee
+          - <<: *sched_toggle
+            entity: automation.cube_another_frog_every_hour
+            primary: Frog every hour
+            icon: frog:frog-face
+          - <<: *sched_toggle
+            entity: automation.cube_green_dot_at_night_and_on_vacation
+            primary: Night green dot
+            icon: mdi:weather-night
 
   # Range, timelines (two columns wide) and the % per device (sensors in packages/uptime.yaml)
   - title: Monitor
@@ -2439,8 +2510,17 @@ views:
           - <<: *toggle
             entity: automation.desk_schedule
             primary: Desk schedule
-            secondary: "{{ 'Paused by Day off' if is_state('input_boolean.day_off', 'on') else ('On' if is_state(entity, 'on') else 'Off') }}"
+            secondary: >-
+              {% if is_state(entity, 'off') %}Off
+              {% elif is_state('input_boolean.day_off', 'on') %}Paused by Day off
+              {% elif is_state('binary_sensor.desk_automations_allowed', 'off') %}Paused, away
+              {% else %}On{% endif %}
             icon: mdi:desk
+            vertical: false
+            grid_options:
+              columns: 12
+              rows: 1
+          - <<: *desk_location
             vertical: false
             grid_options:
               columns: 12

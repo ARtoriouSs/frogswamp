@@ -4,9 +4,9 @@ input_boolean:
   nobody_home:
     name: Nobody home
     icon: mdi:home-export-outline
-  # The Location card on the Schedule tab
+  # On the Schedule tab. Only for the rules that need both people's locations. The desk has its own, packages/desk.yaml
   location_paused:
-    name: Location paused
+    name: Nobody home automations paused
     icon: mdi:map-marker-off
 
 timer:

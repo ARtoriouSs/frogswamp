@@ -30,10 +30,63 @@ desk_move_with_unlock:
       target:
         entity_id: switch.desk_child_lock
 
+# For automations. Raises the desk for a time and lowers it when the time ends. A running lease is extended if
+# this one ends later, never shortened, and the desk isn't sent up again. Does nothing while Aleksander is away
+desk_lease:
+  alias: "Desk: ask for a lease"
+  icon: mdi:timer-plus-outline
+  mode: parallel
+  fields:
+    duration:
+      description: Length of the lease, 30 min if not set
+      example: "00:30:00"
+  variables:
+    length: "{{ duration | default('00:30:00') }}"
+  sequence:
+    - condition: state
+      entity_id: binary_sensor.desk_automations_allowed
+      state: "on"
+    - if: "{{ is_state('timer.desk_lease', 'active') }}"
+      then:
+        - if: >-
+            {{ (as_datetime(state_attr('timer.desk_lease', 'finishes_at')) - now()).total_seconds()
+               < as_timedelta(length).total_seconds() }}
+          then:
+            - action: timer.start
+              target:
+                entity_id: timer.desk_lease
+              data:
+                duration: "{{ length }}"
+      else:
+        - action: input_boolean.turn_on
+          target:
+            entity_id: input_boolean.desk_lease_run
+        - action: timer.start
+          target:
+            entity_id: timer.desk_lease
+          data:
+            duration: "{{ length }}"
+        - action: script.desk_move_with_unlock
+          data:
+            direction: up
+
+# The buttons and NeonPlan. A press by hand ends the lease, so the desk stays where it was sent
+desk_lease_cancel:
+  alias: "Desk: end the lease"
+  icon: mdi:timer-off-outline
+  sequence:
+    - action: timer.cancel
+      target:
+        entity_id: timer.desk_lease
+    - action: input_boolean.turn_off
+      target:
+        entity_id: input_boolean.desk_lease_run
+
 desk_up:
   alias: "Desk: up"
   icon: mdi:arrow-up-bold
   sequence:
+    - action: script.desk_lease_cancel
     - action: script.desk_move_with_unlock
       data:
         direction: up
@@ -42,6 +95,7 @@ desk_down:
   alias: "Desk: down"
   icon: mdi:arrow-down-bold
   sequence:
+    - action: script.desk_lease_cancel
     - action: script.desk_move_with_unlock
       data:
         direction: down
