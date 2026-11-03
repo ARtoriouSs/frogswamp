@@ -1,0 +1,303 @@
+# Estimated electricity cost for the Energy tab. Each `<device>_cost_total` only grows: on each energy
+# update it adds the new kWh at the price of that moment, so a new price never changes what was already
+# counted. Long-term statistics keep these forever, they draw the monthly graphs. `<device>_cost_month`
+# starts from 0 each month. Counting starts when a sensor is first created.
+# A new device goes to: this file (trigger, cost sensor, meter, the sums) and dashboards/main.yaml
+input_number:
+  # No `initial`, so HA restores them after a restart. The first values are in automations/energy_prices.yaml
+  energy_price_per_kwh:
+    name: Per kWh
+    icon: mdi:cash
+    min: 0
+    max: 10
+    step: 0.0001
+    mode: box
+    unit_of_measurement: zł/kWh
+  energy_price_fixed:
+    name: Fixed
+    icon: mdi:cash-lock
+    min: 0
+    max: 1000
+    step: 0.01
+    mode: box
+    unit_of_measurement: zł/month
+
+input_select:
+  energy_compare:
+    name: Compare months
+    icon: mdi:chart-bar
+    options:
+      - All
+      - Climate
+      - Fridge
+      - Master floor
+      - Guest floor
+      - Master towel
+      - Guest towel
+      - TV
+      - Printer
+      - Cube Matrix
+      - Blinds
+      - Curtains
+      - Router
+      - Server
+      - PC
+
+template:
+  - trigger:
+      - trigger: state
+        entity_id:
+          - sensor.living_room_refrigerator_energy
+          - sensor.master_floor_warming_energy
+          - sensor.guest_floor_warming_energy
+          - sensor.master_towel_heat_energy
+          - sensor.guest_towel_heat_energy
+          - sensor.tv_energy
+          - sensor.printer_energy
+          - sensor.cube_matrix_energy
+          - sensor.blinds_energy
+          - sensor.curtains_energy
+          - sensor.router_energy
+          - sensor.server_energy
+          - sensor.pc_energy
+        not_to:
+          - unavailable
+          - unknown
+    sensor:
+      # The energy sensor comes from this sensor's ID. `last_kwh` survives restarts and offline time,
+      # so the kWh used in between is still counted. A lower reading means the source was reset: no cost
+      - name: Fridge cost
+        unique_id: repo_energy_cost_fridge
+        default_entity_id: sensor.living_room_refrigerator_cost_total
+        unit_of_measurement: zł
+        state_class: total_increasing
+        state: &cost_state >-
+          {% set kwh = states(this.entity_id | replace('_cost_total', '_energy')) | float(none) %}
+          {% set last = this.attributes.get('last_kwh') %}
+          {% set cost = this.state | float(0) %}
+          {% if kwh is none or last is none %}{{ cost }}
+          {% else %}{{ (cost + max(kwh - last, 0) * states('input_number.energy_price_per_kwh') | float(0)) | round(6) }}{% endif %}
+        attributes: &cost_attributes
+          last_kwh: >-
+            {% set kwh = states(this.entity_id | replace('_cost_total', '_energy')) | float(none) %}
+            {{ kwh if kwh is not none else this.attributes.get('last_kwh') }}
+      - name: Master floor cost
+        unique_id: repo_energy_cost_master_floor
+        default_entity_id: sensor.master_floor_warming_cost_total
+        unit_of_measurement: zł
+        state_class: total_increasing
+        state: *cost_state
+        attributes: *cost_attributes
+      - name: Guest floor cost
+        unique_id: repo_energy_cost_guest_floor
+        default_entity_id: sensor.guest_floor_warming_cost_total
+        unit_of_measurement: zł
+        state_class: total_increasing
+        state: *cost_state
+        attributes: *cost_attributes
+      - name: Master towel cost
+        unique_id: repo_energy_cost_master_towel
+        default_entity_id: sensor.master_towel_heat_cost_total
+        unit_of_measurement: zł
+        state_class: total_increasing
+        state: *cost_state
+        attributes: *cost_attributes
+      - name: Guest towel cost
+        unique_id: repo_energy_cost_guest_towel
+        default_entity_id: sensor.guest_towel_heat_cost_total
+        unit_of_measurement: zł
+        state_class: total_increasing
+        state: *cost_state
+        attributes: *cost_attributes
+      - name: TV cost
+        unique_id: repo_energy_cost_tv
+        default_entity_id: sensor.tv_cost_total
+        unit_of_measurement: zł
+        state_class: total_increasing
+        state: *cost_state
+        attributes: *cost_attributes
+      - name: Printer cost
+        unique_id: repo_energy_cost_printer
+        default_entity_id: sensor.printer_cost_total
+        unit_of_measurement: zł
+        state_class: total_increasing
+        state: *cost_state
+        attributes: *cost_attributes
+      - name: Cube Matrix cost
+        unique_id: repo_energy_cost_cube_matrix
+        default_entity_id: sensor.cube_matrix_cost_total
+        unit_of_measurement: zł
+        state_class: total_increasing
+        state: *cost_state
+        attributes: *cost_attributes
+      - name: Blinds cost
+        unique_id: repo_energy_cost_blinds
+        default_entity_id: sensor.blinds_cost_total
+        unit_of_measurement: zł
+        state_class: total_increasing
+        state: *cost_state
+        attributes: *cost_attributes
+      - name: Curtains cost
+        unique_id: repo_energy_cost_curtains
+        default_entity_id: sensor.curtains_cost_total
+        unit_of_measurement: zł
+        state_class: total_increasing
+        state: *cost_state
+        attributes: *cost_attributes
+      - name: Router cost
+        unique_id: repo_energy_cost_router
+        default_entity_id: sensor.router_cost_total
+        unit_of_measurement: zł
+        state_class: total_increasing
+        state: *cost_state
+        attributes: *cost_attributes
+      - name: Server cost
+        unique_id: repo_energy_cost_server
+        default_entity_id: sensor.server_cost_total
+        unit_of_measurement: zł
+        state_class: total_increasing
+        state: *cost_state
+        attributes: *cost_attributes
+      - name: PC cost
+        unique_id: repo_energy_cost_pc
+        default_entity_id: sensor.pc_cost_total
+        unit_of_measurement: zł
+        state_class: total_increasing
+        state: *cost_state
+        attributes: *cost_attributes
+
+  # The fixed charge grows with time. The first run only stores the start of the month, the next one
+  # adds the days already passed, so the monthly meter below sees them too
+  - trigger:
+      - trigger: time_pattern
+        minutes: 0
+      - trigger: homeassistant
+        event: start
+    sensor:
+      - name: Fixed cost
+        unique_id: repo_energy_cost_fixed
+        default_entity_id: sensor.fixed_cost_total
+        unit_of_measurement: zł
+        state_class: total_increasing
+        state: >-
+          {% set last = this.attributes.get('last_time') %}
+          {% set start = now().replace(day=1, hour=0, minute=0, second=0, microsecond=0) %}
+          {% set month = ((start + timedelta(days=32)).replace(day=1) - start).total_seconds() %}
+          {% set fixed = states('input_number.energy_price_fixed') | float(0) %}
+          {% if last is none %}0
+          {% else %}{{ (this.state | float(0) + (now().timestamp() - last) / month * fixed) | round(6) }}{% endif %}
+        attributes:
+          last_time: >-
+            {{ now().timestamp() if this.attributes.get('last_time') is not none
+               else now().replace(day=1, hour=0, minute=0, second=0, microsecond=0).timestamp() }}
+
+  - sensor:
+      # Unavailable while any part is missing: a lower sum would look like a reset to the statistics
+      - name: Climate cost
+        unique_id: repo_energy_cost_climate
+        default_entity_id: sensor.climate_cost_total
+        unit_of_measurement: zł
+        state_class: total_increasing
+        state: >-
+            {% set parts = ['sensor.master_floor_warming_cost_total',
+               'sensor.guest_floor_warming_cost_total', 'sensor.master_towel_heat_cost_total',
+               'sensor.guest_towel_heat_cost_total'] %}
+            {{ parts | map('states') | map('float', 0) | sum | round(6) }}
+        availability: >-
+            {% set parts = ['sensor.master_floor_warming_cost_total',
+               'sensor.guest_floor_warming_cost_total', 'sensor.master_towel_heat_cost_total',
+               'sensor.guest_towel_heat_cost_total'] %}
+            {{ parts | reject('has_value') | list | count == 0 }}
+      - name: Devices cost
+        unique_id: repo_energy_cost_devices
+        default_entity_id: sensor.devices_cost_total
+        unit_of_measurement: zł
+        state_class: total_increasing
+        state: >-
+            {% set parts = ['sensor.living_room_refrigerator_cost_total',
+               'sensor.master_floor_warming_cost_total', 'sensor.guest_floor_warming_cost_total',
+               'sensor.master_towel_heat_cost_total', 'sensor.guest_towel_heat_cost_total',
+               'sensor.tv_cost_total', 'sensor.printer_cost_total', 'sensor.cube_matrix_cost_total',
+               'sensor.blinds_cost_total', 'sensor.curtains_cost_total', 'sensor.router_cost_total',
+               'sensor.server_cost_total', 'sensor.pc_cost_total'] %}
+            {{ parts | map('states') | map('float', 0) | sum | round(6) }}
+        availability: >-
+            {% set parts = ['sensor.living_room_refrigerator_cost_total',
+               'sensor.master_floor_warming_cost_total', 'sensor.guest_floor_warming_cost_total',
+               'sensor.master_towel_heat_cost_total', 'sensor.guest_towel_heat_cost_total',
+               'sensor.tv_cost_total', 'sensor.printer_cost_total', 'sensor.cube_matrix_cost_total',
+               'sensor.blinds_cost_total', 'sensor.curtains_cost_total', 'sensor.router_cost_total',
+               'sensor.server_cost_total', 'sensor.pc_cost_total'] %}
+            {{ parts | reject('has_value') | list | count == 0 }}
+      - name: Devices energy
+        unique_id: repo_energy_devices
+        default_entity_id: sensor.devices_energy_total
+        device_class: energy
+        unit_of_measurement: kWh
+        state_class: total_increasing
+        state: >-
+            {% set parts = ['sensor.living_room_refrigerator_energy',
+               'sensor.master_floor_warming_energy', 'sensor.guest_floor_warming_energy',
+               'sensor.master_towel_heat_energy', 'sensor.guest_towel_heat_energy', 'sensor.tv_energy',
+               'sensor.printer_energy', 'sensor.cube_matrix_energy', 'sensor.blinds_energy',
+               'sensor.curtains_energy', 'sensor.router_energy', 'sensor.server_energy',
+               'sensor.pc_energy'] %}
+            {{ parts | map('states') | map('float', 0) | sum | round(6) }}
+        availability: >-
+            {% set parts = ['sensor.living_room_refrigerator_energy',
+               'sensor.master_floor_warming_energy', 'sensor.guest_floor_warming_energy',
+               'sensor.master_towel_heat_energy', 'sensor.guest_towel_heat_energy', 'sensor.tv_energy',
+               'sensor.printer_energy', 'sensor.cube_matrix_energy', 'sensor.blinds_energy',
+               'sensor.curtains_energy', 'sensor.router_energy', 'sensor.server_energy',
+               'sensor.pc_energy'] %}
+            {{ parts | reject('has_value') | list | count == 0 }}
+
+utility_meter:
+  living_room_refrigerator_cost_month:
+    source: sensor.living_room_refrigerator_cost_total
+    cycle: monthly
+  master_floor_warming_cost_month:
+    source: sensor.master_floor_warming_cost_total
+    cycle: monthly
+  guest_floor_warming_cost_month:
+    source: sensor.guest_floor_warming_cost_total
+    cycle: monthly
+  master_towel_heat_cost_month:
+    source: sensor.master_towel_heat_cost_total
+    cycle: monthly
+  guest_towel_heat_cost_month:
+    source: sensor.guest_towel_heat_cost_total
+    cycle: monthly
+  tv_cost_month:
+    source: sensor.tv_cost_total
+    cycle: monthly
+  printer_cost_month:
+    source: sensor.printer_cost_total
+    cycle: monthly
+  cube_matrix_cost_month:
+    source: sensor.cube_matrix_cost_total
+    cycle: monthly
+  blinds_cost_month:
+    source: sensor.blinds_cost_total
+    cycle: monthly
+  curtains_cost_month:
+    source: sensor.curtains_cost_total
+    cycle: monthly
+  router_cost_month:
+    source: sensor.router_cost_total
+    cycle: monthly
+  server_cost_month:
+    source: sensor.server_cost_total
+    cycle: monthly
+  pc_cost_month:
+    source: sensor.pc_cost_total
+    cycle: monthly
+  climate_cost_month:
+    source: sensor.climate_cost_total
+    cycle: monthly
+  devices_cost_month:
+    source: sensor.devices_cost_total
+    cycle: monthly
+  fixed_cost_month:
+    source: sensor.fixed_cost_total
+    cycle: monthly

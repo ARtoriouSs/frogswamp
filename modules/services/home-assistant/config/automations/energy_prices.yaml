@@ -1,0 +1,23 @@
+# First values of the price fields, from the E.ON invoice of September 2026 (G11, Stoen). HA restores the
+# fields after that, so changes on the Energy tab stay. Only a fresh install has the per kWh price at 0
+- id: repo_energy_prices_first_values
+  alias: "Energy: first price values"
+  description: Fills in the price fields on a fresh install
+  triggers:
+    - trigger: homeassistant
+      event: start
+  conditions:
+    - condition: numeric_state
+      entity_id: input_number.energy_price_per_kwh
+      below: 0.0001
+  actions:
+    - action: input_number.set_value
+      target:
+        entity_id: input_number.energy_price_per_kwh
+      data:
+        value: 0.9627
+    - action: input_number.set_value
+      target:
+        entity_id: input_number.energy_price_fixed
+      data:
+        value: 47.88

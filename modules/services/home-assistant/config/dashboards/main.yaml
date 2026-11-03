@@ -829,6 +829,8 @@ views:
             initial_view: dayGridMonth
             entities:
               - calendar.workday_sensor_pl_calendar
+            grid_options:
+              columns: full
 
       - type: grid
         cards:
@@ -1722,8 +1724,8 @@ views:
             tap_action:
               action: more-info
 
-  # The same cards as the built-in Energy page. Devices are set up there (Settings → Dashboards → Energy),
-  # for now only the fridge
+  # The usage cards are the same as on the built-in Energy page. Devices are set up there
+  # (Settings → Dashboards → Energy). Costs and prices: packages/energy_cost.yaml
   - title: Energy
     path: energy
     visible:
@@ -1736,8 +1738,8 @@ views:
       - type: grid
         cards:
           - type: heading
-            heading: Fridge
-            icon: mdi:fridge
+            heading: Usage by device
+            icon: mdi:chart-bar
           - type: energy-date-selection
             grid_options:
               columns: full
@@ -1751,7 +1753,7 @@ views:
       - type: grid
         cards:
           - type: heading
-            heading: Power now
+            heading: Fridge power
             icon: mdi:flash
           - type: custom:mushroom-template-card
             entity: sensor.living_room_refrigerator_power
@@ -1769,6 +1771,418 @@ views:
             entities:
               - entity: sensor.living_room_refrigerator_power
                 name: Fridge
+            grid_options:
+              columns: full
+
+      # Counted from the 1st, the meters start again each month
+      - type: grid
+        cards:
+          - type: heading
+            heading: Cost this month
+            icon: mdi:cash-multiple
+          - &cost_card
+            type: custom:mushroom-template-card
+            entity: sensor.devices_cost_month
+            primary: Total with fixed
+            secondary: "{{ '%.2f' | format(states(entity) | float(0) + states('sensor.fixed_cost_month') | float(0)) }} zł"
+            icon: mdi:sigma
+            color: amber
+            grid_options:
+              columns: 6
+              rows: 1
+            tap_action:
+              action: more-info
+          - <<: *cost_card
+            primary: Devices
+            secondary: &cost_value "{{ '%.2f' | format(states(entity) | float(0)) }} zł"
+            icon: mdi:power-plug
+          - <<: *cost_card
+            entity: sensor.climate_cost_month
+            primary: Climate
+            secondary: *cost_value
+            icon: mdi:radiator
+          - <<: *cost_card
+            entity: sensor.fixed_cost_month
+            primary: Fixed so far
+            secondary: *cost_value
+            icon: mdi:cash-lock
+          - type: heading
+            heading: By device
+            heading_style: subtitle
+          - &device_cost
+            <<: *cost_card
+            secondary: *cost_value
+            entity: sensor.living_room_refrigerator_cost_month
+            primary: Fridge
+            icon: mdi:fridge
+          - <<: *device_cost
+            entity: sensor.master_floor_warming_cost_month
+            primary: Master floor
+            icon: mdi:heating-coil
+          - <<: *device_cost
+            entity: sensor.guest_floor_warming_cost_month
+            primary: Guest floor
+            icon: mdi:heating-coil
+          - <<: *device_cost
+            entity: sensor.master_towel_heat_cost_month
+            primary: Master towel
+            icon: mdi:radiator
+          - <<: *device_cost
+            entity: sensor.guest_towel_heat_cost_month
+            primary: Guest towel
+            icon: mdi:radiator
+          - <<: *device_cost
+            entity: sensor.tv_cost_month
+            primary: TV
+            icon: mdi:television
+          - <<: *device_cost
+            entity: sensor.printer_cost_month
+            primary: Printer
+            icon: mdi:printer
+          - <<: *device_cost
+            entity: sensor.cube_matrix_cost_month
+            primary: Cube Matrix
+            icon: mdi:cube-outline
+          - <<: *device_cost
+            entity: sensor.blinds_cost_month
+            primary: Blinds
+            icon: mdi:blinds
+          - <<: *device_cost
+            entity: sensor.curtains_cost_month
+            primary: Curtains
+            icon: mdi:curtains
+          - <<: *device_cost
+            entity: sensor.router_cost_month
+            primary: Router
+            icon: mdi:router-wireless
+          - <<: *device_cost
+            entity: sensor.server_cost_month
+            primary: Server
+            icon: mdi:server
+          - <<: *device_cost
+            entity: sensor.pc_cost_month
+            primary: PC
+            icon: mdi:desktop-tower-monitor
+
+      - type: grid
+        cards:
+          - type: heading
+            heading: Prices
+            icon: mdi:cash
+          - type: markdown
+            content: >-
+              **Per kWh** <abbr title="Enter the gross price, with VAT. Invoice lines included:&#10;• Energia czynna&#10;• Opłata sieciowa zmienna&#10;• Opłata jakościowa&#10;• Opłata OZE&#10;• Opłata kogeneracyjna">(?)</abbr> · **Fixed** <abbr title="Enter the gross price, with VAT. Invoice lines included:&#10;• Opłata sieciowa stała&#10;• Opłata handlowa&#10;• Opłata mocowa&#10;• Opłata abonamentowa">(?)</abbr><br>
+              Only one flat price works here, such as G11. Day/night tariffs like G12 are not supported.
+              A new price counts from that moment on, what was already counted stays. These costs are an
+              estimate: only the devices listed here, and most of them are calculated, not measured.
+            grid_options:
+              columns: full
+          - type: entities
+            entities:
+              - input_number.energy_price_per_kwh
+              - input_number.energy_price_fixed
+            grid_options:
+              columns: full
+          - type: heading
+            heading: Compare months
+            icon: mdi:chart-bar
+          - type: custom:mushroom-select-card
+            entity: input_select.energy_compare
+            primary_info: none
+            secondary_info: none
+            grid_options:
+              columns: full
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.energy_compare
+                state: All
+            card:
+              type: vertical-stack
+              cards:
+                - &month_graph
+                  type: statistics-graph
+                  period: month
+                  days_to_show: 400
+                  chart_type: bar
+                  stat_types:
+                    - change
+                  title: All usage
+                  entities:
+                    - sensor.devices_energy_total
+                - <<: *month_graph
+                  title: All cost
+                  entities:
+                    - entity: sensor.devices_cost_total
+                      name: Devices
+                    - entity: sensor.fixed_cost_total
+                      name: Fixed
+            grid_options:
+              columns: full
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.energy_compare
+                state: Climate
+            card:
+              type: vertical-stack
+              cards:
+                - <<: *month_graph
+                  title: Climate usage
+                  entities:
+                    - sensor.heating_energy
+                - <<: *month_graph
+                  title: Climate cost
+                  entities:
+                    - entity: sensor.climate_cost_total
+                      name: Climate
+            grid_options:
+              columns: full
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.energy_compare
+                state: Fridge
+            card:
+              type: vertical-stack
+              cards:
+                - <<: *month_graph
+                  title: Fridge usage
+                  entities:
+                    - sensor.living_room_refrigerator_energy
+                - <<: *month_graph
+                  title: Fridge cost
+                  entities:
+                    - entity: sensor.living_room_refrigerator_cost_total
+                      name: Fridge
+            grid_options:
+              columns: full
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.energy_compare
+                state: Master floor
+            card:
+              type: vertical-stack
+              cards:
+                - <<: *month_graph
+                  title: Master floor usage
+                  entities:
+                    - sensor.master_floor_warming_energy
+                - <<: *month_graph
+                  title: Master floor cost
+                  entities:
+                    - entity: sensor.master_floor_warming_cost_total
+                      name: Master floor
+            grid_options:
+              columns: full
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.energy_compare
+                state: Guest floor
+            card:
+              type: vertical-stack
+              cards:
+                - <<: *month_graph
+                  title: Guest floor usage
+                  entities:
+                    - sensor.guest_floor_warming_energy
+                - <<: *month_graph
+                  title: Guest floor cost
+                  entities:
+                    - entity: sensor.guest_floor_warming_cost_total
+                      name: Guest floor
+            grid_options:
+              columns: full
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.energy_compare
+                state: Master towel
+            card:
+              type: vertical-stack
+              cards:
+                - <<: *month_graph
+                  title: Master towel usage
+                  entities:
+                    - sensor.master_towel_heat_energy
+                - <<: *month_graph
+                  title: Master towel cost
+                  entities:
+                    - entity: sensor.master_towel_heat_cost_total
+                      name: Master towel
+            grid_options:
+              columns: full
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.energy_compare
+                state: Guest towel
+            card:
+              type: vertical-stack
+              cards:
+                - <<: *month_graph
+                  title: Guest towel usage
+                  entities:
+                    - sensor.guest_towel_heat_energy
+                - <<: *month_graph
+                  title: Guest towel cost
+                  entities:
+                    - entity: sensor.guest_towel_heat_cost_total
+                      name: Guest towel
+            grid_options:
+              columns: full
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.energy_compare
+                state: TV
+            card:
+              type: vertical-stack
+              cards:
+                - <<: *month_graph
+                  title: TV usage
+                  entities:
+                    - sensor.tv_energy
+                - <<: *month_graph
+                  title: TV cost
+                  entities:
+                    - entity: sensor.tv_cost_total
+                      name: TV
+            grid_options:
+              columns: full
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.energy_compare
+                state: Printer
+            card:
+              type: vertical-stack
+              cards:
+                - <<: *month_graph
+                  title: Printer usage
+                  entities:
+                    - sensor.printer_energy
+                - <<: *month_graph
+                  title: Printer cost
+                  entities:
+                    - entity: sensor.printer_cost_total
+                      name: Printer
+            grid_options:
+              columns: full
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.energy_compare
+                state: Cube Matrix
+            card:
+              type: vertical-stack
+              cards:
+                - <<: *month_graph
+                  title: Cube Matrix usage
+                  entities:
+                    - sensor.cube_matrix_energy
+                - <<: *month_graph
+                  title: Cube Matrix cost
+                  entities:
+                    - entity: sensor.cube_matrix_cost_total
+                      name: Cube Matrix
+            grid_options:
+              columns: full
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.energy_compare
+                state: Blinds
+            card:
+              type: vertical-stack
+              cards:
+                - <<: *month_graph
+                  title: Blinds usage
+                  entities:
+                    - sensor.blinds_energy
+                - <<: *month_graph
+                  title: Blinds cost
+                  entities:
+                    - entity: sensor.blinds_cost_total
+                      name: Blinds
+            grid_options:
+              columns: full
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.energy_compare
+                state: Curtains
+            card:
+              type: vertical-stack
+              cards:
+                - <<: *month_graph
+                  title: Curtains usage
+                  entities:
+                    - sensor.curtains_energy
+                - <<: *month_graph
+                  title: Curtains cost
+                  entities:
+                    - entity: sensor.curtains_cost_total
+                      name: Curtains
+            grid_options:
+              columns: full
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.energy_compare
+                state: Router
+            card:
+              type: vertical-stack
+              cards:
+                - <<: *month_graph
+                  title: Router usage
+                  entities:
+                    - sensor.router_energy
+                - <<: *month_graph
+                  title: Router cost
+                  entities:
+                    - entity: sensor.router_cost_total
+                      name: Router
+            grid_options:
+              columns: full
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.energy_compare
+                state: Server
+            card:
+              type: vertical-stack
+              cards:
+                - <<: *month_graph
+                  title: Server usage
+                  entities:
+                    - sensor.server_energy
+                - <<: *month_graph
+                  title: Server cost
+                  entities:
+                    - entity: sensor.server_cost_total
+                      name: Server
+            grid_options:
+              columns: full
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.energy_compare
+                state: PC
+            card:
+              type: vertical-stack
+              cards:
+                - <<: *month_graph
+                  title: PC usage
+                  entities:
+                    - sensor.pc_energy
+                - <<: *month_graph
+                  title: PC cost
+                  entities:
+                    - entity: sensor.pc_cost_total
+                      name: PC
             grid_options:
               columns: full
 

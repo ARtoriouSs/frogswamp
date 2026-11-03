@@ -93,6 +93,12 @@ Switches in `config/packages/modes.yaml`. Automations check them in their condit
 
 The bathroom thermostats' air sensors hang outside, by the doors, so they measure the bedroom (master) and the hall (guest). Tuya gives this only as the `current_temperature` attribute of the thermostat, so `config/packages/room_temperature.yaml` makes `sensor.bedroom_temperature` and `sensor.hall_temperature` from it. The thermostats stay in the bathrooms. A template sensor's area can only be set in the UI (it is kept in HA's state dir): **Settings → Entities → the sensor → ⚙ → Area**.
 
+## Energy costs
+
+The Energy tab shows the cost of each device, Climate (floors + towel heaters), all devices and the fixed charge, from the 1st of the month. It's an estimate: only the devices in HA's Energy list, most of them calculated by Powercalc, not measured. The months stay in long-term statistics, the graphs under Compare months read them.
+
+The Per kWh and Fixed fields on that tab are the prices. Enter gross prices, from the invoice. HA restores them after a restart, and they are in the backup with the rest of `/var/lib/home-assistant`. A new price counts from that moment on and doesn't change what was already counted. It works only with one flat price (G11), not with day/night tariffs. A new device goes to `packages/energy_cost.yaml` and `dashboards/main.yaml`.
+
 ## Bluetooth recovery
 
 If the Bluetooth chip hangs, the kernel resets it and it comes back under a new name (`hci0` → `hci1`). HA would keep scanning on the old one. A udev rule then reloads **only HA's Bluetooth integration** through the HA API (`home-assistant-bluetooth-recover.service`), so the rest of HA keeps running. HA finds the adapter again by its MAC address. It does nothing during boot or in HA's first 2 minutes. Check it with `just ssh journalctl -u home-assistant-bluetooth-recover`.
