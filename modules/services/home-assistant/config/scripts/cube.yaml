@@ -25,7 +25,7 @@ cube_event:
   sequence:
     - variables:
         cube: light.cube_matrix_192_168_101_121
-        quiet: "{{ is_state('input_boolean.vacation', 'on') or is_state('input_boolean.cube_night', 'on') or is_state('input_boolean.nobody_home', 'on') }}"
+        quiet: "{{ is_state('binary_sensor.vacation_active', 'on') or is_state('input_boolean.cube_night', 'on') or is_state('input_boolean.nobody_home', 'on') }}"
     - if: "{{ quiet }}"
       then:
         - action: script.cube_brightness_on
@@ -40,7 +40,7 @@ cube_event:
         wait: true
         # Hold keeps the last event frame until the brightness is down, so the dot doesn't flash bright
         then: "{{ 'hold' if quiet else 'restore' }}"
-    - if: "{{ is_state('input_boolean.vacation', 'on') or is_state('input_boolean.cube_night', 'on') or is_state('input_boolean.nobody_home', 'on') }}"
+    - if: "{{ is_state('binary_sensor.vacation_active', 'on') or is_state('input_boolean.cube_night', 'on') or is_state('input_boolean.nobody_home', 'on') }}"
       then:
         - action: script.cube_brightness_off
     - if: "{{ quiet }}"

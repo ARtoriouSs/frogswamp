@@ -5,7 +5,7 @@
   mode: queued
   triggers:
     - trigger: state
-      entity_id: input_boolean.vacation
+      entity_id: binary_sensor.vacation_active
       from: "off"
       to: "on"
   actions:
@@ -20,3 +20,14 @@
       data:
         bathroom: master
         state: "off"
+
+# Remote Calendar reads its link only once a day by itself
+- id: repo_modes_calendar_refresh
+  alias: "Modes: refresh the calendar every hour"
+  triggers:
+    - trigger: time_pattern
+      minutes: 0
+  actions:
+    - action: homeassistant.update_entity
+      target:
+        entity_id: calendar.home_assistant_events

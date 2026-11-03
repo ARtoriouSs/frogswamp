@@ -1,5 +1,6 @@
-# Manual modes. Automations check them in their conditions,
-# so modes can overlap (e.g. Vacation off doesn't restart the desk while Day off is on)
+# Modes. Day off and Vacation are on if their switch or the calendar says so: automations read the
+# binary sensors below, never these two switches. Modes can overlap
+# (e.g. Vacation off doesn't restart the desk while Day off is on)
 input_boolean:
   day_off:
     name: Day off
@@ -10,3 +11,77 @@ input_boolean:
   guests_in_living_room:
     name: Guests in the living room
     icon: mdi:account-multiple
+
+# calendar.home_assistant_events comes from Remote Calendar, added in the UI (its secret link stays in HA storage).
+# All-day events count, titled "Vacation" or "Day off". Case, spaces and dashes in the title don't matter.
+# Keeps the last known days if the calendar can't be read
+template:
+  - triggers:
+      - trigger: time_pattern
+        minutes: "/15"
+      - trigger: homeassistant
+        event: start
+      - trigger: event
+        event_type: event_template_reloaded
+    actions:
+      - action: calendar.get_events
+        target:
+          entity_id: calendar.home_assistant_events
+        data:
+          start_date_time: "{{ today_at() }}"
+          end_date_time: "{{ today_at() + timedelta(days=3) }}"
+        response_variable: calendar_events
+        continue_on_error: true
+      - variables:
+          modes: >-
+            {% set entity = 'calendar.home_assistant_events' %}
+            {% if calendar_events is defined and entity in calendar_events %}
+              {% set ns = namespace(day_off=[], vacation=[]) %}
+              {# An all-day event has a plain date of 10 characters as its start, and its end date is not included #}
+              {% for event in calendar_events[entity].events if event.start | length == 10 %}
+                {% set title = event.summary | lower | regex_replace('[\\s-]+', '') %}
+                {% for offset in range(3) %}
+                  {% set day = (now().date() + timedelta(days=offset)) | string %}
+                  {% if event.start <= day < event.end %}
+                    {% if title == 'dayoff' %}
+                      {% set ns.day_off = ns.day_off + [day] %}
+                    {% elif title == 'vacation' %}
+                      {% set ns.vacation = ns.vacation + [day] %}
+                    {% endif %}
+                  {% endif %}
+                {% endfor %}
+              {% endfor %}
+              {{ {'day_off': ns.day_off | unique | sort, 'vacation': ns.vacation | unique | sort} }}
+            {% else %}
+              {{ none }}
+            {% endif %}
+    sensor:
+      - name: Calendar modes
+        unique_id: repo_calendar_modes
+        icon: mdi:calendar-check
+        state: "{{ (modes.day_off + modes.vacation) | length if modes else this.state }}"
+        attributes:
+          day_off: "{{ modes.day_off if modes else this.attributes.get('day_off', []) }}"
+          vacation: "{{ modes.vacation if modes else this.attributes.get('vacation', []) }}"
+
+  - binary_sensor:
+      - name: Day off active
+        unique_id: repo_day_off_active
+        icon: mdi:beach
+        state: >-
+          {{ is_state('input_boolean.day_off', 'on')
+             or now().date() | string in (state_attr('sensor.calendar_modes', 'day_off') or []) }}
+      # For bedtime. 12 h back from any time between noon and the next noon is the day the night started
+      - name: Day off next day
+        unique_id: repo_day_off_next_day
+        icon: mdi:beach
+        state: >-
+          {{ is_state('input_boolean.day_off', 'on')
+             or ((now() - timedelta(hours=12)).date() + timedelta(days=1)) | string
+                in (state_attr('sensor.calendar_modes', 'day_off') or []) }}
+      - name: Vacation active
+        unique_id: repo_vacation_active
+        icon: mdi:airplane
+        state: >-
+          {{ is_state('input_boolean.vacation', 'on')
+             or now().date() | string in (state_attr('sensor.calendar_modes', 'vacation') or []) }}

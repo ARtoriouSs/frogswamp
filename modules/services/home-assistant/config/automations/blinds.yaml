@@ -7,7 +7,7 @@
       event: sunset
   conditions:
     - condition: state
-      entity_id: input_boolean.vacation
+      entity_id: binary_sensor.vacation_active
       state: "off"
   actions:
     - action: script.curtains_close
@@ -20,7 +20,7 @@
       offset: "02:00:00"
   conditions:
     - condition: state
-      entity_id: input_boolean.vacation
+      entity_id: binary_sensor.vacation_active
       state: "off"
   actions:
     - action: script.blinds_full_close
@@ -33,7 +33,7 @@
       at: "01:00:00"
   conditions:
     - condition: state
-      entity_id: input_boolean.vacation
+      entity_id: binary_sensor.vacation_active
       state: "off"
   actions:
     - action: script.blinds_full_close
@@ -47,7 +47,7 @@
   conditions:
     - condition: state
       entity_id:
-        - input_boolean.vacation
+        - binary_sensor.vacation_active
         - input_boolean.guests_in_living_room
       state: "off"
   actions:

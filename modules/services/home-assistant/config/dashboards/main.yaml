@@ -776,9 +776,13 @@ views:
             type: custom:mushroom-template-card
             entity: input_boolean.day_off
             primary: Day off
-            secondary: "{{ 'On' if is_state(entity, 'on') else 'Off' }}"
+            # The switch, or its binary sensor when only the calendar turned the mode on
+            secondary: >-
+              {{ 'On' if is_state(entity, 'on')
+                 else 'From calendar' if is_state(entity | replace('input_boolean.', 'binary_sensor.') ~ '_active', 'on')
+                 else 'Off' }}
             icon: mdi:beach
-            color: "{{ 'green' if is_state(entity, 'on') else 'disabled' }}"
+            color: "{{ 'green' if is_state(entity | replace('input_boolean.', 'binary_sensor.') ~ '_active', 'on') else 'disabled' }}"
             vertical: true
             grid_options:
               columns: 6
@@ -2438,7 +2442,7 @@ views:
           - <<: *toggle
             entity: automation.desk_schedule
             primary: Desk schedule
-            secondary: "{{ 'Paused by Day off' if is_state('input_boolean.day_off', 'on') else ('On' if is_state(entity, 'on') else 'Off') }}"
+            secondary: "{{ 'Paused by Day off' if is_state('binary_sensor.day_off_active', 'on') else ('On' if is_state(entity, 'on') else 'Off') }}"
             icon: mdi:desk
             vertical: false
             grid_options:

@@ -28,7 +28,7 @@
     bathroom: guest
   conditions: &floor_warming_conditions
     - condition: state
-      entity_id: input_boolean.vacation
+      entity_id: binary_sensor.vacation_active
       state: "off"
   actions: &floor_warming_actions
     # A night goes by the day after the one it started on
@@ -45,7 +45,7 @@
         # Day off on counts as a weekend day: late bedtime
         - condition: template
           value_template: >-
-            {{ (workday['binary_sensor.workday_sensor_pl'].workday and is_state('input_boolean.day_off', 'off'))
+            {{ (workday['binary_sensor.workday_sensor_pl'].workday and is_state('binary_sensor.day_off_next_day', 'off'))
                == trigger.id.endswith('workday') }}
     - action: script.heat_lease
       data:

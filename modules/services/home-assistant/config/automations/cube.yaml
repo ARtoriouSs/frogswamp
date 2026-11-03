@@ -26,7 +26,7 @@
     - trigger: state
       id: mode
       entity_id:
-        - input_boolean.vacation
+        - binary_sensor.vacation_active
         - input_boolean.cube_night
         - input_boolean.nobody_home
       from:
@@ -54,7 +54,7 @@
         - if:
             - condition: template
               value_template: >-
-                {{ (workday['binary_sensor.workday_sensor_pl'].workday and is_state('input_boolean.day_off', 'off'))
+                {{ (workday['binary_sensor.workday_sensor_pl'].workday and is_state('binary_sensor.day_off_next_day', 'off'))
                    != trigger.id.endswith('workday') }}
           then:
             - stop: Not this day's timing
@@ -64,7 +64,7 @@
           target:
             entity_id: input_boolean.cube_night
     - variables:
-        quiet: "{{ is_state('input_boolean.vacation', 'on') or is_state('input_boolean.cube_night', 'on') or is_state('input_boolean.nobody_home', 'on') }}"
+        quiet: "{{ is_state('binary_sensor.vacation_active', 'on') or is_state('input_boolean.cube_night', 'on') or is_state('input_boolean.nobody_home', 'on') }}"
         dimmed: "{{ is_state('select.cube_matrix_192_168_101_121_background', 'dot') }}"
     - choose:
         - conditions: "{{ quiet and not dimmed }}"
@@ -90,7 +90,7 @@
     - &not_quiet
       condition: state
       entity_id:
-        - input_boolean.vacation
+        - binary_sensor.vacation_active
         - input_boolean.cube_night
         - input_boolean.nobody_home
       state: "off"
@@ -135,6 +135,7 @@
           {{ frogs[(i + 1) % frogs | length] }}
 
 # The desk: a scene's state is the time it was last run from HA, so a new value means it just ran.
+# The modes: only the switches, so a calendar event doesn't flash the cube at midnight.
 # The blinds and curtains: their button scripts. Moves from the Tuya app or by hand are not seen here
 - id: repo_cube_event_animations
   alias: "Cube: animations for desk, blinds and modes"
@@ -207,8 +208,8 @@
       state: "on"
     - condition: state
       entity_id:
-        - input_boolean.day_off
-        - input_boolean.vacation
+        - binary_sensor.day_off_active
+        - binary_sensor.vacation_active
         - input_boolean.cube_night
         - input_boolean.nobody_home
       state: "off"

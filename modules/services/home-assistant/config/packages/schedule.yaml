@@ -3,7 +3,7 @@
 # is reset to `initial` on the next HA restart, so change them here.
 # Workdays come from the Workday integration (binary_sensor.workday_sensor_pl), so holidays count as
 # weekend days. Wakeup depends on the day itself, bedtime on the next day: an early bedtime before
-# a workday, a late one before a weekend day or a holiday. Day off on counts as a weekend day.
+# a workday, a late one before a weekend day or a holiday. A day off, by switch or calendar, counts as a weekend day.
 # Work is only on workdays
 #
 # Automations use sensor.wakeup below for wakeup, the two wakeup helpers are only its fallback
@@ -58,6 +58,7 @@ template:
           - input_datetime.wakeup_workday
           - input_datetime.wakeup_weekend
           - input_boolean.day_off
+          - sensor.calendar_modes
       - trigger: time
         at: "13:00:00"
       - trigger: homeassistant
@@ -85,7 +86,8 @@ template:
           {% set current = as_datetime(this.state, none) %}
           {% set current = as_local(current) if current else none %}
           {% set current_is_this_morning = current is not none and current.date() | string == morning %}
-          {% set is_workday = workday['binary_sensor.workday_sensor_pl'].workday and is_state('input_boolean.day_off', 'off') %}
+          {% set is_day_off = is_state('input_boolean.day_off', 'on') or morning in (state_attr('sensor.calendar_modes', 'day_off') or []) %}
+          {% set is_workday = workday['binary_sensor.workday_sensor_pl'].workday and not is_day_off %}
           {% set fallback = states('input_datetime.wakeup_workday' if is_workday else 'input_datetime.wakeup_weekend') %}
           {% if alarm and alarm.date() | string == morning and 4 <= alarm.hour < 12 and alarm > now() %}
             {{ alarm.isoformat() }}
