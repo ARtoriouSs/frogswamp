@@ -5,7 +5,7 @@
   mode: queued
   triggers:
     - trigger: state
-      entity_id: binary_sensor.vacation_active
+      entity_id: input_boolean.vacation
       from: "off"
       to: "on"
   actions:
@@ -31,3 +31,44 @@
     - action: homeassistant.update_entity
       target:
         entity_id: calendar.home_assistant_events
+
+# The switch shows the mode, the calendar sets it. An event keeps the switch on, so one turned off by hand comes
+# back within 15 minutes. The end of an event turns the switch off, also if it was turned on by hand.
+# A switch turned on by hand with no event stays on
+- id: repo_modes_calendar_sync
+  alias: "Modes: switches follow the calendar"
+  mode: queued
+  triggers:
+    - trigger: time_pattern
+      minutes: "/15"
+    - trigger: homeassistant
+      event: start
+    - trigger: state
+      entity_id:
+        - binary_sensor.calendar_day_off_today
+        - binary_sensor.calendar_vacation_today
+      from:
+        - "on"
+        - "off"
+      to:
+        - "on"
+        - "off"
+  actions:
+    - repeat:
+        for_each:
+          - calendar: binary_sensor.calendar_day_off_today
+            switch: input_boolean.day_off
+          - calendar: binary_sensor.calendar_vacation_today
+            switch: input_boolean.vacation
+        sequence:
+          - choose:
+              - conditions: "{{ is_state(repeat.item.calendar, 'on') }}"
+                sequence:
+                  - action: input_boolean.turn_on
+                    target:
+                      entity_id: "{{ repeat.item.switch }}"
+              - conditions: "{{ trigger.entity_id | default('') == repeat.item.calendar and trigger.to_state.state == 'off' }}"
+                sequence:
+                  - action: input_boolean.turn_off
+                    target:
+                      entity_id: "{{ repeat.item.switch }}"

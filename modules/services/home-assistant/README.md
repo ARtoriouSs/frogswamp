@@ -80,7 +80,7 @@ Workday can only be added in the UI (once, it is kept in HA's state dir): **Sett
 
 Switches in `config/packages/modes.yaml`. Automations check them in their conditions, so modes can be on together.
 
-**Calendar.** Day off and Vacation also turn on from all-day events in the Google calendar `Home Assistant Events`, titled `Vacation` or `Day off` (`day-off` and `dayoff` work too, case doesn't matter). A mode is on if its switch **or** the calendar says so. Vacation starts at midnight on its first day. Bedtime and wakeup know about a day off the evening before. A switch turned off doesn't cancel a calendar event, delete the event instead.
+**Calendar.** Day off and Vacation also turn on from all-day events in the Google calendar `Home Assistant Events`, titled `Vacation` or `Day off` (`day-off` and `dayoff` work too, case doesn't matter). The switch always shows the mode, and the calendar sets it. Vacation starts at midnight on its first day. Bedtime and wakeup know about a day off the evening before. During an event, a switch turned off comes back within 15 minutes, so delete the event to cancel it. When an event ends, its switch turns off, even if it was turned on by hand. A switch turned on by hand with no event stays on. An event that ends while HA is down leaves its switch on. Automations read the switch, and the Schedule tab's calendar shows these events.
 
 HA reads the calendar through **Remote Calendar**, added in the UI with the calendar's secret iCal link, so the link is not in this repo. It refreshes every hour, so a new event can take over an hour to count. If the link leaks, reset it in Google Calendar and add the integration again.
 

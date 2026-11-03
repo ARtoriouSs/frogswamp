@@ -59,6 +59,7 @@ template:
           - input_datetime.wakeup_weekend
           - input_boolean.day_off
           - sensor.calendar_modes
+          - binary_sensor.calendar_day_off_today
       - trigger: time
         at: "13:00:00"
       - trigger: homeassistant
@@ -86,7 +87,9 @@ template:
           {% set current = as_datetime(this.state, none) %}
           {% set current = as_local(current) if current else none %}
           {% set current_is_this_morning = current is not none and current.date() | string == morning %}
-          {% set is_day_off = is_state('input_boolean.day_off', 'on') or morning in (state_attr('sensor.calendar_modes', 'day_off') or []) %}
+          {# The switch counts only when today's event didn't turn it on, that event says nothing about the next morning #}
+          {% set is_day_off = morning in (state_attr('sensor.calendar_modes', 'day_off') or [])
+             or (is_state('input_boolean.day_off', 'on') and is_state('binary_sensor.calendar_day_off_today', 'off')) %}
           {% set is_workday = workday['binary_sensor.workday_sensor_pl'].workday and not is_day_off %}
           {% set fallback = states('input_datetime.wakeup_workday' if is_workday else 'input_datetime.wakeup_weekend') %}
           {% if alarm and alarm.date() | string == morning and 4 <= alarm.hour < 12 and alarm > now() %}

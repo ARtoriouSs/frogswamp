@@ -28,7 +28,7 @@
     bathroom: guest
   conditions: &floor_warming_conditions
     - condition: state
-      entity_id: binary_sensor.vacation_active
+      entity_id: input_boolean.vacation
       state: "off"
   actions: &floor_warming_actions
     # A night goes by the day after the one it started on

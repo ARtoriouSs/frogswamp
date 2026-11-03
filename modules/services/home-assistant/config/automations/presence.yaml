@@ -98,7 +98,7 @@
         entity_id: timer.nobody_home
   conditions:
     - condition: state
-      entity_id: binary_sensor.vacation_active
+      entity_id: input_boolean.vacation
       state: "off"
   actions:
     - action: notify.mobile_app_pixel_7

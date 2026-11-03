@@ -1,6 +1,5 @@
-# Modes. Day off and Vacation are on if their switch or the calendar says so: automations read the
-# binary sensors below, never these two switches. Modes can overlap
-# (e.g. Vacation off doesn't restart the desk while Day off is on)
+# Modes. Automations read these switches. The calendar sets Day off and Vacation through
+# automations/modes.yaml. Modes can overlap (e.g. Vacation off doesn't restart the desk while Day off is on)
 input_boolean:
   day_off:
     name: Day off
@@ -65,23 +64,20 @@ template:
           vacation: "{{ modes.vacation if modes else this.attributes.get('vacation', []) }}"
 
   - binary_sensor:
-      - name: Day off active
-        unique_id: repo_day_off_active
+      - name: Calendar day off today
+        unique_id: repo_calendar_day_off_today
         icon: mdi:beach
-        state: >-
-          {{ is_state('input_boolean.day_off', 'on')
-             or now().date() | string in (state_attr('sensor.calendar_modes', 'day_off') or []) }}
-      # For bedtime. 12 h back from any time between noon and the next noon is the day the night started
+        state: "{{ now().date() | string in (state_attr('sensor.calendar_modes', 'day_off') or []) }}"
+      - name: Calendar vacation today
+        unique_id: repo_calendar_vacation_today
+        icon: mdi:airplane
+        state: "{{ now().date() | string in (state_attr('sensor.calendar_modes', 'vacation') or []) }}"
+      # For bedtime. 12 h back from any time between noon and the next noon is the day the night started.
+      # The switch counts for the next day only when today's event didn't turn it on, that event says nothing about tomorrow
       - name: Day off next day
         unique_id: repo_day_off_next_day
         icon: mdi:beach
         state: >-
-          {{ is_state('input_boolean.day_off', 'on')
-             or ((now() - timedelta(hours=12)).date() + timedelta(days=1)) | string
-                in (state_attr('sensor.calendar_modes', 'day_off') or []) }}
-      - name: Vacation active
-        unique_id: repo_vacation_active
-        icon: mdi:airplane
-        state: >-
-          {{ is_state('input_boolean.vacation', 'on')
-             or now().date() | string in (state_attr('sensor.calendar_modes', 'vacation') or []) }}
+          {{ ((now() - timedelta(hours=12)).date() + timedelta(days=1)) | string
+                in (state_attr('sensor.calendar_modes', 'day_off') or [])
+             or (is_state('input_boolean.day_off', 'on') and is_state('binary_sensor.calendar_day_off_today', 'off')) }}

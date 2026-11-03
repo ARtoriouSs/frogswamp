@@ -55,7 +55,7 @@
   alias: "Timed heat: Vacation ends the runs"
   triggers:
     - trigger: state
-      entity_id: binary_sensor.vacation_active
+      entity_id: input_boolean.vacation
       from: "off"
       to: "on"
   actions:

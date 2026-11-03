@@ -19,8 +19,8 @@
   conditions:
     - condition: state
       entity_id:
-        - binary_sensor.day_off_active
-        - binary_sensor.vacation_active
+        - input_boolean.day_off
+        - input_boolean.vacation
       state: "off"
     # Workday integration: weekdays without holidays
     - condition: state

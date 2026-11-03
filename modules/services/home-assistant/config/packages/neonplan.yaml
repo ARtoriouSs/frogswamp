@@ -19,7 +19,7 @@ template:
       - name: Vacation mode inverted
         unique_id: repo_neonplan_vacation_mode_inverted
         icon: mdi:airplane-off
-        state: "{{ is_state('binary_sensor.vacation_active', 'off') }}"
+        state: "{{ is_state('input_boolean.vacation', 'off') }}"
         turn_on: []
         turn_off: []
 

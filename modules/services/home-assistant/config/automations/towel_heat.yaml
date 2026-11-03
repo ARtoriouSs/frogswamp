@@ -20,7 +20,7 @@
         offset: "-01:00:00"
     - trigger: state
       id: off_vacation_start
-      entity_id: binary_sensor.vacation_active
+      entity_id: input_boolean.vacation
       from: "off"
       to: "on"
   conditions:
@@ -29,7 +29,7 @@
         - condition: trigger
           id: off_vacation_start
         - condition: state
-          entity_id: binary_sensor.vacation_active
+          entity_id: input_boolean.vacation
           state: "off"
   actions:
     # Only for the night triggers, so Vacation works even without the Workday integration
