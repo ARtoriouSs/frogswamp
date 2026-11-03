@@ -166,11 +166,11 @@ template:
         state: *cost_state
         attributes: *cost_attributes
 
-  # The fixed charge grows with time. The first run only stores the start of the month, the next one
-  # adds the days already passed, so the monthly meter below sees them too
+  # The whole fixed charge is added once a month. At minute 1, so the monthly meter below has already
+  # started again at midnight. A new amount counts from the next month
   - trigger:
       - trigger: time_pattern
-        minutes: 0
+        minutes: 1
       - trigger: homeassistant
         event: start
     sensor:
@@ -180,16 +180,11 @@ template:
         unit_of_measurement: zł
         state_class: total_increasing
         state: >-
-          {% set last = this.attributes.get('last_time') %}
-          {% set start = now().replace(day=1, hour=0, minute=0, second=0, microsecond=0) %}
-          {% set month = ((start + timedelta(days=32)).replace(day=1) - start).total_seconds() %}
-          {% set fixed = states('input_number.energy_price_fixed') | float(0) %}
-          {% if last is none %}0
-          {% else %}{{ (this.state | float(0) + (now().timestamp() - last) / month * fixed) | round(6) }}{% endif %}
+          {% set cost = this.state | float(0) %}
+          {% if this.attributes.get('last_month') == now().strftime('%Y-%m') %}{{ cost }}
+          {% else %}{{ (cost + states('input_number.energy_price_fixed') | float(0)) | round(6) }}{% endif %}
         attributes:
-          last_time: >-
-            {{ now().timestamp() if this.attributes.get('last_time') is not none
-               else now().replace(day=1, hour=0, minute=0, second=0, microsecond=0).timestamp() }}
+          last_month: "{{ now().strftime('%Y-%m') }}"
 
   - sensor:
       # Unavailable while any part is missing: a lower sum would look like a reset to the statistics

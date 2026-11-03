@@ -97,7 +97,7 @@ The bathroom thermostats' air sensors hang outside, by the doors, so they measur
 
 The Energy tab shows the cost of each device, Climate (floors + towel heaters), all devices and the fixed charge, from the 1st of the month. It's an estimate: only the devices in HA's Energy list, most of them calculated by Powercalc, not measured. The months stay in long-term statistics, the graphs under Compare months read them.
 
-The Per kWh and Fixed fields on that tab are the prices. Enter gross prices, from the invoice. HA restores them after a restart, and they are in the backup with the rest of `/var/lib/home-assistant`. A new price counts from that moment on and doesn't change what was already counted. It works only with one flat price (G11), not with day/night tariffs. A new device goes to `packages/energy_cost.yaml` and `dashboards/main.yaml`.
+The Per kWh and Fixed fields on that tab are the prices. Enter gross prices, from the invoice. HA restores them after a restart, and they are in the backup with the rest of `/var/lib/home-assistant`. A new Per kWh price counts from that moment on, a new Fixed amount from the next month, and neither changes what was already counted. The whole Fixed amount is added on the 1st. It works only with one flat price (G11), not with day/night tariffs. A new device goes to `packages/energy_cost.yaml` and `dashboards/main.yaml`.
 
 ## Bluetooth recovery
 

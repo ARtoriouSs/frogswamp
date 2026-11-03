@@ -26,6 +26,7 @@ frontend:
     - /local/frogswamp/icons.js
     - /local/frogswamp/presence-sidebar.js
     - /local/frogswamp/tab-dividers.js
+    - /local/frogswamp/hint-card.js
     # Installed through HACS, its config is custom-sidebar-config.yaml
     - /hacsfiles/custom-sidebar/custom-sidebar-plugin.js
   themes: !include_dir_merge_named themes

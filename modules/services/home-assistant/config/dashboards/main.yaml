@@ -831,6 +831,7 @@ views:
               - calendar.workday_sensor_pl_calendar
             grid_options:
               columns: full
+              rows: 10
 
       - type: grid
         cards:
@@ -1737,9 +1738,25 @@ views:
     sections:
       - type: grid
         cards:
-          - type: heading
+          - type: custom:frog-hint-card
             heading: Usage by device
             icon: mdi:chart-bar
+            hint: |-
+              Measured by the device: Fridge
+
+              Estimated by Powercalc, not measured:
+              • Master floor warming
+              • Guest floor warming
+              • Master towel heat
+              • Guest towel heat
+              • TV
+              • Printer
+              • Cube Matrix
+              • Blinds
+              • Curtains
+              • Router
+              • Server
+              • PC
           - type: energy-date-selection
             grid_options:
               columns: full
@@ -1803,7 +1820,7 @@ views:
             icon: mdi:radiator
           - <<: *cost_card
             entity: sensor.fixed_cost_month
-            primary: Fixed so far
+            primary: Fixed
             secondary: *cost_value
             icon: mdi:cash-lock
           - type: heading
@@ -1866,17 +1883,32 @@ views:
 
       - type: grid
         cards:
-          - type: heading
+          - type: custom:frog-hint-card
             heading: Prices
             icon: mdi:cash
-          - type: markdown
-            content: >-
-              **Per kWh** <abbr title="Enter the gross price, with VAT. Invoice lines included:&#10;• Energia czynna&#10;• Opłata sieciowa zmienna&#10;• Opłata jakościowa&#10;• Opłata OZE&#10;• Opłata kogeneracyjna">(?)</abbr> · **Fixed** <abbr title="Enter the gross price, with VAT. Invoice lines included:&#10;• Opłata sieciowa stała&#10;• Opłata handlowa&#10;• Opłata mocowa&#10;• Opłata abonamentowa">(?)</abbr><br>
-              Only one flat price works here, such as G11. Day/night tariffs like G12 are not supported.
-              A new price counts from that moment on, what was already counted stays. These costs are an
-              estimate: only the devices listed here, and most of them are calculated, not measured.
-            grid_options:
-              columns: full
+            hint: |-
+              An estimate of the costs: only the devices listed here, and most of them are calculated, not measured. It won't match the bill.
+
+              Only one flat price works, such as G11. Day/night tariffs like G12 are not supported.
+
+              A new Per kWh price counts from that moment. A new Fixed amount counts from the next month. What was already counted stays.
+          - type: custom:frog-hint-card
+            items:
+              - label: Per kWh
+                hint: |-
+                  Gross price, with VAT. Invoice lines included:
+                  • Energia czynna
+                  • Opłata sieciowa zmienna
+                  • Opłata jakościowa
+                  • Opłata OZE
+                  • Opłata kogeneracyjna
+              - label: Fixed
+                hint: |-
+                  Gross price per month, with VAT. Invoice lines included:
+                  • Opłata sieciowa stała
+                  • Opłata handlowa
+                  • Opłata mocowa
+                  • Opłata abonamentowa
           - type: entities
             entities:
               - input_number.energy_price_per_kwh
@@ -1888,6 +1920,7 @@ views:
             icon: mdi:chart-bar
           - type: custom:mushroom-select-card
             entity: input_select.energy_compare
+            icon_type: none
             primary_info: none
             secondary_info: none
             grid_options:
