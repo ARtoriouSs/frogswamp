@@ -824,12 +824,11 @@ views:
           - type: heading
             heading: Calendar
             icon: mdi:calendar-month
-          # Workday's calendar has an event on each workday, so a weekday without one is a holiday.
-          # The other one has the days off and vacations
+          # Public holidays, and the days off and vacations
           - type: calendar
             initial_view: dayGridMonth
             entities:
-              - calendar.workday_sensor_pl_calendar
+              - calendar.holidays_in_poland
               - calendar.home_assistant_events
             grid_options:
               columns: full
