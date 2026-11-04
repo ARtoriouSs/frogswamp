@@ -3,7 +3,7 @@
 # short animations when the desk, blinds or modes change. The short ones play even when the
 # cube is off (wake) and then go back to what was there before.
 # Quiet mode, from bedtime to wakeup, during Vacation and while nobody is home: only a green dot at 0%.
-# Frogs, coffee/moon and problem signs stop, event animations still play at 100%
+# Frogs and problem signs stop, event animations still play at 100%
 
 # Bedtime and wakeup turn Cube night on and off with the same workday logic as the floor warming
 # (packages/schedule.yaml). The background tells if the cube is dimmed now: the dot means it is.
@@ -192,37 +192,6 @@
         # The checks are still pictures, the rest are animations looped for the time
         repeat: forever
         duration: "{{ 10 if trigger.id == 'mode' else 5 }}"
-
-# Coffee at work start, moon at work end, on workdays that aren't a day off or vacation
-- id: repo_cube_work_start_end
-  alias: "Cube: coffee at work start, moon at work end"
-  triggers:
-    - trigger: time
-      at: input_datetime.work_start
-      id: coffee
-    - trigger: time
-      at: input_datetime.work_end
-      id: moon
-  conditions:
-    - condition: state
-      entity_id: binary_sensor.workday_sensor_pl
-      state: "on"
-    - condition: state
-      entity_id:
-        - input_boolean.day_off
-        - input_boolean.vacation
-        - input_boolean.cube_night
-        - input_boolean.nobody_home
-      state: "off"
-  actions:
-    - action: cubematrix.show
-      target:
-        entity_id: light.cube_matrix_192_168_101_121
-      data:
-        preset: "{{ trigger.id }}"
-        repeat: forever
-        duration: 10
-        wake: true
 
 # Something starts playing through the TV's Chromecast: Jellyfin cast from the phone, or a match
 # from the football page. Kodi isn't in HA, so a match played in Kodi isn't seen

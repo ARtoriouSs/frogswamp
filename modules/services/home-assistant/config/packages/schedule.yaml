@@ -32,18 +32,6 @@ input_datetime:
     has_date: false
     has_time: true
     initial: "01:00:00"
-  work_start:
-    name: Work start
-    icon: mdi:briefcase
-    has_date: false
-    has_time: true
-    initial: "10:00:00"
-  work_end:
-    name: Work end
-    icon: mdi:briefcase-off
-    has_date: false
-    has_time: true
-    initial: "19:00:00"
 
 # The wakeup of the coming morning: the phone alarm if it rings on that morning from 04:00 to before 12:00,
 # otherwise the fallback for that day. The morning changes at 13:00, after the last possible "wakeup + 1 h" trigger.

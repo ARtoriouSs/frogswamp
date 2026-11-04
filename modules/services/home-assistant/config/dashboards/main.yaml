@@ -48,10 +48,11 @@ card_templates:
   - &fridge
     type: custom:mushroom-template-card
     entity: number.living_room_refrigerator_fridge_temperature
-    primary: Fridge
-    secondary: >-
-      {{ states('sensor.living_room_refrigerator_fridge_temperature') }} °C · target {{ states(entity) }} °C
-      {{- ' · door open' if is_state('binary_sensor.living_room_refrigerator_fridge_door', 'on') }}
+    primary: >-
+      Fridge
+      {{- ' · door open' if is_state('binary_sensor.living_room_refrigerator_fridge_door', 'on')
+          else (' · door closed' if is_state('binary_sensor.living_room_refrigerator_fridge_door', 'off')) }}
+    secondary: "{{ states('sensor.living_room_refrigerator_fridge_temperature') }} °C · target {{ states(entity) }} °C"
     icon: mdi:fridge-bottom
     color: "{{ 'red' if is_state('binary_sensor.living_room_refrigerator_fridge_door', 'on') else 'light-blue' }}"
     grid_options:
@@ -654,12 +655,72 @@ views:
           - *fridge
           - <<: *fridge
             entity: number.living_room_refrigerator_freezer_temperature
-            primary: Freezer
-            secondary: >-
-              {{ states('sensor.living_room_refrigerator_freezer_temperature') }} °C · target {{ states(entity) }} °C
-              {{- ' · door open' if is_state('binary_sensor.living_room_refrigerator_freezer_door', 'on') }}
+            primary: >-
+              Freezer
+              {{- ' · door open' if is_state('binary_sensor.living_room_refrigerator_freezer_door', 'on')
+                  else (' · door closed' if is_state('binary_sensor.living_room_refrigerator_freezer_door', 'off')) }}
+            secondary: "{{ states('sensor.living_room_refrigerator_freezer_temperature') }} °C · target {{ states(entity) }} °C"
             icon: mdi:fridge-top
             color: "{{ 'red' if is_state('binary_sensor.living_room_refrigerator_freezer_door', 'on') else 'blue' }}"
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.climate_range
+                state: Day
+            card: &climate_fridge_graph
+              type: history-graph
+              hours_to_show: 24
+              entities:
+                - entity: sensor.living_room_refrigerator_fridge_temperature
+                  name: Fridge
+                - entity: number.living_room_refrigerator_fridge_temperature
+                  name: Fridge target
+                - entity: sensor.living_room_refrigerator_freezer_temperature
+                  name: Freezer
+                - entity: number.living_room_refrigerator_freezer_temperature
+                  name: Freezer target
+            grid_options:
+              columns: full
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.climate_range
+                state: Week
+            card:
+              <<: *climate_fridge_graph
+              hours_to_show: 168
+            grid_options:
+              columns: full
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.climate_range
+                state: Month
+            card:
+              <<: *climate_fridge_graph
+              hours_to_show: 744
+            grid_options:
+              columns: full
+          # Targets have no long-term statistics, so Year shows only the two temperatures
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.climate_range
+                state: Year
+            card:
+              type: statistics-graph
+              period: day
+              days_to_show: 365
+              chart_type: line
+              stat_types:
+                - mean
+              entities:
+                - entity: sensor.living_room_refrigerator_fridge_temperature
+                  name: Fridge
+                - entity: sensor.living_room_refrigerator_freezer_temperature
+                  name: Freezer
+            grid_options:
+              columns: full
 
       - type: grid
         cards:
@@ -892,10 +953,6 @@ views:
             primary: Animations
             icon: mdi:animation-play
           - <<: *cube_automation
-            entity: automation.cube_coffee_at_work_start_moon_at_work_end
-            primary: Coffee and moon
-            icon: mdi:coffee
-          - <<: *cube_automation
             entity: automation.cube_green_dot_at_night_and_on_vacation
             primary: Night green dot
             icon: mdi:weather-night
@@ -1106,21 +1163,6 @@ views:
             secondary: Before a weekend day or holiday
             icon: mdi:beach
             color: indigo
-          - type: heading
-            heading: ""
-          - type: heading
-            heading: Work
-            icon: mdi:laptop
-          - <<: *time
-            entity: input_datetime.work_start
-            secondary: Start
-            icon: mdi:play
-            color: blue
-          - <<: *time
-            entity: input_datetime.work_end
-            secondary: End
-            icon: mdi:stop
-            color: blue
 
       - type: grid
         column_span: 2
@@ -1232,10 +1274,6 @@ views:
             heading: Cube
             heading_style: subtitle
           - <<: *sched_toggle
-            entity: automation.cube_coffee_at_work_start_moon_at_work_end
-            primary: Coffee and moon
-            icon: mdi:coffee
-          - <<: *sched_toggle
             entity: automation.cube_another_frog_every_hour
             primary: Frog every hour
             icon: frog:frog-face
@@ -1267,23 +1305,6 @@ views:
             grid_options:
               columns: 12
               rows: 2
-          - type: heading
-            heading: Kitchen
-            heading_style: subtitle
-          - &security_door
-            <<: *info
-            entity: binary_sensor.living_room_refrigerator_fridge_door
-            primary: Fridge door
-            secondary: "{{ 'Open' if is_state(entity, 'on') else ('Closed' if is_state(entity, 'off') else 'Unavailable') }}"
-            icon: "{{ 'mdi:door-open' if is_state(entity, 'on') else 'mdi:door-closed' }}"
-            color: "{{ 'red' if is_state(entity, 'on') else ('green' if is_state(entity, 'off') else 'disabled') }}"
-            vertical: true
-            grid_options:
-              columns: 6
-              rows: 2
-          - <<: *security_door
-            entity: binary_sensor.living_room_refrigerator_freezer_door
-            primary: Freezer door
 
       - type: grid
         cards:
@@ -1292,17 +1313,24 @@ views:
             icon: mdi:car
           # lock sensors: off means locked
           - &security_lock
-            <<: *security_door
+            <<: *info
             entity: binary_sensor.garage_audi_a5_sportback_doors_locked
             primary: Doors lock
             secondary: "{{ 'Unlocked' if is_state(entity, 'on') else ('Locked' if is_state(entity, 'off') else 'Unavailable') }}"
             icon: "{{ 'mdi:lock-open-variant' if is_state(entity, 'on') else 'mdi:lock' }}"
+            color: "{{ 'red' if is_state(entity, 'on') else ('green' if is_state(entity, 'off') else 'disabled') }}"
+            vertical: true
+            grid_options:
+              columns: 6
+              rows: 2
           - <<: *security_lock
             entity: binary_sensor.garage_audi_a5_sportback_trunk_locked
             primary: Trunk lock
-          - <<: *security_door
+          - &security_door
+            <<: *security_lock
             entity: binary_sensor.garage_audi_a5_sportback_door_front_left
             primary: Front left door
+            secondary: "{{ 'Open' if is_state(entity, 'on') else ('Closed' if is_state(entity, 'off') else 'Unavailable') }}"
             icon: mdi:car-door
           - <<: *security_door
             entity: binary_sensor.garage_audi_a5_sportback_door_front_right
@@ -2678,10 +2706,11 @@ views:
           - *fridge
           - <<: *fridge
             entity: number.living_room_refrigerator_freezer_temperature
-            primary: Freezer
-            secondary: >-
-              {{ states('sensor.living_room_refrigerator_freezer_temperature') }} °C · target {{ states(entity) }} °C
-              {{- ' · door open' if is_state('binary_sensor.living_room_refrigerator_freezer_door', 'on') }}
+            primary: >-
+              Freezer
+              {{- ' · door open' if is_state('binary_sensor.living_room_refrigerator_freezer_door', 'on')
+                  else (' · door closed' if is_state('binary_sensor.living_room_refrigerator_freezer_door', 'off')) }}
+            secondary: "{{ states('sensor.living_room_refrigerator_freezer_temperature') }} °C · target {{ states(entity) }} °C"
             icon: mdi:fridge-top
             color: "{{ 'red' if is_state('binary_sensor.living_room_refrigerator_freezer_door', 'on') else 'blue' }}"
           - <<: *toggle
