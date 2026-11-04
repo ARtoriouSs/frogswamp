@@ -243,7 +243,7 @@
         data:
           tag: car-fuel
 
-# Only a real drop below 5% counts, so a part that's already low when its data is entered doesn't alert
+# Only a real drop below 5% counts. Entering a part's km for the first time doesn't alert, a later correction can
 - id: repo_alert_car_part
   alias: "Alert: car part due"
   description: A car part or the inspection drops below 5%

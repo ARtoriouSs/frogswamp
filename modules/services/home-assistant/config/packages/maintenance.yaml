@@ -5,41 +5,59 @@ input_datetime:
     icon: mdi:calendar-check
     has_date: true
     has_time: false
-  car_oil_changed: &car_date
+  car_oil_changed:
     name: Oil and filter date
     icon: mdi:calendar-check
     has_date: true
     has_time: false
   car_air_filter_changed:
-    <<: *car_date
     name: Air filter date
+    icon: mdi:calendar-check
+    has_date: true
+    has_time: false
   car_fuel_filter_changed:
-    <<: *car_date
     name: Fuel filter date
+    icon: mdi:calendar-check
+    has_date: true
+    has_time: false
   car_gearbox_hydraulic_changed:
-    <<: *car_date
     name: Gearbox hydraulic date
+    icon: mdi:calendar-check
+    has_date: true
+    has_time: false
   car_gearbox_mechanical_changed:
-    <<: *car_date
     name: Gearbox mechanical date
+    icon: mdi:calendar-check
+    has_date: true
+    has_time: false
   car_inspection_changed:
-    <<: *car_date
     name: Inspection date
+    icon: mdi:calendar-check
+    has_date: true
+    has_time: false
   car_front_pads_changed:
-    <<: *car_date
     name: Front pads date
+    icon: mdi:calendar-check
+    has_date: true
+    has_time: false
   car_front_discs_changed:
-    <<: *car_date
     name: Front discs date
+    icon: mdi:calendar-check
+    has_date: true
+    has_time: false
   car_rear_pads_changed:
-    <<: *car_date
     name: Rear pads date
+    icon: mdi:calendar-check
+    has_date: true
+    has_time: false
   car_rear_discs_changed:
-    <<: *car_date
     name: Rear discs date
+    icon: mdi:calendar-check
+    has_date: true
+    has_time: false
 
 input_number:
-  car_oil_km: &car_km
+  car_oil_km:
     name: Oil and filter km
     icon: mdi:counter
     min: 0
@@ -48,29 +66,69 @@ input_number:
     mode: box
     unit_of_measurement: km
   car_air_filter_km:
-    <<: *car_km
     name: Air filter km
+    icon: mdi:counter
+    min: 0
+    max: 999999
+    step: 1
+    mode: box
+    unit_of_measurement: km
   car_fuel_filter_km:
-    <<: *car_km
     name: Fuel filter km
+    icon: mdi:counter
+    min: 0
+    max: 999999
+    step: 1
+    mode: box
+    unit_of_measurement: km
   car_gearbox_hydraulic_km:
-    <<: *car_km
     name: Gearbox hydraulic km
+    icon: mdi:counter
+    min: 0
+    max: 999999
+    step: 1
+    mode: box
+    unit_of_measurement: km
   car_gearbox_mechanical_km:
-    <<: *car_km
     name: Gearbox mechanical km
+    icon: mdi:counter
+    min: 0
+    max: 999999
+    step: 1
+    mode: box
+    unit_of_measurement: km
   car_front_pads_km:
-    <<: *car_km
     name: Front pads km
+    icon: mdi:counter
+    min: 0
+    max: 999999
+    step: 1
+    mode: box
+    unit_of_measurement: km
   car_front_discs_km:
-    <<: *car_km
     name: Front discs km
+    icon: mdi:counter
+    min: 0
+    max: 999999
+    step: 1
+    mode: box
+    unit_of_measurement: km
   car_rear_pads_km:
-    <<: *car_km
     name: Rear pads km
+    icon: mdi:counter
+    min: 0
+    max: 999999
+    step: 1
+    mode: box
+    unit_of_measurement: km
   car_rear_discs_km:
-    <<: *car_km
     name: Rear discs km
+    icon: mdi:counter
+    min: 0
+    max: 999999
+    step: 1
+    mode: box
+    unit_of_measurement: km
 
 script:
   fridge_filter_reset:
@@ -132,11 +190,11 @@ template:
         unique_id: car_part_air_filter
         icon: mdi:air-filter
         unit_of_measurement: "%"
-        state: "{% from 'car_parts.jinja' import capacity %}{{ capacity('air_filter', 20000, 365) }}"
+        state: "{% from 'car_parts.jinja' import capacity %}{{ capacity('air_filter', 20000, 730) }}"
         availability: "{% from 'car_parts.jinja' import km_known %}{{ km_known('air_filter') }}"
         attributes:
           km_left: "{% from 'car_parts.jinja' import km_left %}{{ km_left('air_filter', 20000) }}"
-          days_left: "{% from 'car_parts.jinja' import days_left %}{{ days_left('air_filter', 365) }}"
+          days_left: "{% from 'car_parts.jinja' import days_left %}{{ days_left('air_filter', 730) }}"
       - name: Car fuel filter
         unique_id: car_part_fuel_filter
         icon: mdi:filter

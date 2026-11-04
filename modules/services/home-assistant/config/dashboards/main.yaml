@@ -2698,7 +2698,7 @@ views:
       - type: grid
         cards:
           - type: heading
-            heading: Fridge filter
+            heading: Water filter
             icon: mdi:filter
           - type: custom:mushroom-template-card
             entity: sensor.fridge_filter_capacity
@@ -2756,6 +2756,13 @@ views:
             secondary: &odometer_km "{{ states(entity) | int(0) | string | regex_replace('(?<=\\d)(?=(\\d{3})+$)', ' ') }} km"
             icon: mdi:counter
             color: grey
+          # The car's own oil counter
+          - <<: *car_fuel
+            entity: sensor.garage_audi_a5_sportback_next_oil_change
+            primary: Car oil sensor
+            secondary: *odometer_km
+            icon: mdi:oil
+            color: grey
           - &car_refresh
             type: custom:mushroom-template-card
             entity: button.garage_audi_a5_sportback_refresh_data
@@ -2774,7 +2781,7 @@ views:
               target:
                 entity_id: button.garage_audi_a5_sportback_refresh_data
           - type: heading
-            heading: Service · tap after a change
+            heading: Oil + filter
             heading_style: subtitle
           - &car_part
             type: custom:mushroom-template-card
@@ -2817,30 +2824,9 @@ views:
               <<: *car_part_tap
               data:
                 part: fuel_filter
-          - <<: *car_part
-            entity: sensor.car_gearbox_hydraulic
-            primary: Gearbox oil, hydraulic
-            icon: mdi:car-shift-pattern
-            tap_action:
-              <<: *car_part_tap
-              data:
-                part: gearbox_hydraulic
-          - <<: *car_part
-            entity: sensor.car_gearbox_mechanical
-            primary: Gearbox oil, mechanical
-            icon: mdi:car-shift-pattern
-            tap_action:
-              <<: *car_part_tap
-              data:
-                part: gearbox_mechanical
-          - <<: *car_part
-            entity: sensor.car_inspection
-            primary: Inspection
-            icon: mdi:clipboard-check
-            tap_action:
-              <<: *car_part_tap
-              data:
-                part: inspection
+          - type: heading
+            heading: Brakes
+            heading_style: subtitle
           # Changed by condition, so there is no percentage, only the km since the change
           - &car_part_km
             <<: *car_part
@@ -2877,6 +2863,36 @@ views:
               <<: *car_part_tap
               data:
                 part: rear_discs
+          - type: heading
+            heading: Gearbox
+            heading_style: subtitle
+          - <<: *car_part
+            entity: sensor.car_gearbox_hydraulic
+            primary: Gearbox oil, hydraulic
+            icon: mdi:car-shift-pattern
+            tap_action:
+              <<: *car_part_tap
+              data:
+                part: gearbox_hydraulic
+          - <<: *car_part
+            entity: sensor.car_gearbox_mechanical
+            primary: Gearbox oil, mechanical
+            icon: mdi:car-shift-pattern
+            tap_action:
+              <<: *car_part_tap
+              data:
+                part: gearbox_mechanical
+          - type: heading
+            heading: Other
+            heading_style: subtitle
+          - <<: *car_part
+            entity: sensor.car_inspection
+            primary: Inspection
+            icon: mdi:clipboard-check
+            tap_action:
+              <<: *car_part_tap
+              data:
+                part: inspection
           - <<: *car_part
             entity: sensor.garage_audi_a5_sportback_adblue_range
             primary: AdBlue
@@ -2885,10 +2901,13 @@ views:
             color: "{{ 'red' if states(entity) | int(99999) < 1000 else 'green' }}"
             tap_action:
               action: more-info
+          - type: heading
+            heading: Records
+            heading_style: subtitle
           - <<: *car_part
             entity: input_number.car_oil_km
             primary: Edit dates and km
-            secondary: ""
+            secondary: Tap a part above after changing it
             icon: mdi:pencil
             color: grey
             tap_action:
@@ -2896,6 +2915,18 @@ views:
               navigation_path: /main-yaml/maintenance-data
             hold_action:
               action: none
+          # The Links tab uses this card too
+          - &link
+            type: custom:mushroom-template-card
+            primary: Notion - Car service
+            icon: mdi:notebook
+            color: blue
+            grid_options:
+              columns: 12
+              rows: 1
+            tap_action:
+              action: url
+              url_path: https://app.notion.com/p/History-and-service-28f5a7bba4ca467e92b31a9f319244bb
 
   # Opened from the Edit button on the Maintenance tab
   - title: Service data
@@ -2936,6 +2967,45 @@ views:
               - input_datetime.car_rear_discs_changed
             grid_options:
               columns: full
+
+  - title: Links
+    path: links
+    visible:
+      - user: 276c6c52cb474dd9bdf6dac5ca4fad31 # Aleksander
+      - user: 06ec04272df9426db1d4322dfc5bda92 # Natallia
+    icon: mdi:link-variant
+    type: sections
+    max_columns: 2
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: Home
+            icon: mdi:home
+          - <<: *link
+            primary: Specification
+            icon: mdi:file-table
+            tap_action:
+              action: url
+              url_path: https://docs.google.com/spreadsheets/d/1mFcm4bjmM_yxb_aYDi6F_g2wdYKDKifWJAfbP5PR9ao/edit?gid=1248248648#gid=1248248648
+          - <<: *link
+            primary: Notion
+            tap_action:
+              action: url
+              url_path: https://app.notion.com/p/Nowy-Kamionek-18b659e3027580f8825ee8d90e06afff
+          - <<: *link
+            primary: Google Drive
+            icon: mdi:google-drive
+            tap_action:
+              action: url
+              url_path: https://drive.google.com/drive/u/1/folders/1pyUI2S1f5AgGhZdCkdSr816VmTs1lZi9
+      - type: grid
+        cards:
+          - type: heading
+            heading: Car
+            icon: mdi:car
+          - <<: *link
+            primary: Service
 
   # One tab per room. Printer and Hall cards are defined in Monitor and shown there too
   - title: Living room
