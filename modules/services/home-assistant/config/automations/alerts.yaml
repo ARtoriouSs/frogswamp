@@ -242,3 +242,36 @@
         message: "Fuel: {{ trigger.to_state.state }}% · {{ states('sensor.garage_audi_a5_sportback_range') }} km"
         data:
           tag: car-fuel
+
+# Only a real drop below 5% counts, so a part that's already low when its data is entered doesn't alert
+- id: repo_alert_car_part
+  alias: "Alert: car part due"
+  description: A car part or the inspection drops below 5%
+  mode: parallel
+  triggers:
+    - trigger: state
+      entity_id:
+        - sensor.car_oil
+        - sensor.car_air_filter
+        - sensor.car_fuel_filter
+        - sensor.car_gearbox_hydraulic
+        - sensor.car_gearbox_mechanical
+        - sensor.car_inspection
+      not_from:
+        - unavailable
+        - unknown
+  conditions:
+    - "{{ trigger.from_state is not none and trigger.from_state.state | float(0) >= 5 and trigger.to_state.state | float(100) < 5 }}"
+  actions:
+    - variables:
+        km: "{{ trigger.to_state.attributes.km_left | default(none) }}"
+        days: "{{ trigger.to_state.attributes.days_left | default(none) }}"
+    - action: notify.mobile_app_pixel_7
+      data:
+        title: "{{ trigger.to_state.name }} is due soon"
+        message: >-
+          {{ trigger.to_state.state | float(0) | round(0) | int }}%
+          {%- if km is not none %} · {{ km }} km left{% endif %}
+          {%- if days is not none %} · {{ days }} days left{% endif %}
+        data:
+          tag: "car-part-{{ trigger.entity_id }}"

@@ -64,6 +64,7 @@ Scripts → `config/scripts/<name>.yaml` (mapping). Helpers/template sensors →
 | Printer ink low | A cartridge drops below 15% |
 | Fridge or freezer door open | The fridge door is open for 3 min, or the freezer door for 1 min. Works without Arm mode |
 | Fridge filter | `sensor.fridge_filter_capacity` drops below 5%. Sent once, about 18 days before the year ends |
+| Car part due | A car service row drops below 5%. Sent once. A part entered when it's already low doesn't alert, its card is red |
 | Car fuel low | The reported fuel level drops below 10%. The car reports hours late, so the real level can be lower |
 
 ## Schedule
@@ -109,7 +110,9 @@ While it is on, `config/automations/security.yaml` sends a phone alert with the 
 
 ## Maintenance
 
-The Maintenance tab shows battery levels, **add new battery devices there**, the fridge filter, and the car's fuel and odometer. The filter card counts 365 days from `input_datetime.fridge_filter_changed` (`config/packages/maintenance.yaml`), from 100% to 0%: green, yellow below 40%, red below 10%. The alert comes below 5%. Tap it and confirm after changing the filter. To enter an older date, set the helper in Developer tools → Actions. The Samsung sensor next to it counts for a Samsung filter, so it's there only for comparison.
+The Maintenance tab shows battery levels, **add new battery devices there**, the fridge filter, and the car's fuel and odometer. The filter card counts 365 days from `input_datetime.fridge_filter_changed` (`config/packages/maintenance.yaml`), from 100% to 0%: green, yellow below 40%, red below 10%. The alert comes below 5%. Tap it and confirm after changing the filter. To enter an older date, use the Service data page (the Edit button in the Car column). The Samsung sensor next to it counts for a Samsung filter, so it's there only for comparison.
+
+Car service rows count km and time from the last change and show the lower percentage, with the same colours. Tap one and confirm after a change: it saves today and the current odometer. The odometer comes hours or days late, so correct the km on the Service data page if needed. The rules (km, days) are in `config/packages/maintenance.yaml`, the formula in `config/custom_templates/car_parts.jinja`. Pads and discs are changed by condition, so they only show the km since the change. AdBlue shows the car's own range. The data started as a copy of the Notion page `History and service`; they don't sync.
 
 ## Room temperatures
 

@@ -1,10 +1,76 @@
-# The date stays after a restart. Until it's first set, the sensor is unavailable and doesn't alert
+# Helpers without an initial value keep what was set in the UI after a restart. Edit them on the Service data page
 input_datetime:
   fridge_filter_changed:
     name: Fridge filter changed
     icon: mdi:calendar-check
     has_date: true
     has_time: false
+  car_oil_changed: &car_date
+    name: Oil and filter date
+    icon: mdi:calendar-check
+    has_date: true
+    has_time: false
+  car_air_filter_changed:
+    <<: *car_date
+    name: Air filter date
+  car_fuel_filter_changed:
+    <<: *car_date
+    name: Fuel filter date
+  car_gearbox_hydraulic_changed:
+    <<: *car_date
+    name: Gearbox hydraulic date
+  car_gearbox_mechanical_changed:
+    <<: *car_date
+    name: Gearbox mechanical date
+  car_inspection_changed:
+    <<: *car_date
+    name: Inspection date
+  car_front_pads_changed:
+    <<: *car_date
+    name: Front pads date
+  car_front_discs_changed:
+    <<: *car_date
+    name: Front discs date
+  car_rear_pads_changed:
+    <<: *car_date
+    name: Rear pads date
+  car_rear_discs_changed:
+    <<: *car_date
+    name: Rear discs date
+
+input_number:
+  car_oil_km: &car_km
+    name: Oil and filter km
+    icon: mdi:counter
+    min: 0
+    max: 999999
+    step: 1
+    mode: box
+    unit_of_measurement: km
+  car_air_filter_km:
+    <<: *car_km
+    name: Air filter km
+  car_fuel_filter_km:
+    <<: *car_km
+    name: Fuel filter km
+  car_gearbox_hydraulic_km:
+    <<: *car_km
+    name: Gearbox hydraulic km
+  car_gearbox_mechanical_km:
+    <<: *car_km
+    name: Gearbox mechanical km
+  car_front_pads_km:
+    <<: *car_km
+    name: Front pads km
+  car_front_discs_km:
+    <<: *car_km
+    name: Front discs km
+  car_rear_pads_km:
+    <<: *car_km
+    name: Rear pads km
+  car_rear_discs_km:
+    <<: *car_km
+    name: Rear discs km
 
 script:
   fridge_filter_reset:
@@ -16,6 +82,29 @@ script:
           entity_id: input_datetime.fridge_filter_changed
         data:
           date: "{{ now().date() }}"
+  # With no odometer value (or for the inspection, which has no km) only the date is saved
+  car_part_reset:
+    alias: Car part changed
+    icon: mdi:wrench
+    fields:
+      part:
+        description: The middle of the helper names, for example oil
+        required: true
+        selector:
+          text:
+    sequence:
+      - action: input_datetime.set_datetime
+        target:
+          entity_id: "input_datetime.car_{{ part }}_changed"
+        data:
+          date: "{{ now().date() }}"
+      - if: "{{ has_value('input_number.car_' ~ part ~ '_km') and has_value('sensor.garage_audi_a5_sportback_odometer') }}"
+        then:
+          - action: input_number.set_value
+            target:
+              entity_id: "input_number.car_{{ part }}_km"
+            data:
+              value: "{{ states('sensor.garage_audi_a5_sportback_odometer') | float }}"
 
 template:
   - sensor:
@@ -28,4 +117,80 @@ template:
           {% set changed = states('input_datetime.fridge_filter_changed') | as_datetime | as_local %}
           {% set days = (now() - changed).total_seconds() / 86400 %}
           {{ [0, [100, 100 - days / 365 * 100] | min] | max | round(1) }}
-        availability: "{{ state_attr('input_datetime.fridge_filter_changed', 'year') | int(0) >= 2000 }}"
+
+      # The numbers are the service rules: km, then days, 0 when there is no such limit
+      - name: Car oil
+        unique_id: car_part_oil
+        icon: mdi:oil
+        unit_of_measurement: "%"
+        state: "{% from 'car_parts.jinja' import capacity %}{{ capacity('oil', 15000, 365) }}"
+        availability: "{% from 'car_parts.jinja' import km_known %}{{ km_known('oil') }}"
+        attributes:
+          km_left: "{% from 'car_parts.jinja' import km_left %}{{ km_left('oil', 15000) }}"
+          days_left: "{% from 'car_parts.jinja' import days_left %}{{ days_left('oil', 365) }}"
+      - name: Car air filter
+        unique_id: car_part_air_filter
+        icon: mdi:air-filter
+        unit_of_measurement: "%"
+        state: "{% from 'car_parts.jinja' import capacity %}{{ capacity('air_filter', 20000, 365) }}"
+        availability: "{% from 'car_parts.jinja' import km_known %}{{ km_known('air_filter') }}"
+        attributes:
+          km_left: "{% from 'car_parts.jinja' import km_left %}{{ km_left('air_filter', 20000) }}"
+          days_left: "{% from 'car_parts.jinja' import days_left %}{{ days_left('air_filter', 365) }}"
+      - name: Car fuel filter
+        unique_id: car_part_fuel_filter
+        icon: mdi:filter
+        unit_of_measurement: "%"
+        state: "{% from 'car_parts.jinja' import capacity %}{{ capacity('fuel_filter', 60000, 0) }}"
+        availability: "{% from 'car_parts.jinja' import km_known %}{{ km_known('fuel_filter') }}"
+        attributes:
+          km_left: "{% from 'car_parts.jinja' import km_left %}{{ km_left('fuel_filter', 60000) }}"
+      - name: Car gearbox hydraulic
+        unique_id: car_part_gearbox_hydraulic
+        icon: mdi:car-shift-pattern
+        unit_of_measurement: "%"
+        state: "{% from 'car_parts.jinja' import capacity %}{{ capacity('gearbox_hydraulic', 60000, 0) }}"
+        availability: "{% from 'car_parts.jinja' import km_known %}{{ km_known('gearbox_hydraulic') }}"
+        attributes:
+          km_left: "{% from 'car_parts.jinja' import km_left %}{{ km_left('gearbox_hydraulic', 60000) }}"
+      - name: Car gearbox mechanical
+        unique_id: car_part_gearbox_mechanical
+        icon: mdi:car-shift-pattern
+        unit_of_measurement: "%"
+        state: "{% from 'car_parts.jinja' import capacity %}{{ capacity('gearbox_mechanical', 120000, 0) }}"
+        availability: "{% from 'car_parts.jinja' import km_known %}{{ km_known('gearbox_mechanical') }}"
+        attributes:
+          km_left: "{% from 'car_parts.jinja' import km_left %}{{ km_left('gearbox_mechanical', 120000) }}"
+      - name: Car inspection
+        unique_id: car_part_inspection
+        icon: mdi:clipboard-check
+        unit_of_measurement: "%"
+        state: "{% from 'car_parts.jinja' import capacity %}{{ capacity('inspection', 0, 365) }}"
+        attributes:
+          days_left: "{% from 'car_parts.jinja' import days_left %}{{ days_left('inspection', 365) }}"
+
+      # Changed by condition, so these only count the km since the change
+      - name: Car front pads
+        unique_id: car_part_front_pads
+        icon: mdi:car-brake-alert
+        unit_of_measurement: km
+        state: "{% from 'car_parts.jinja' import km_used %}{{ km_used('front_pads') }}"
+        availability: "{% from 'car_parts.jinja' import km_known %}{{ km_known('front_pads') }}"
+      - name: Car front discs
+        unique_id: car_part_front_discs
+        icon: mdi:disc
+        unit_of_measurement: km
+        state: "{% from 'car_parts.jinja' import km_used %}{{ km_used('front_discs') }}"
+        availability: "{% from 'car_parts.jinja' import km_known %}{{ km_known('front_discs') }}"
+      - name: Car rear pads
+        unique_id: car_part_rear_pads
+        icon: mdi:car-brake-alert
+        unit_of_measurement: km
+        state: "{% from 'car_parts.jinja' import km_used %}{{ km_used('rear_pads') }}"
+        availability: "{% from 'car_parts.jinja' import km_known %}{{ km_known('rear_pads') }}"
+      - name: Car rear discs
+        unique_id: car_part_rear_discs
+        icon: mdi:disc
+        unit_of_measurement: km
+        state: "{% from 'car_parts.jinja' import km_used %}{{ km_used('rear_discs') }}"
+        availability: "{% from 'car_parts.jinja' import km_known %}{{ km_known('rear_discs') }}"

@@ -1,0 +1,25 @@
+{# Used by packages/maintenance.yaml. part is the middle of the helper names: input_number.car_<part>_km, input_datetime.car_<part>_changed #}
+{% macro km_used(part) -%}
+{{ (states('sensor.garage_audi_a5_sportback_odometer') | float(0) - states('input_number.car_' ~ part ~ '_km') | float(0)) | round(0) | int }}
+{%- endmacro %}
+
+{% macro km_left(part, km_limit) -%}
+{{ km_limit - km_used(part) | int }}
+{%- endmacro %}
+
+{% macro days_left(part, day_limit) -%}
+{{ day_limit - (now() - (states('input_datetime.car_' ~ part ~ '_changed') | as_datetime | as_local)).days }}
+{%- endmacro %}
+
+{# The lower of the km and the time percentage. A limit of 0 means this part has no such limit #}
+{% macro capacity(part, km_limit, day_limit) -%}
+{% set km_percent = 100 - km_used(part) | int / km_limit * 100 if km_limit else 100 %}
+{% set seconds = (now() - (states('input_datetime.car_' ~ part ~ '_changed') | as_datetime | as_local)).total_seconds() %}
+{% set day_percent = 100 - seconds / 86400 / day_limit * 100 if day_limit else 100 %}
+{{- [0, [100, km_percent, day_percent] | min] | max | round(1) -}}
+{%- endmacro %}
+
+{# False while the odometer is unavailable or the part has no km recorded yet #}
+{% macro km_known(part) -%}
+{{ has_value('sensor.garage_audi_a5_sportback_odometer') and states('input_number.car_' ~ part ~ '_km') | float(0) > 0 }}
+{%- endmacro %}

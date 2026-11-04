@@ -2705,11 +2705,7 @@ views:
             primary: Filter capacity
             secondary: >-
               {% set changed = states('input_datetime.fridge_filter_changed') | as_datetime(none) %}
-              {% if has_value(entity) and changed is not none %}
-                {{ states(entity) | float(0) | round(0) | int }}% · changed {{ changed.strftime('%d.%m.%Y') }}
-              {% else %}
-                Not set · tap when you change the filter
-              {% endif %}
+              {{ 'Unavailable' if changed is none else (states(entity) | float(0) | round(0) | int) ~ '% · changed ' ~ changed.strftime('%d.%m.%Y') }}
             icon: mdi:filter
             color: >-
               {% set capacity = states(entity) | float(-1) %}
@@ -2777,6 +2773,169 @@ views:
               perform_action: button.press
               target:
                 entity_id: button.garage_audi_a5_sportback_refresh_data
+          - type: heading
+            heading: Service · tap after a change
+            heading_style: subtitle
+          - &car_part
+            type: custom:mushroom-template-card
+            entity: sensor.car_oil
+            primary: Oil & filter
+            secondary: >-
+              {% set km = state_attr(entity, 'km_left') %}{% set days = state_attr(entity, 'days_left') %}
+              {% if not has_value(entity) %}Unavailable{% else %}{{ states(entity) | float(0) | round(0) | int }}%
+              {%- if km is not none %} · {{ km | abs }} km {{ 'left' if km >= 0 else 'over' }}{% endif %}
+              {%- if days is not none %} · {{ days | abs }} days {{ 'left' if days >= 0 else 'over' }}{% endif %}{% endif %}
+            icon: mdi:oil
+            color: >-
+              {% set capacity = states(entity) | float(-1) %}
+              {{ 'disabled' if capacity < 0 else ('red' if capacity < 10 else ('yellow' if capacity < 40 else 'green')) }}
+            grid_options:
+              columns: 12
+              rows: 1
+            tap_action: &car_part_tap
+              action: perform-action
+              perform_action: script.car_part_reset
+              data:
+                part: oil
+              confirmation:
+                text: Part changed? This saves today's date and the current odometer.
+            hold_action:
+              action: more-info
+          - <<: *car_part
+            entity: sensor.car_air_filter
+            primary: Air filter
+            icon: mdi:air-filter
+            tap_action:
+              <<: *car_part_tap
+              data:
+                part: air_filter
+          - <<: *car_part
+            entity: sensor.car_fuel_filter
+            primary: Fuel filter
+            icon: mdi:filter
+            tap_action:
+              <<: *car_part_tap
+              data:
+                part: fuel_filter
+          - <<: *car_part
+            entity: sensor.car_gearbox_hydraulic
+            primary: Gearbox oil, hydraulic
+            icon: mdi:car-shift-pattern
+            tap_action:
+              <<: *car_part_tap
+              data:
+                part: gearbox_hydraulic
+          - <<: *car_part
+            entity: sensor.car_gearbox_mechanical
+            primary: Gearbox oil, mechanical
+            icon: mdi:car-shift-pattern
+            tap_action:
+              <<: *car_part_tap
+              data:
+                part: gearbox_mechanical
+          - <<: *car_part
+            entity: sensor.car_inspection
+            primary: Inspection
+            icon: mdi:clipboard-check
+            tap_action:
+              <<: *car_part_tap
+              data:
+                part: inspection
+          # Changed by condition, so there is no percentage, only the km since the change
+          - &car_part_km
+            <<: *car_part
+            entity: sensor.car_front_pads
+            primary: Front pads
+            secondary: "{{ states(entity) | int(0) ~ ' km since the change' if has_value(entity) else 'Not recorded' }}"
+            icon: mdi:car-brake-alert
+            color: grey
+            tap_action:
+              <<: *car_part_tap
+              data:
+                part: front_pads
+          - <<: *car_part_km
+            entity: sensor.car_front_discs
+            primary: Front discs
+            icon: mdi:disc
+            tap_action:
+              <<: *car_part_tap
+              data:
+                part: front_discs
+          - <<: *car_part_km
+            entity: sensor.car_rear_pads
+            primary: Rear pads
+            icon: mdi:car-brake-alert
+            tap_action:
+              <<: *car_part_tap
+              data:
+                part: rear_pads
+          - <<: *car_part_km
+            entity: sensor.car_rear_discs
+            primary: Rear discs
+            icon: mdi:disc
+            tap_action:
+              <<: *car_part_tap
+              data:
+                part: rear_discs
+          - <<: *car_part
+            entity: sensor.garage_audi_a5_sportback_adblue_range
+            primary: AdBlue
+            secondary: "{{ states(entity) ~ ' km left' if has_value(entity) else 'Unavailable' }}"
+            icon: mdi:car-coolant-level
+            color: "{{ 'red' if states(entity) | int(99999) < 1000 else 'green' }}"
+            tap_action:
+              action: more-info
+          - <<: *car_part
+            entity: input_number.car_oil_km
+            primary: Edit dates and km
+            secondary: ""
+            icon: mdi:pencil
+            color: grey
+            tap_action:
+              action: navigate
+              navigation_path: /main-yaml/maintenance-data
+            hold_action:
+              action: none
+
+  # Opened from the Edit button on the Maintenance tab
+  - title: Service data
+    path: maintenance-data
+    subview: true
+    back_path: /main-yaml/maintenance
+    visible:
+      - user: 276c6c52cb474dd9bdf6dac5ca4fad31 # Aleksander
+      - user: 06ec04272df9426db1d4322dfc5bda92 # Natallia
+    icon: mdi:pencil
+    type: sections
+    max_columns: 1
+    sections:
+      - type: grid
+        cards:
+          - type: entities
+            title: Last change
+            entities:
+              - input_datetime.fridge_filter_changed
+              - input_datetime.car_inspection_changed
+              - input_number.car_oil_km
+              - input_datetime.car_oil_changed
+              - input_number.car_air_filter_km
+              - input_datetime.car_air_filter_changed
+              - input_number.car_fuel_filter_km
+              - input_datetime.car_fuel_filter_changed
+              - input_number.car_gearbox_hydraulic_km
+              - input_datetime.car_gearbox_hydraulic_changed
+              - input_number.car_gearbox_mechanical_km
+              - input_datetime.car_gearbox_mechanical_changed
+              - input_number.car_front_pads_km
+              - input_datetime.car_front_pads_changed
+              - input_number.car_front_discs_km
+              - input_datetime.car_front_discs_changed
+              - input_number.car_rear_pads_km
+              - input_datetime.car_rear_pads_changed
+              - input_number.car_rear_discs_km
+              - input_datetime.car_rear_discs_changed
+            grid_options:
+              columns: full
 
   # One tab per room. Printer and Hall cards are defined in Monitor and shown there too
   - title: Living room
