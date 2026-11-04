@@ -2659,6 +2659,125 @@ views:
             grid_options:
               columns: full
 
+  - title: Maintenance
+    path: maintenance
+    visible:
+      - user: 276c6c52cb474dd9bdf6dac5ca4fad31 # Aleksander
+      - user: 06ec04272df9426db1d4322dfc5bda92 # Natallia
+    icon: mdi:wrench
+    type: sections
+    max_columns: 3
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: Batteries
+            icon: mdi:battery
+          # Each device has a _battery_level and a _battery_state sensor with the same start
+          - &battery
+            type: custom:mushroom-template-card
+            entity: sensor.pixel_7_battery_level
+            primary: Phone
+            secondary: >-
+              {% if states(entity) in ['unavailable', 'unknown'] %}Unavailable
+              {% else %}{{ states(entity) }}%{{ ' · charging' if is_state(entity | replace('_level', '_state'), 'charging') }}
+              {% endif %}
+            icon: mdi:cellphone
+            color: >-
+              {% set level = states(entity) | float(-1) %}
+              {{ 'disabled' if level < 0 else ('red' if level <= 15 else ('yellow' if level <= 30 else 'green')) }}
+            grid_options:
+              columns: 12
+              rows: 1
+            tap_action:
+              action: more-info
+          - <<: *battery
+            entity: sensor.google_pixel_watch_battery_level
+            primary: Watch
+            icon: mdi:watch
+      - type: grid
+        cards:
+          - type: heading
+            heading: Fridge filter
+            icon: mdi:filter
+          - type: custom:mushroom-template-card
+            entity: sensor.fridge_filter_capacity
+            primary: Filter capacity
+            secondary: >-
+              {% set changed = states('input_datetime.fridge_filter_changed') | as_datetime(none) %}
+              {% if has_value(entity) and changed is not none %}
+                {{ states(entity) | float(0) | round(0) | int }}% · changed {{ changed.strftime('%d.%m.%Y') }}
+              {% else %}
+                Not set · tap when you change the filter
+              {% endif %}
+            icon: mdi:filter
+            color: >-
+              {% set capacity = states(entity) | float(-1) %}
+              {{ 'disabled' if capacity < 0 else ('red' if capacity < 10 else ('yellow' if capacity < 40 else 'green')) }}
+            grid_options:
+              columns: 12
+              rows: 1
+            tap_action:
+              action: perform-action
+              perform_action: script.turn_on
+              target:
+                entity_id: script.fridge_filter_reset
+              confirmation:
+                text: Filter changed? This sets the capacity back to 100%.
+            hold_action:
+              action: more-info
+          # Counts for a Samsung filter, so it's only for comparison with the card above
+          - type: custom:mushroom-template-card
+            entity: sensor.living_room_refrigerator_water_filter_usage
+            primary: Samsung filter sensor
+            secondary: >-
+              {% if states(entity) in ['unavailable', 'unknown'] %}Unavailable
+              {% else %}{{ states(entity) }}% used{{ ' · asks for a change' if is_state('binary_sensor.living_room_refrigerator_filter_status', 'on') }}
+              {% endif %}
+            icon: mdi:fridge-outline
+            color: grey
+            grid_options:
+              columns: 12
+              rows: 1
+            tap_action:
+              action: more-info
+      # The Garage tab uses the same cards
+      - type: grid
+        cards:
+          - type: heading
+            heading: Car
+            icon: mdi:car
+          - &car_fuel
+            <<: *info
+            entity: sensor.garage_audi_a5_sportback_fuel_level
+            primary: Fuel
+            secondary: "{{ states(entity) }} % · {{ states('sensor.garage_audi_a5_sportback_range') }} km"
+            icon: mdi:gas-station
+            color: "{{ 'red' if states(entity) | int(100) < 15 else 'amber' }}"
+          - <<: *car_fuel
+            entity: sensor.garage_audi_a5_sportback_odometer
+            primary: Odometer
+            secondary: &odometer_km "{{ states(entity) | int(0) | string | regex_replace('(?<=\\d)(?=(\\d{3})+$)', ' ') }} km"
+            icon: mdi:counter
+            color: grey
+          - &car_refresh
+            type: custom:mushroom-template-card
+            entity: button.garage_audi_a5_sportback_refresh_data
+            primary: Refresh car data
+            secondary: >-
+              {% set reported = as_timestamp(states('sensor.garage_audi_a5_sportback_vehicle_last_reported'), none) %}
+              {{ 'Last report: ' ~ reported | timestamp_custom('%d.%m %H:%M') if reported is not none else 'Last report: unknown' }}
+            icon: mdi:refresh
+            color: grey
+            grid_options:
+              columns: 12
+              rows: 1
+            tap_action:
+              action: perform-action
+              perform_action: button.press
+              target:
+                entity_id: button.garage_audi_a5_sportback_refresh_data
+
   # One tab per room. Printer and Hall cards are defined in Monitor and shown there too
   - title: Living room
     path: living-room
@@ -3174,12 +3293,7 @@ views:
                  or is_state('binary_sensor.garage_audi_a5_sportback_windows_open', 'on')
                  or is_state('binary_sensor.garage_audi_a5_sportback_trunk_open', 'on') else 'green' }}
           - &car
-            <<: *info
-            entity: sensor.garage_audi_a5_sportback_fuel_level
-            primary: Fuel
-            secondary: "{{ states(entity) }} % · {{ states('sensor.garage_audi_a5_sportback_range') }} km"
-            icon: mdi:gas-station
-            color: "{{ 'red' if states(entity) | int(100) < 15 else 'amber' }}"
+            <<: *car_fuel
             grid_options:
               columns: 4
               rows: 2
@@ -3187,7 +3301,7 @@ views:
           - <<: *car
             entity: sensor.garage_audi_a5_sportback_odometer
             primary: Odometer
-            secondary: "{{ states(entity) | int(0) | string | regex_replace('(?<=\\d)(?=(\\d{3})+$)', ' ') }} km"
+            secondary: *odometer_km
             icon: mdi:counter
             color: grey
           # lock sensors: off means locked
@@ -3201,19 +3315,7 @@ views:
               {{ 'mdi:lock' if is_state(entity, 'off') and is_state('binary_sensor.garage_audi_a5_sportback_trunk_locked', 'off') else 'mdi:lock-open-variant' }}
             color: >-
               {{ 'green' if is_state(entity, 'off') and is_state('binary_sensor.garage_audi_a5_sportback_trunk_locked', 'off') else 'red' }}
-          - type: custom:mushroom-template-card
-            entity: button.garage_audi_a5_sportback_refresh_data
-            primary: Refresh car data
-            icon: mdi:refresh
-            color: grey
-            grid_options:
-              columns: 12
-              rows: 1
-            tap_action:
-              action: perform-action
-              perform_action: button.press
-              target:
-                entity_id: button.garage_audi_a5_sportback_refresh_data
+          - *car_refresh
 
   # Guests see only this view (custom-sidebar-config.yaml hides the rest of the sidebar for them).
   # It hides things, it doesn't block them: a guest can still reach any entity through the API

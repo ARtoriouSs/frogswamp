@@ -63,6 +63,8 @@ Scripts → `config/scripts/<name>.yaml` (mapping). Helpers/template sensors →
 | Internet was down | Router WAN back on after at least 1 min down. Also written to the logbook |
 | Printer ink low | A cartridge drops below 15% |
 | Fridge or freezer door open | The fridge door is open for 3 min, or the freezer door for 1 min. Works without Arm mode |
+| Fridge filter | `sensor.fridge_filter_capacity` drops below 5%. Sent once, about 18 days before the year ends |
+| Car fuel low | The reported fuel level drops below 10%. The car reports hours late, so the real level can be lower |
 
 ## Schedule
 
@@ -104,6 +106,10 @@ HA reads the calendar through **Remote Calendar**, added in the UI with the cale
 `input_boolean.arm_mode`, the button on the Security tab. A `Vacation` all-day event in `Home Assistant Events` turns it on when the event starts and off when it ends. The Vacation switch, Day off and the work calendar don't change it. Turned off by hand during a vacation, it stays off. Turned on by hand, it stays on until it is turned off, or until a Vacation event ends.
 
 While it is on, `config/automations/security.yaml` sends a phone alert with the `🚨 ARM MODE:` title when the fridge or freezer door opens, or when a listed device changes: the TV, thermostats, towel heat, blinds and curtains. The cube and the car aren't listed. Going unavailable and temperatures don't count. **Add new devices to its list.** It starts 2 minutes after Arm mode turns on, and again 2 minutes after an HA restart, so what Vacation itself turns off doesn't alert. Schedules still count: with Arm mode on by hand and no Vacation, a blind opening by its schedule sends an alert too.
+
+## Maintenance
+
+The Maintenance tab shows battery levels, **add new battery devices there**, the fridge filter, and the car's fuel and odometer. The filter card counts 365 days from `input_datetime.fridge_filter_changed` (`config/packages/maintenance.yaml`), from 100% to 0%: green, yellow below 40%, red below 10%. The alert comes below 5%. Tap it and confirm after changing the filter. To enter an older date, set the helper in Developer tools → Actions. The Samsung sensor next to it counts for a Samsung filter, so it's there only for comparison.
 
 ## Room temperatures
 

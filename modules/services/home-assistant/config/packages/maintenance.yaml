@@ -1,0 +1,31 @@
+# The date stays after a restart. Until it's first set, the sensor is unavailable and doesn't alert
+input_datetime:
+  fridge_filter_changed:
+    name: Fridge filter changed
+    icon: mdi:calendar-check
+    has_date: true
+    has_time: false
+
+script:
+  fridge_filter_reset:
+    alias: Fridge filter changed
+    icon: mdi:filter
+    sequence:
+      - action: input_datetime.set_datetime
+        target:
+          entity_id: input_datetime.fridge_filter_changed
+        data:
+          date: "{{ now().date() }}"
+
+template:
+  - sensor:
+      # Falls from 100% to 0% in the 365 days after the change
+      - name: Fridge filter capacity
+        unique_id: fridge_filter_capacity
+        icon: mdi:filter
+        unit_of_measurement: "%"
+        state: >-
+          {% set changed = states('input_datetime.fridge_filter_changed') | as_datetime | as_local %}
+          {% set days = (now() - changed).total_seconds() / 86400 %}
+          {{ [0, [100, 100 - days / 365 * 100] | min] | max | round(1) }}
+        availability: "{{ state_attr('input_datetime.fridge_filter_changed', 'year') | int(0) >= 2000 }}"

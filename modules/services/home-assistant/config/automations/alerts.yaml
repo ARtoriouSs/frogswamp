@@ -202,3 +202,43 @@
         message: "{{ trigger.to_state.name }}: {{ trigger.to_state.state }}%"
         data:
           tag: "ink-{{ trigger.entity_id }}"
+
+# Same as the ink alert: only a real drop below 5% counts
+- id: repo_alert_fridge_filter
+  alias: "Alert: time to change the fridge filter"
+  description: The fridge filter capacity drops below 5%
+  triggers:
+    - trigger: state
+      entity_id: sensor.fridge_filter_capacity
+      not_from:
+        - unavailable
+        - unknown
+  conditions:
+    - "{{ trigger.from_state is not none and trigger.from_state.state | float(0) >= 5 and trigger.to_state.state | float(100) < 5 }}"
+  actions:
+    - action: notify.mobile_app_pixel_7
+      data:
+        title: Time to change the fridge filter
+        message: "Capacity: {{ trigger.to_state.state | float(0) | round(0) | int }}%. After changing it, tap the card on the Maintenance tab"
+        data:
+          tag: fridge-filter
+
+# The car reports hours late, so the fuel can be lower by the time this arrives
+- id: repo_alert_car_fuel
+  alias: "Alert: car fuel low"
+  description: The car fuel level drops below 10%
+  triggers:
+    - trigger: state
+      entity_id: sensor.garage_audi_a5_sportback_fuel_level
+      not_from:
+        - unavailable
+        - unknown
+  conditions:
+    - "{{ trigger.from_state is not none and trigger.from_state.state | float(0) >= 10 and trigger.to_state.state | float(100) < 10 }}"
+  actions:
+    - action: notify.mobile_app_pixel_7
+      data:
+        title: Car fuel is low
+        message: "Fuel: {{ trigger.to_state.state }}% · {{ states('sensor.garage_audi_a5_sportback_range') }} km"
+        data:
+          tag: car-fuel
