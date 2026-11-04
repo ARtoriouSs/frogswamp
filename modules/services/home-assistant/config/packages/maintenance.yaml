@@ -15,6 +15,11 @@ input_datetime:
     icon: mdi:calendar-check
     has_date: true
     has_time: false
+  car_cabin_filter_changed:
+    name: Cabin filter date
+    icon: mdi:calendar-check
+    has_date: true
+    has_time: false
   car_fuel_filter_changed:
     name: Fuel filter date
     icon: mdi:calendar-check
@@ -67,6 +72,14 @@ input_number:
     unit_of_measurement: km
   car_air_filter_km:
     name: Air filter km
+    icon: mdi:counter
+    min: 0
+    max: 999999
+    step: 1
+    mode: box
+    unit_of_measurement: km
+  car_cabin_filter_km:
+    name: Cabin filter km
     icon: mdi:counter
     min: 0
     max: 999999
@@ -195,6 +208,15 @@ template:
         attributes:
           km_left: "{% from 'car_parts.jinja' import km_left %}{{ km_left('air_filter', 20000) }}"
           days_left: "{% from 'car_parts.jinja' import days_left %}{{ days_left('air_filter', 730) }}"
+      - name: Car cabin filter
+        unique_id: car_part_cabin_filter
+        icon: mdi:air-purifier
+        unit_of_measurement: "%"
+        state: "{% from 'car_parts.jinja' import capacity %}{{ capacity('cabin_filter', 30000, 730) }}"
+        availability: "{% from 'car_parts.jinja' import km_known %}{{ km_known('cabin_filter') }}"
+        attributes:
+          km_left: "{% from 'car_parts.jinja' import km_left %}{{ km_left('cabin_filter', 30000) }}"
+          days_left: "{% from 'car_parts.jinja' import days_left %}{{ days_left('cabin_filter', 730) }}"
       - name: Car fuel filter
         unique_id: car_part_fuel_filter
         icon: mdi:filter

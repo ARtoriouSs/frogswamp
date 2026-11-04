@@ -253,6 +253,7 @@
       entity_id:
         - sensor.car_oil
         - sensor.car_air_filter
+        - sensor.car_cabin_filter
         - sensor.car_fuel_filter
         - sensor.car_gearbox_hydraulic
         - sensor.car_gearbox_mechanical

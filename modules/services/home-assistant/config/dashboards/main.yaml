@@ -2743,6 +2743,9 @@ views:
           - type: heading
             heading: Car
             icon: mdi:car
+          - type: heading
+            heading: Car sensors
+            heading_style: subtitle
           - &car_fuel
             <<: *info
             entity: sensor.garage_audi_a5_sportback_fuel_level
@@ -2781,7 +2784,33 @@ views:
               target:
                 entity_id: button.garage_audi_a5_sportback_refresh_data
           - type: heading
-            heading: Oil + filter
+            heading: Records
+            heading_style: subtitle
+          - type: custom:mushroom-template-card
+            primary: Edit dates and km
+            secondary: Tap a part below after changing it
+            icon: mdi:pencil
+            color: grey
+            grid_options:
+              columns: 12
+              rows: 1
+            tap_action:
+              action: navigate
+              navigation_path: /main-yaml/maintenance-data
+          # The Links tab uses this card too
+          - &link
+            type: custom:mushroom-template-card
+            primary: Notion - Car service
+            icon: mdi:notebook
+            color: blue
+            grid_options:
+              columns: 12
+              rows: 1
+            tap_action:
+              action: url
+              url_path: https://app.notion.com/p/History-and-service-28f5a7bba4ca467e92b31a9f319244bb
+          - type: heading
+            heading: Oil and filters
             heading_style: subtitle
           - &car_part
             type: custom:mushroom-template-card
@@ -2789,7 +2818,7 @@ views:
             primary: Oil & filter
             secondary: >-
               {% set km = state_attr(entity, 'km_left') %}{% set days = state_attr(entity, 'days_left') %}
-              {% if not has_value(entity) %}Unavailable{% else %}{{ states(entity) | float(0) | round(0) | int }}%
+              {% if not has_value(entity) %}No data{% else %}{{ states(entity) | float(0) | round(0) | int }}%
               {%- if km is not none %} · {{ km | abs }} km {{ 'left' if km >= 0 else 'over' }}{% endif %}
               {%- if days is not none %} · {{ days | abs }} days {{ 'left' if days >= 0 else 'over' }}{% endif %}{% endif %}
             icon: mdi:oil
@@ -2816,6 +2845,14 @@ views:
               <<: *car_part_tap
               data:
                 part: air_filter
+          - <<: *car_part
+            entity: sensor.car_cabin_filter
+            primary: Cabin filter
+            icon: mdi:air-purifier
+            tap_action:
+              <<: *car_part_tap
+              data:
+                part: cabin_filter
           - <<: *car_part
             entity: sensor.car_fuel_filter
             primary: Fuel filter
@@ -2883,7 +2920,7 @@ views:
               data:
                 part: gearbox_mechanical
           - type: heading
-            heading: Other
+            heading: Inspection
             heading_style: subtitle
           - <<: *car_part
             entity: sensor.car_inspection
@@ -2893,6 +2930,9 @@ views:
               <<: *car_part_tap
               data:
                 part: inspection
+          - type: heading
+            heading: Other
+            heading_style: subtitle
           - <<: *car_part
             entity: sensor.garage_audi_a5_sportback_adblue_range
             primary: AdBlue
@@ -2901,32 +2941,6 @@ views:
             color: "{{ 'red' if states(entity) | int(99999) < 1000 else 'green' }}"
             tap_action:
               action: more-info
-          - type: heading
-            heading: Records
-            heading_style: subtitle
-          - <<: *car_part
-            entity: input_number.car_oil_km
-            primary: Edit dates and km
-            secondary: Tap a part above after changing it
-            icon: mdi:pencil
-            color: grey
-            tap_action:
-              action: navigate
-              navigation_path: /main-yaml/maintenance-data
-            hold_action:
-              action: none
-          # The Links tab uses this card too
-          - &link
-            type: custom:mushroom-template-card
-            primary: Notion - Car service
-            icon: mdi:notebook
-            color: blue
-            grid_options:
-              columns: 12
-              rows: 1
-            tap_action:
-              action: url
-              url_path: https://app.notion.com/p/History-and-service-28f5a7bba4ca467e92b31a9f319244bb
 
   # Opened from the Edit button on the Maintenance tab
   - title: Service data
@@ -2951,6 +2965,8 @@ views:
               - input_datetime.car_oil_changed
               - input_number.car_air_filter_km
               - input_datetime.car_air_filter_changed
+              - input_number.car_cabin_filter_km
+              - input_datetime.car_cabin_filter_changed
               - input_number.car_fuel_filter_km
               - input_datetime.car_fuel_filter_changed
               - input_number.car_gearbox_hydraulic_km
