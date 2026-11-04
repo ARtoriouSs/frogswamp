@@ -281,6 +281,73 @@ views:
       - type: grid
         cards:
           - type: heading
+            heading: Range
+            icon: mdi:calendar-range
+          - type: custom:mushroom-template-card
+            entity: input_select.climate_range
+            primary: Day
+            icon: mdi:calendar-today
+            color: "{{ 'primary' if is_state(entity, 'Day') else 'disabled' }}"
+            vertical: true
+            grid_options:
+              columns: 3
+              rows: 2
+            tap_action:
+              action: perform-action
+              perform_action: input_select.select_option
+              target:
+                entity_id: input_select.climate_range
+              data:
+                option: Day
+          - type: custom:mushroom-template-card
+            entity: input_select.climate_range
+            primary: Week
+            icon: mdi:calendar-week
+            color: "{{ 'primary' if is_state(entity, 'Week') else 'disabled' }}"
+            vertical: true
+            grid_options:
+              columns: 3
+              rows: 2
+            tap_action:
+              action: perform-action
+              perform_action: input_select.select_option
+              target:
+                entity_id: input_select.climate_range
+              data:
+                option: Week
+          - type: custom:mushroom-template-card
+            entity: input_select.climate_range
+            primary: Month
+            icon: mdi:calendar-month
+            color: "{{ 'primary' if is_state(entity, 'Month') else 'disabled' }}"
+            vertical: true
+            grid_options:
+              columns: 3
+              rows: 2
+            tap_action:
+              action: perform-action
+              perform_action: input_select.select_option
+              target:
+                entity_id: input_select.climate_range
+              data:
+                option: Month
+          - type: custom:mushroom-template-card
+            entity: input_select.climate_range
+            primary: Year
+            icon: mdi:calendar-blank-multiple
+            color: "{{ 'primary' if is_state(entity, 'Year') else 'disabled' }}"
+            vertical: true
+            grid_options:
+              columns: 3
+              rows: 2
+            tap_action:
+              action: perform-action
+              perform_action: input_select.select_option
+              target:
+                entity_id: input_select.climate_range
+              data:
+                option: Year
+          - type: heading
             heading: Temperature
             icon: mdi:thermometer
           # Blue under 18 °C, green up to 24 °C, orange above
@@ -335,19 +402,74 @@ views:
             grid_options:
               columns: 6
               rows: 2
-          - type: history-graph
-            hours_to_show: 24
-            entities:
-              - entity: sensor.home_temperature
-                name: Home
-              - entity: sensor.bedroom_temperature
-                name: Bedroom
-              - entity: sensor.hall_temperature
-                name: Hall
-              - entity: sensor.guest_bathroom_temperature
-                name: Guest bath
-              - entity: sensor.garage_audi_a5_sportback_outside_temperature
-                name: Car
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.climate_range
+                state: Day
+            card: &climate_temperature_graph
+              type: history-graph
+              hours_to_show: 24
+              entities:
+                - entity: sensor.home_temperature
+                  name: Home
+                - entity: sensor.bedroom_temperature
+                  name: Bedroom
+                - entity: sensor.hall_temperature
+                  name: Hall
+                - entity: sensor.guest_bathroom_temperature
+                  name: Guest bath
+                - entity: sensor.garage_audi_a5_sportback_outside_temperature
+                  name: Car
+                - entity: sensor.outside_temperature
+                  name: Outside
+            grid_options:
+              columns: full
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.climate_range
+                state: Week
+            card:
+              <<: *climate_temperature_graph
+              hours_to_show: 168
+            grid_options:
+              columns: full
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.climate_range
+                state: Month
+            card:
+              <<: *climate_temperature_graph
+              hours_to_show: 744
+            grid_options:
+              columns: full
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.climate_range
+                state: Year
+            card:
+              type: statistics-graph
+              period: day
+              days_to_show: 365
+              chart_type: line
+              stat_types:
+                - mean
+              entities:
+                - entity: sensor.home_temperature
+                  name: Home
+                - entity: sensor.bedroom_temperature
+                  name: Bedroom
+                - entity: sensor.hall_temperature
+                  name: Hall
+                - entity: sensor.guest_bathroom_temperature
+                  name: Guest bath
+                - entity: sensor.garage_audi_a5_sportback_outside_temperature
+                  name: Car
+                - entity: sensor.outside_temperature
+                  name: Outside
             grid_options:
               columns: full
 
@@ -437,11 +559,57 @@ views:
             heading: Master bathroom
             icon: mdi:shower-head
           - *thermostat
-          - type: history-graph
-            hours_to_show: 24
-            entities:
-              - entity: climate.thermostat_master_local
-                name: Thermostat
+          # Climate entities have no long-term statistics, so Year shows only the air sensor of this thermostat
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.climate_range
+                state: Day
+            card: &climate_master_graph
+              type: history-graph
+              hours_to_show: 24
+              entities:
+                - entity: climate.thermostat_master_local
+                  name: Thermostat
+            grid_options:
+              columns: full
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.climate_range
+                state: Week
+            card:
+              <<: *climate_master_graph
+              hours_to_show: 168
+            grid_options:
+              columns: full
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.climate_range
+                state: Month
+            card:
+              <<: *climate_master_graph
+              hours_to_show: 744
+            grid_options:
+              columns: full
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.climate_range
+                state: Year
+            card:
+              type: statistics-graph
+              period: day
+              days_to_show: 365
+              chart_type: line
+              stat_types:
+                - mean
+                - min
+                - max
+              entities:
+                - entity: sensor.bedroom_temperature
+                  name: Air
             grid_options:
               columns: full
           - <<: *toggle
@@ -500,11 +668,57 @@ views:
             icon: mdi:shower
           - <<: *thermostat
             entity: climate.thermostat_guest_local
-          - type: history-graph
-            hours_to_show: 24
-            entities:
-              - entity: climate.thermostat_guest_local
-                name: Thermostat
+          # Climate entities have no long-term statistics, so Year shows only the air sensor of this thermostat
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.climate_range
+                state: Day
+            card: &climate_guest_graph
+              type: history-graph
+              hours_to_show: 24
+              entities:
+                - entity: climate.thermostat_guest_local
+                  name: Thermostat
+            grid_options:
+              columns: full
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.climate_range
+                state: Week
+            card:
+              <<: *climate_guest_graph
+              hours_to_show: 168
+            grid_options:
+              columns: full
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.climate_range
+                state: Month
+            card:
+              <<: *climate_guest_graph
+              hours_to_show: 744
+            grid_options:
+              columns: full
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.climate_range
+                state: Year
+            card:
+              type: statistics-graph
+              period: day
+              days_to_show: 365
+              chart_type: line
+              stat_types:
+                - mean
+                - min
+                - max
+              entities:
+                - entity: sensor.hall_temperature
+                  name: Air
             grid_options:
               columns: full
           - <<: *toggle

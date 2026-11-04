@@ -1,8 +1,28 @@
+# The range picker of the Climate tab
+input_select:
+  climate_range:
+    name: Climate range
+    icon: mdi:calendar-range
+    options:
+      - Day
+      - Week
+      - Month
+      - Year
+    initial: Day
+
 # Room temperatures from the bathroom thermostats. Their sensors hang outside, by the bathroom doors,
 # and are set to show the air there, not the floor. The thermostats stay in the bathrooms, these
 # sensors go to the rooms (areas can only be set in the UI, see README)
 template:
   - sensor:
+      # Graphs can't read the weather entity's attribute, so it needs its own sensor
+      - name: Outside temperature
+        unique_id: repo_outside_temperature
+        device_class: temperature
+        state_class: measurement
+        unit_of_measurement: "°C"
+        state: "{{ state_attr('weather.forecast_home_assistant', 'temperature') }}"
+        availability: "{{ state_attr('weather.forecast_home_assistant', 'temperature') is number }}"
       - name: Bedroom temperature
         unique_id: repo_bedroom_temperature
         device_class: temperature
