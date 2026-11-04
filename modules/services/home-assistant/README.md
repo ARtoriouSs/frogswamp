@@ -64,7 +64,8 @@ Scripts → `config/scripts/<name>.yaml` (mapping). Helpers/template sensors →
 | Printer ink low | A cartridge drops below 15% |
 | Fridge or freezer door open | The fridge door is open for 3 min, or the freezer door for 1 min. Works without Arm mode |
 | Fridge filter | `sensor.fridge_filter_capacity` drops below 5%. Sent once, about 18 days before the year ends |
-| Car part due | A car service row drops below 5%. Sent once. Entering a part's km for the first time doesn't alert, even when it's low, but a later correction that drops it below 5% does |
+| Car part due | A car service row drops below 2000 km left, or reaches 29 days left (checked at 10:00). Each is sent once. A part that's already past a limit stays silent until it's reset; only its card shows it |
+| AdBlue low | The car's AdBlue range drops below 2000 km |
 | Car fuel low | The reported fuel level drops below 10%. The car reports hours late, so the real level can be lower |
 
 ## Schedule
