@@ -121,6 +121,8 @@ template:
         state: "{{ not is_state('sensor.garage_audi_a5_sportback_range', 'unavailable') }}"
         attributes: *uptime_attributes
 
+# A ratio divides by the whole window, so time before an entity's first recorded state would count as online.
+# The Week and Month windows start no earlier than that state, the dates do nothing once the window has passed them
 sensor:
   - platform: history_stats
     name: Blinds right offline day
@@ -137,18 +139,16 @@ sensor:
     entity_id: cover.blinds_right_local
     state: unavailable
     type: ratio
+    start: "{{ max(now() - timedelta(hours=168), '2026-11-01T16:55:22+01:00' | as_datetime) }}"
     end: *uptime_end
-    duration:
-      hours: 168
   - platform: history_stats
     name: Blinds right offline month
     unique_id: repo_uptime_blinds_right_offline_month
     entity_id: cover.blinds_right_local
     state: unavailable
     type: ratio
+    start: "{{ max(now() - timedelta(hours=744), '2026-11-01T16:55:22+01:00' | as_datetime) }}"
     end: *uptime_end
-    duration:
-      hours: 744
   - platform: history_stats
     name: Blinds middle offline day
     unique_id: repo_uptime_blinds_middle_offline_day
@@ -164,18 +164,16 @@ sensor:
     entity_id: cover.blinds_middle_local
     state: unavailable
     type: ratio
+    start: "{{ max(now() - timedelta(hours=168), '2026-11-01T16:29:19+01:00' | as_datetime) }}"
     end: *uptime_end
-    duration:
-      hours: 168
   - platform: history_stats
     name: Blinds middle offline month
     unique_id: repo_uptime_blinds_middle_offline_month
     entity_id: cover.blinds_middle_local
     state: unavailable
     type: ratio
+    start: "{{ max(now() - timedelta(hours=744), '2026-11-01T16:29:19+01:00' | as_datetime) }}"
     end: *uptime_end
-    duration:
-      hours: 744
   - platform: history_stats
     name: Blinds left door offline day
     unique_id: repo_uptime_blinds_left_door_offline_day
@@ -191,18 +189,16 @@ sensor:
     entity_id: cover.blinds_left_door_local
     state: unavailable
     type: ratio
+    start: "{{ max(now() - timedelta(hours=168), '2026-11-01T16:48:44+01:00' | as_datetime) }}"
     end: *uptime_end
-    duration:
-      hours: 168
   - platform: history_stats
     name: Blinds left door offline month
     unique_id: repo_uptime_blinds_left_door_offline_month
     entity_id: cover.blinds_left_door_local
     state: unavailable
     type: ratio
+    start: "{{ max(now() - timedelta(hours=744), '2026-11-01T16:48:44+01:00' | as_datetime) }}"
     end: *uptime_end
-    duration:
-      hours: 744
   - platform: history_stats
     name: Tv offline day
     unique_id: repo_uptime_tv_offline_day
@@ -227,9 +223,8 @@ sensor:
     entity_id: media_player.living_room_philips_tv
     state: unavailable
     type: ratio
+    start: "{{ max(now() - timedelta(hours=744), '2026-10-16T05:45:34+02:00' | as_datetime) }}"
     end: *uptime_end
-    duration:
-      hours: 744
   - platform: history_stats
     name: Fridge offline day
     unique_id: repo_uptime_fridge_offline_day
@@ -254,9 +249,8 @@ sensor:
     entity_id: sensor.living_room_refrigerator_fridge_temperature
     state: unavailable
     type: ratio
+    start: "{{ max(now() - timedelta(hours=744), '2026-10-24T02:09:22+02:00' | as_datetime) }}"
     end: *uptime_end
-    duration:
-      hours: 744
   - platform: history_stats
     name: Curtains offline day
     unique_id: repo_uptime_curtains_offline_day
@@ -272,18 +266,16 @@ sensor:
     entity_id: cover.curtains_local
     state: unavailable
     type: ratio
+    start: "{{ max(now() - timedelta(hours=168), '2026-11-01T16:56:21+01:00' | as_datetime) }}"
     end: *uptime_end
-    duration:
-      hours: 168
   - platform: history_stats
     name: Curtains offline month
     unique_id: repo_uptime_curtains_offline_month
     entity_id: cover.curtains_local
     state: unavailable
     type: ratio
+    start: "{{ max(now() - timedelta(hours=744), '2026-11-01T16:56:21+01:00' | as_datetime) }}"
     end: *uptime_end
-    duration:
-      hours: 744
   - platform: history_stats
     name: Desk offline day
     unique_id: repo_uptime_desk_offline_day
@@ -308,9 +300,8 @@ sensor:
     entity_id: switch.desk_child_lock
     state: unavailable
     type: ratio
+    start: "{{ max(now() - timedelta(hours=744), '2026-10-16T23:51:25+02:00' | as_datetime) }}"
     end: *uptime_end
-    duration:
-      hours: 744
   - platform: history_stats
     name: Cube offline day
     unique_id: repo_uptime_cube_offline_day
@@ -335,9 +326,8 @@ sensor:
     entity_id: light.cube_matrix_192_168_101_121
     state: unavailable
     type: ratio
+    start: "{{ max(now() - timedelta(hours=744), '2026-10-25T19:30:59+01:00' | as_datetime) }}"
     end: *uptime_end
-    duration:
-      hours: 744
   - platform: history_stats
     name: PC offline day
     unique_id: repo_uptime_pc_offline_day
@@ -353,18 +343,16 @@ sensor:
     entity_id: binary_sensor.pc_ping
     state: "off"
     type: ratio
+    start: "{{ max(now() - timedelta(hours=168), '2026-11-02T22:14:31+01:00' | as_datetime) }}"
     end: *uptime_end
-    duration:
-      hours: 168
   - platform: history_stats
     name: PC offline month
     unique_id: repo_uptime_pc_offline_month
     entity_id: binary_sensor.pc_ping
     state: "off"
     type: ratio
+    start: "{{ max(now() - timedelta(hours=744), '2026-11-02T22:14:31+01:00' | as_datetime) }}"
     end: *uptime_end
-    duration:
-      hours: 744
   - platform: history_stats
     name: Printer offline day
     unique_id: repo_uptime_printer_offline_day
@@ -389,9 +377,8 @@ sensor:
     entity_id: sensor.office_printer
     state: unavailable
     type: ratio
+    start: "{{ max(now() - timedelta(hours=744), '2026-10-16T18:22:36+02:00' | as_datetime) }}"
     end: *uptime_end
-    duration:
-      hours: 744
   - platform: history_stats
     name: Guest thermostat offline day
     unique_id: repo_uptime_guest_thermostat_offline_day
@@ -407,18 +394,16 @@ sensor:
     entity_id: climate.thermostat_guest_local
     state: unavailable
     type: ratio
+    start: "{{ max(now() - timedelta(hours=168), '2026-11-01T16:57:53+01:00' | as_datetime) }}"
     end: *uptime_end
-    duration:
-      hours: 168
   - platform: history_stats
     name: Guest thermostat offline month
     unique_id: repo_uptime_guest_thermostat_offline_month
     entity_id: climate.thermostat_guest_local
     state: unavailable
     type: ratio
+    start: "{{ max(now() - timedelta(hours=744), '2026-11-01T16:57:53+01:00' | as_datetime) }}"
     end: *uptime_end
-    duration:
-      hours: 744
   - platform: history_stats
     name: Guest towel heat offline day
     unique_id: repo_uptime_guest_towel_heat_offline_day
@@ -443,9 +428,8 @@ sensor:
     entity_id: climate.guest_bathroom_towel_heat_guest
     state: unavailable
     type: ratio
+    start: "{{ max(now() - timedelta(hours=744), '2026-10-16T23:51:25+02:00' | as_datetime) }}"
     end: *uptime_end
-    duration:
-      hours: 744
   - platform: history_stats
     name: Master thermostat offline day
     unique_id: repo_uptime_master_thermostat_offline_day
@@ -461,18 +445,16 @@ sensor:
     entity_id: climate.thermostat_master_local
     state: unavailable
     type: ratio
+    start: "{{ max(now() - timedelta(hours=168), '2026-11-01T16:59:04+01:00' | as_datetime) }}"
     end: *uptime_end
-    duration:
-      hours: 168
   - platform: history_stats
     name: Master thermostat offline month
     unique_id: repo_uptime_master_thermostat_offline_month
     entity_id: climate.thermostat_master_local
     state: unavailable
     type: ratio
+    start: "{{ max(now() - timedelta(hours=744), '2026-11-01T16:59:04+01:00' | as_datetime) }}"
     end: *uptime_end
-    duration:
-      hours: 744
   - platform: history_stats
     name: Master towel heat relay offline day
     unique_id: repo_uptime_master_towel_heat_relay_offline_day
@@ -497,9 +479,8 @@ sensor:
     entity_id: switch.master_bathroom_towel_heat_relay
     state: unavailable
     type: ratio
+    start: "{{ max(now() - timedelta(hours=744), '2026-10-24T17:00:01+02:00' | as_datetime) }}"
     end: *uptime_end
-    duration:
-      hours: 744
   - platform: history_stats
     name: Router offline day
     unique_id: repo_uptime_router_offline_day
@@ -524,9 +505,8 @@ sensor:
     entity_id: binary_sensor.huawei_igd_wan_status
     state: unavailable
     type: ratio
+    start: "{{ max(now() - timedelta(hours=744), '2026-10-17T00:10:28+02:00' | as_datetime) }}"
     end: *uptime_end
-    duration:
-      hours: 744
   - platform: history_stats
     name: Zigbee bridge offline day
     unique_id: repo_uptime_zigbee_bridge_offline_day
@@ -557,9 +537,8 @@ sensor:
       - "off"
       - "unavailable"
     type: ratio
+    start: "{{ max(now() - timedelta(hours=744), '2026-10-17T15:43:04+02:00' | as_datetime) }}"
     end: *uptime_end
-    duration:
-      hours: 744
   - platform: history_stats
     name: Audi offline day
     unique_id: repo_uptime_audi_offline_day
@@ -584,6 +563,5 @@ sensor:
     entity_id: sensor.garage_audi_a5_sportback_range
     state: unavailable
     type: ratio
+    start: "{{ max(now() - timedelta(hours=744), '2026-10-24T16:25:50+02:00' | as_datetime) }}"
     end: *uptime_end
-    duration:
-      hours: 744
