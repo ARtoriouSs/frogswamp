@@ -11,14 +11,14 @@ template:
         turn_off:
           - action: script.curtains_open
 
-      # Through script.floor_warming_set, like the schedule: on = manual at 45 °C, off = manual at 5 °C.
-      # On while the thermostat heats in manual mode to more than 5 °C
+      # Through script.floor_warming_set, like the schedule: on = manual at 30 °C, off = manual at 18 °C.
+      # On while the thermostat heats in manual mode to more than 18 °C
       - name: Guest floor warming
         unique_id: repo_neonplan_guest_floor_warming
         icon: mdi:heating-coil
         state: >-
           {{ is_state('climate.thermostat_guest_local', 'heat')
-             and state_attr('climate.thermostat_guest_local', 'temperature') | float(0) > 5 }}
+             and state_attr('climate.thermostat_guest_local', 'temperature') | float(0) > 18 }}
         turn_on:
           - action: script.floor_warming_set
             data:
@@ -35,7 +35,7 @@ template:
         icon: mdi:heating-coil
         state: >-
           {{ is_state('climate.thermostat_master_local', 'heat')
-             and state_attr('climate.thermostat_master_local', 'temperature') | float(0) > 5 }}
+             and state_attr('climate.thermostat_master_local', 'temperature') | float(0) > 18 }}
         turn_on:
           - action: script.floor_warming_set
             data:

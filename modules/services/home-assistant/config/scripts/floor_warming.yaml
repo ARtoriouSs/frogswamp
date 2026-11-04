@@ -1,5 +1,5 @@
-# Bathroom floors through Tuya Local, in place of the Tuya cloud scenes. Same as the scenes did:
-# the thermostat on in manual mode (heat), 45 °C for on, 5 °C for off
+# Bathroom floors through Tuya Local, in place of the Tuya cloud scenes:
+# the thermostat on in manual mode (heat), 30 °C for on, 18 °C for off
 floor_warming_set:
   alias: "Floor warming: on or off"
   icon: mdi:heating-coil
@@ -25,4 +25,4 @@ floor_warming_set:
       target:
         entity_id: "{{ thermostat }}"
       data:
-        temperature: "{{ 45 if state == 'on' else 5 }}"
+        temperature: "{{ 30 if state == 'on' else 18 }}"
