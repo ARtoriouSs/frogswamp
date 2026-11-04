@@ -1,0 +1,16 @@
+# Accepted work meetings raise the desk, automations/work_meetings.yaml. They come from the work-calendar
+# service, which filters the work calendar, through the Remote Calendar integration added in the UI
+input_boolean:
+  work_meetings_paused:
+    name: Work meetings paused
+    icon: mdi:account-group-outline
+
+rest:
+  - resource: http://127.0.0.1:8129/status
+    scan_interval: 300
+    sensor:
+      - name: Work calendar last read
+        unique_id: repo_work_calendar_last_read
+        device_class: timestamp
+        icon: mdi:calendar-sync
+        value_template: "{{ value_json.last_read }}"

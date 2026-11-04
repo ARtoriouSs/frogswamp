@@ -96,6 +96,10 @@
         "voice/claude_oauth_token".restartUnits = [ "voice-bridge.service" ];
         "voice/ha_token".restartUnits = [ "voice-bridge.service" ];
       })
+      (lib.mkIf config.frogswamp.workCalendar.enable {
+        "work_calendar/ical_url".restartUnits = [ "work-calendar.service" ];
+        "work_calendar/email".restartUnits = [ "work-calendar.service" ];
+      })
       # Later tasks append blocks here, one per module:
       # (lib.mkIf config.frogswamp.<module>.enable { ... })
     ];
@@ -151,6 +155,10 @@
     voice = {
       claudeTokenFile = lib.mkDefault config.sops.secrets."voice/claude_oauth_token".path;
       haTokenFile = lib.mkDefault config.sops.secrets."voice/ha_token".path;
+    };
+    workCalendar = {
+      urlFile = lib.mkDefault config.sops.secrets."work_calendar/ical_url".path;
+      emailFile = lib.mkDefault config.sops.secrets."work_calendar/email".path;
     };
     # Later tasks add their secret file options here.
   };

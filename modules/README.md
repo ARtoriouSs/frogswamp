@@ -12,6 +12,7 @@ Each module does one thing and is switched on in `hosts/frogswamp/default.nix` (
 | `services/mqtt.nix` | Mosquitto (localhost) + Zigbee2MQTT | 8080 |
 | `services/jellyfin.nix` | Jellyfin, QuickSync, `/srv/media` folders | 8096 |
 | `services/samba.nix` | `media` network share | 445 |
+| `services/work-calendar/` | Accepted work meetings from a secret calendar link, for HA | 8129 (localhost) |
 | `services/homepage.nix` | Start page with links and widgets | 8082 |
 | `services/qbittorrent.nix` | Torrent client: sequential downloads, stops seeding at completion | 8090, 51413 |
 | `services/arr.nix` | Radarr, Sonarr, Prowlarr, Bazarr | 7878, 8989, 9696, 6767 |

@@ -71,6 +71,24 @@
       mm...
       .mm..
 
+- name: meeting
+  size: 5x5
+  palette: {b: '#1e78ff', w: '#ffffff', d: '#0a2a5a', g: '#3a3a3a'}
+  fps: 2
+  frames:
+    - |
+      bbbbb
+      wwwww
+      wbwbw
+      wwwww
+      wbwww
+    - |
+      ddddd
+      ggggg
+      gdgdg
+      ggggg
+      gdggg
+
 - name: play
   size: 5x5
   palette: {x: '#ffffff'}

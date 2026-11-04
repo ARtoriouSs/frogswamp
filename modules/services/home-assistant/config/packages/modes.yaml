@@ -13,7 +13,9 @@ input_boolean:
 
 # calendar.home_assistant_events comes from Remote Calendar, added in the UI (its secret link stays in HA storage).
 # All-day events count, titled "Vacation" or "Day off". Case, spaces and dashes in the title don't matter.
-# Keeps the last known days if the calendar can't be read
+# A day off is also an all-day "Out of Office" in calendar.work_meetings (packages/work_meetings.yaml), or any day
+# that the Workday integration says isn't a workday, so weekends and holidays turn the Day off switch on.
+# Each source keeps its last known days if it can't be read
 template:
   - triggers:
       - trigger: time_pattern
@@ -25,11 +27,34 @@ template:
     actions:
       - action: calendar.get_events
         target:
-          entity_id: calendar.home_assistant_events
+          entity_id:
+            - calendar.home_assistant_events
+            - calendar.work_meetings
         data:
           start_date_time: "{{ today_at() }}"
           end_date_time: "{{ today_at() + timedelta(days=3) }}"
         response_variable: calendar_events
+        continue_on_error: true
+      - action: workday.check_date
+        target:
+          entity_id: binary_sensor.workday_sensor_pl
+        data:
+          check_date: "{{ now().date() + timedelta(days=0) }}"
+        response_variable: workday_0
+        continue_on_error: true
+      - action: workday.check_date
+        target:
+          entity_id: binary_sensor.workday_sensor_pl
+        data:
+          check_date: "{{ now().date() + timedelta(days=1) }}"
+        response_variable: workday_1
+        continue_on_error: true
+      - action: workday.check_date
+        target:
+          entity_id: binary_sensor.workday_sensor_pl
+        data:
+          check_date: "{{ now().date() + timedelta(days=2) }}"
+        response_variable: workday_2
         continue_on_error: true
       - variables:
           modes: >-
@@ -54,13 +79,47 @@ template:
             {% else %}
               {{ none }}
             {% endif %}
+          out_of_office: >-
+            {% set entity = 'calendar.work_meetings' %}
+            {% if calendar_events is defined and entity in calendar_events %}
+              {% set ns = namespace(days=[]) %}
+              {% for event in calendar_events[entity].events
+                 if event.start | length == 10 and event.summary | lower | regex_replace('[\\s-]+', '') == 'outofoffice' %}
+                {% for offset in range(3) %}
+                  {% set day = (now().date() + timedelta(days=offset)) | string %}
+                  {% if event.start <= day < event.end %}
+                    {% set ns.days = ns.days + [day] %}
+                  {% endif %}
+                {% endfor %}
+              {% endfor %}
+              {{ ns.days | unique | sort }}
+            {% else %}
+              {{ none }}
+            {% endif %}
+          non_working: >-
+            {% set entity = 'binary_sensor.workday_sensor_pl' %}
+            {% if workday_0 is defined and workday_1 is defined and workday_2 is defined %}
+              {% set ns = namespace(days=[]) %}
+              {% for offset, answer in [(0, workday_0), (1, workday_1), (2, workday_2)] if not answer[entity].workday %}
+                {% set ns.days = ns.days + [(now().date() + timedelta(days=offset)) | string] %}
+              {% endfor %}
+              {{ ns.days }}
+            {% else %}
+              {{ none }}
+            {% endif %}
     sensor:
       - name: Calendar modes
         unique_id: repo_calendar_modes
         icon: mdi:calendar-check
-        state: "{{ (modes.day_off + modes.vacation) | length if modes else this.state }}"
+        state: "{{ (modes.day_off + modes.vacation) | length if modes else this.state | int(0) }}"
         attributes:
-          day_off: "{{ modes.day_off if modes else this.attributes.get('day_off', []) }}"
+          day_off_events: "{{ modes.day_off if modes else this.attributes.get('day_off_events', []) }}"
+          out_of_office: "{{ out_of_office if out_of_office is not none else this.attributes.get('out_of_office', []) }}"
+          non_working: "{{ non_working if non_working is not none else this.attributes.get('non_working', []) }}"
+          day_off: >-
+            {{ ((modes.day_off if modes else this.attributes.get('day_off_events', []))
+                + (out_of_office if out_of_office is not none else this.attributes.get('out_of_office', []))
+                + (non_working if non_working is not none else this.attributes.get('non_working', []))) | unique | sort }}
           vacation: "{{ modes.vacation if modes else this.attributes.get('vacation', []) }}"
 
   - binary_sensor:

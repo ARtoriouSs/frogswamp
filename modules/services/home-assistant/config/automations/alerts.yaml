@@ -118,6 +118,24 @@
             data:
               tag: integration-down
 
+# The desk stops following new meetings without this, for example after the secret link was reset
+- id: repo_alert_work_calendar
+  alias: "Alert: work calendar is old"
+  description: The work-calendar service hasn't read the calendar for 2 hours. It isn't read during a day off
+  triggers:
+    - trigger: template
+      value_template: >-
+        {% set t = as_timestamp(states('sensor.work_calendar_last_read'), none) %}
+        {{ is_state('input_boolean.day_off', 'off') and (t is none or now().timestamp() - t > 2 * 3600) }}
+      for: "00:30:00"
+  actions:
+    - action: notify.mobile_app_pixel_7
+      data:
+        title: Work calendar is old
+        message: "New meetings don't reach the desk. Check: just ssh journalctl -u work-calendar"
+        data:
+          tag: work-calendar
+
 - id: repo_alert_zigbee_bridge
   alias: "Alert: Zigbee bridge down"
   description: Zigbee2MQTT is disconnected for 10 minutes

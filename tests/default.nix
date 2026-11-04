@@ -20,6 +20,8 @@ in
   test-arr = call ./arr.nix;
   test-media-provision = call ./media-provision.nix;
   test-media-janitor = call ./media-janitor.nix;
+  test-work-calendar = call ./work-calendar.nix;
+  test-work-calendar-service = call ./work-calendar-service.nix;
   test-football-unit = call ./football-unit.nix;
   test-voice-bridge-unit = call ./voice-bridge-unit.nix;
   test-voice = call ./voice.nix;

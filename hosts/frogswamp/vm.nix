@@ -26,6 +26,7 @@
     acestream.enable = lib.mkForce false; # needs the internet for its image
     matterServer.enable = lib.mkForce false; # same
     musicAssistant.enable = lib.mkForce false; # same
+    workCalendar.enable = lib.mkForce false; # same
     football = {
       kodi.passwordFile = lib.mkForce "/etc/vm-dummy-secret";
       haTokenFile = lib.mkForce "/etc/vm-dummy-secret";

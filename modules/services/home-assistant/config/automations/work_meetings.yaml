@@ -1,0 +1,79 @@
+# Remote Calendar reads its link only once a day by itself. A missing calendar must not stop the automation.
+# The work calendar isn't read during a day off, so changes made then count only when it ends
+- id: repo_work_meetings_refresh
+  alias: "Work meetings: refresh the calendar"
+  triggers:
+    - trigger: time_pattern
+      minutes: /5
+  conditions:
+    - condition: state
+      entity_id: input_boolean.day_off
+      state: "off"
+  actions:
+    - action: homeassistant.update_entity
+      continue_on_error: true
+      target:
+        entity_id: calendar.work_meetings
+
+# A lease for each meeting. It runs 1 minute past the end, so the next meeting of a back-to-back pair can extend it
+# before the desk goes down. Only a new meeting asks: the same one doesn't, so Desk down during a meeting stays down.
+# script.desk_lease skips it while Aleksander is away
+- id: repo_work_meetings_desk
+  alias: "Work meetings: desk up"
+  mode: queued
+  triggers:
+    - trigger: state
+      entity_id: calendar.work_meetings
+  conditions:
+    - condition: state
+      entity_id:
+        - input_boolean.work_meetings_paused
+        - input_boolean.day_off
+        - input_boolean.vacation
+      state: "off"
+    - >-
+      {{ trigger.to_state.state == 'on'
+         and not trigger.to_state.attributes.get('all_day', false)
+         and (trigger.from_state is none
+              or trigger.from_state.state != 'on'
+              or trigger.from_state.attributes.get('end_time') != trigger.to_state.attributes.get('end_time')
+              or trigger.from_state.attributes.get('message') != trigger.to_state.attributes.get('message')) }}
+  actions:
+    - variables:
+        seconds: "{{ (as_local(as_datetime(trigger.to_state.attributes.end_time)) - now()).total_seconds() | int + 60 }}"
+    - condition: template
+      value_template: "{{ seconds > 60 }}"
+    - action: script.desk_lease
+      data:
+        duration: "{{ seconds | timestamp_custom('%H:%M:%S', false) }}"
+
+# Only for meetings that will raise the desk, and not while the cube is quiet
+- id: repo_work_meetings_cube
+  alias: "Work meetings: sign on the cube"
+  description: The meeting sign, 10 minutes before a meeting
+  mode: queued
+  triggers:
+    - trigger: calendar
+      entity_id: calendar.work_meetings
+      event: start
+      offset: "-00:10:00"
+  conditions:
+    - condition: state
+      entity_id:
+        - input_boolean.work_meetings_paused
+        - input_boolean.day_off
+        - input_boolean.vacation
+        - input_boolean.cube_night
+        - input_boolean.nobody_home
+      state: "off"
+    - condition: state
+      entity_id: binary_sensor.desk_automations_allowed
+      state: "on"
+    # Out of Office
+    - "{{ not trigger.calendar_event.all_day }}"
+  actions:
+    - action: script.cube_event
+      data:
+        preset: meeting
+        repeat: forever
+        duration: 30

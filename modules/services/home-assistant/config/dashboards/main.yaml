@@ -881,12 +881,13 @@ views:
           - type: heading
             heading: Calendar
             icon: mdi:calendar-month
-          # Public holidays, and the days off and vacations
+          # Public holidays, the days off and vacations, and the meetings that raise the desk
           - type: calendar
             initial_view: dayGridMonth
             entities:
               - calendar.holidays_in_poland
               - calendar.home_assistant_events
+              - calendar.work_meetings
             grid_options:
               columns: full
               rows: 10
@@ -932,6 +933,15 @@ views:
             entity: automation.desk_schedule
             primary: Standing breaks
             icon: mdi:desk
+            grid_options:
+              columns: 12
+              rows: 1
+          - <<: *sched_toggle
+            entity: input_boolean.work_meetings_paused
+            primary: Work meetings
+            secondary: "{{ 'Paused' if is_state(entity, 'on') else 'Running' }}"
+            icon: mdi:account-group
+            color: "{{ 'amber' if is_state(entity, 'on') else 'green' }}"
             grid_options:
               columns: 12
               rows: 1
