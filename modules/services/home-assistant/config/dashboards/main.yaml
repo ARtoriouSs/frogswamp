@@ -2784,11 +2784,17 @@ views:
               target:
                 entity_id: button.garage_audi_a5_sportback_refresh_data
           - type: heading
+            heading: Service
+            icon: mdi:wrench
+          - type: heading
+            heading: Tap a service to reset it to today's date and the current mileage
+            heading_style: subtitle
+          - type: heading
             heading: Records
             heading_style: subtitle
           - type: custom:mushroom-template-card
             primary: Edit dates and km
-            secondary: Tap a part below after changing it
+            secondary: Correct a service by hand
             icon: mdi:pencil
             color: grey
             grid_options:
@@ -2810,33 +2816,46 @@ views:
               action: url
               url_path: https://app.notion.com/p/History-and-service-28f5a7bba4ca467e92b31a9f319244bb
           - type: heading
-            heading: Oil and filters
+            heading: Inspection
             heading_style: subtitle
           - &car_part
             type: custom:mushroom-template-card
-            entity: sensor.car_oil
-            primary: Oil & filter
+            entity: sensor.car_inspection
+            primary: Inspection
             secondary: >-
               {% set km = state_attr(entity, 'km_left') %}{% set days = state_attr(entity, 'days_left') %}
               {% if not has_value(entity) %}No data{% else %}{{ states(entity) | float(0) | round(0) | int }}%
               {%- if km is not none %} · {{ km | abs }} km {{ 'left' if km >= 0 else 'over' }}{% endif %}
-              {%- if days is not none %} · {{ days | abs }} days {{ 'left' if days >= 0 else 'over' }}{% endif %}{% endif %}
-            icon: mdi:oil
+              {%- if days is not none %} · {{ days | abs }} days {{ 'left' if days >= 0 else 'over' }}{% endif %}
+              {%- from 'car_parts.jinja' import last_service %}{{ last_service(entity | replace('sensor.car_', '')) }}{% endif %}
+            icon: mdi:clipboard-check
             color: >-
               {% set capacity = states(entity) | float(-1) %}
               {{ 'disabled' if capacity < 0 else ('red' if capacity < 10 else ('yellow' if capacity < 40 else 'green')) }}
+            multiline_secondary: true
             grid_options:
               columns: 12
-              rows: 1
+              rows: auto
             tap_action: &car_part_tap
               action: perform-action
               perform_action: script.car_part_reset
               data:
-                part: oil
+                part: inspection
               confirmation:
                 text: Part changed? This saves today's date and the current odometer.
             hold_action:
               action: more-info
+          - type: heading
+            heading: Oil and filters
+            heading_style: subtitle
+          - <<: *car_part
+            entity: sensor.car_oil
+            primary: Oil & filter
+            icon: mdi:oil
+            tap_action:
+              <<: *car_part_tap
+              data:
+                part: oil
           - <<: *car_part
             entity: sensor.car_air_filter
             primary: Air filter
@@ -2869,7 +2888,9 @@ views:
             <<: *car_part
             entity: sensor.car_front_pads
             primary: Front pads
-            secondary: "{{ states(entity) | int(0) ~ ' km since the change' if has_value(entity) else 'Not recorded' }}"
+            secondary: >-
+              {% from 'car_parts.jinja' import last_service %}
+              {{ states(entity) | int(0) ~ ' km since the change' ~ last_service(entity | replace('sensor.car_', '')) if has_value(entity) else 'Not recorded' }}
             icon: mdi:car-brake-alert
             color: grey
             tap_action:
@@ -2919,17 +2940,6 @@ views:
               <<: *car_part_tap
               data:
                 part: gearbox_mechanical
-          - type: heading
-            heading: Inspection
-            heading_style: subtitle
-          - <<: *car_part
-            entity: sensor.car_inspection
-            primary: Inspection
-            icon: mdi:clipboard-check
-            tap_action:
-              <<: *car_part_tap
-              data:
-                part: inspection
           - type: heading
             heading: Other
             heading_style: subtitle

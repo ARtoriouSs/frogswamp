@@ -23,3 +23,13 @@
 {% macro km_known(part) -%}
 {{ has_value('sensor.garage_audi_a5_sportback_odometer') and states('input_number.car_' ~ part ~ '_km') | float(0) > 0 }}
 {%- endmacro %}
+
+{# Empty when no km is recorded yet. The inspection has no km, so it shows only the date. No-break spaces keep the separator as it is #}
+{% macro last_service(part) -%}
+{%- set km = states('input_number.car_' ~ part ~ '_km') | float(0) | int -%}
+{%- set has_km = has_value('input_number.car_' ~ part ~ '_km') -%}
+{%- set changed = states('input_datetime.car_' ~ part ~ '_changed') | as_datetime(none) -%}
+{%- if changed is not none and (km > 0 or not has_km) -%}
+{{- '  |  Last service: ' ~ (km ~ ' km, ' if has_km else '') ~ changed.strftime('%d.%m.%Y') -}}
+{%- endif -%}
+{%- endmacro %}
