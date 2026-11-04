@@ -36,16 +36,8 @@
     - trigger: state
       id: device
       entity_id:
-        - light.cube_matrix_192_168_101_121
         - remote.living_room_philips_tv
         - switch.master_bathroom_towel_heat_relay
-        - binary_sensor.garage_audi_a5_sportback_doors_locked
-        - binary_sensor.garage_audi_a5_sportback_trunk_locked
-        - binary_sensor.garage_audi_a5_sportback_doors_open
-        - binary_sensor.garage_audi_a5_sportback_trunk_open
-        - binary_sensor.garage_audi_a5_sportback_hood_open
-        - binary_sensor.garage_audi_a5_sportback_windows_open
-        - binary_sensor.garage_audi_a5_sportback_sunroof_open
       from:
         - "on"
         - "off"
@@ -86,16 +78,12 @@
   actions:
     - variables:
         change: >-
-          {% set device_class = trigger.to_state.attributes.device_class | default('') %}
-          {% set state = trigger.to_state.state %}
           {% if trigger.id == 'position' %}
             moved to {{ trigger.to_state.attributes.current_position }}%
-          {% elif device_class == 'lock' %}
-            {{ 'unlocked' if state == 'on' else 'locked' }}
-          {% elif device_class in ['door', 'window'] %}
-            {{ 'open' if state == 'on' else 'closed' }}
+          {% elif trigger.id == 'door' %}
+            open
           {% else %}
-            turned {{ 'off' if state == 'off' else 'on' }}
+            turned {{ 'off' if trigger.to_state.state == 'off' else 'on' }}
           {% endif %}
     - action: notify.mobile_app_pixel_7
       data:

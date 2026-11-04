@@ -104,7 +104,7 @@ HA reads the calendar through **Remote Calendar**, added in the UI with the cale
 
 `input_boolean.arm_mode`, the button on the Security tab. A `Vacation` all-day event in `Home Assistant Events` turns it on when the event starts and off when it ends. The Vacation switch, Day off and the work calendar don't change it. Turned off by hand during a vacation, it stays off. Turned on by hand, it stays on until it is turned off, or until a Vacation event ends.
 
-While it is on, `config/automations/security.yaml` sends a phone alert with the `🚨 ARM MODE:` title when the fridge or freezer door opens, or when a listed device changes: the cube, TV, thermostats, towel heat, blinds, curtains, and the car's locks, doors, windows and sunroof. Going unavailable and temperatures don't count. **Add new devices to its list.** It starts 2 minutes after Arm mode turns on, and again 2 minutes after an HA restart, so what Vacation itself turns off doesn't alert. Schedules still count: with Arm mode on by hand and no Vacation, a blind opening by its schedule sends an alert too. Car alerts come as late as the car's data does.
+While it is on, `config/automations/security.yaml` sends a phone alert with the `🚨 ARM MODE:` title when the fridge or freezer door opens, or when a listed device changes: the TV, thermostats, towel heat, blinds and curtains. The cube and the car aren't listed. Going unavailable and temperatures don't count. **Add new devices to its list.** It starts 2 minutes after Arm mode turns on, and again 2 minutes after an HA restart, so what Vacation itself turns off doesn't alert. Schedules still count: with Arm mode on by hand and no Vacation, a blind opening by its schedule sends an alert too.
 
 ## Room temperatures
 
