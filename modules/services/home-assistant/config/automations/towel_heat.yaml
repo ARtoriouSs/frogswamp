@@ -63,3 +63,20 @@
         - action: script.heat_lease
           data:
             device: towel_master
+
+# Guest towel heat gets its full target on every turn on, from any place: card, voice, button, app or the device.
+# A target changed later in the same run stays until the next turn on
+- id: repo_towel_heat_guest_target
+  alias: "Towel heat: guest target on turn on"
+  description: Sets the guest towel heat target to 35 °C each time it turns on
+  triggers:
+    - trigger: state
+      entity_id: climate.guest_bathroom_towel_heat_guest
+      from: "off"
+      to: "heat"
+  actions:
+    - action: climate.set_temperature
+      target:
+        entity_id: climate.guest_bathroom_towel_heat_guest
+      data:
+        temperature: 35
