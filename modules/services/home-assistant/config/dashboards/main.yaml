@@ -2821,9 +2821,11 @@ views:
             tap_action:
               action: url
               url_path: https://app.notion.com/p/History-and-service-28f5a7bba4ca467e92b31a9f319244bb
-          - type: heading
-            heading: Inspection
-            heading_style: subtitle
+          - type: custom:frog-hint-card
+            items:
+              - label: Inspection
+                hint: |-
+                  Inspection: 365 days, no km limit
           - &car_part
             type: custom:mushroom-template-card
             entity: sensor.car_inspection
@@ -2852,9 +2854,15 @@ views:
                 text: Part changed? This saves today's date and the current odometer.
             hold_action:
               action: more-info
-          - type: heading
-            heading: Oil and filters
-            heading_style: subtitle
+          - type: custom:frog-hint-card
+            items:
+              - label: Oil and filters
+                hint: |-
+                  Whichever comes first:
+                  • Oil and Oil filter: 15 000 km or 365 days. The car also counts it (Car oil sensor)
+                  • Air filter: 20 000 km or 730 days
+                  • Cabin filter: 30 000 km or 730 days
+                  • Fuel filter: 60 000 km, no time limit
           - <<: *car_part
             entity: sensor.car_oil
             primary: Oil and Oil filter
@@ -2887,9 +2895,13 @@ views:
               <<: *car_part_tap
               data:
                 part: fuel_filter
-          - type: heading
-            heading: Brakes
-            heading_style: subtitle
+          - type: custom:frog-hint-card
+            items:
+              - label: Brakes
+                hint: |-
+                  No km or time rule, changed by condition:
+                  • Pads: new ones have about 12 mm, change below about 4 mm. Front pads wear about 2 times faster than rear
+                  • Discs: ask when changing tyres
           # Changed by condition, so there is no percentage, only the km since the change
           - &car_part_km
             <<: *car_part
@@ -2928,9 +2940,12 @@ views:
               <<: *car_part_tap
               data:
                 part: rear_discs
-          - type: heading
-            heading: Gearbox
-            heading_style: subtitle
+          - type: custom:frog-hint-card
+            items:
+              - label: Gearbox
+                hint: |-
+                  • Hydraulic part: 60 000 km, no time limit
+                  • Mechanical part: 120 000 km, no time limit. The Notion table also says it is not needed by the schedule
           - <<: *car_part
             entity: sensor.car_gearbox_hydraulic
             primary: Gearbox oil, hydraulic
@@ -2947,9 +2962,11 @@ views:
               <<: *car_part_tap
               data:
                 part: gearbox_mechanical
-          - type: heading
-            heading: Other
-            heading_style: subtitle
+          - type: custom:frog-hint-card
+            items:
+              - label: Other
+                hint: |-
+                  AdBlue: 15 000 km, no time limit. Refill when the car asks
           - <<: *car_part
             entity: sensor.garage_audi_a5_sportback_adblue_range
             primary: AdBlue
