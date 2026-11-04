@@ -92,7 +92,7 @@ HA reads the calendar through **Remote Calendar**, added in the UI with the cale
 | Mode | Stops |
 |---|---|
 | Day off | desk schedule. Also counts the day as a weekend day for the schedule (late wakeup and bedtime) |
-| Vacation | desk, floor warming, blinds, curtains. Also turns off both floors, guest towel heat and the master towel heat relay, and puts the cube in quiet mode. Nothing turns on again when Vacation ends, everything waits for its next scheduled time (the cube comes back at once, unless it is night) |
+| Vacation | desk, floor warming, blinds, curtains. Also turns off both floor thermostats (the real off mode), guest towel heat and the master towel heat relay, and puts the cube in quiet mode. When Vacation ends the floor thermostats come back in manual mode at 18 °C, which is floor warming off. Nothing else turns on again, everything waits for its next scheduled time (the cube comes back at once, unless it is night) |
 | Guests in the living room | blinds opening in the morning |
 | Nobody home automations paused (`input_boolean.location_paused`) | the nobody-home quiet mode and the count to the Vacation suggestion, which need both people's locations. Turning it on also ends a running away state |
 | Desk location rule paused (`input_boolean.desk_location_paused`) | stops the rule below, so desk automations run while Aleksander is away |

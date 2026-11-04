@@ -1,5 +1,6 @@
 # Vacation on also turns the devices off. The master towel heat relay is turned off in towel_heat.yaml.
-# Nothing here turns them on again: the floors come back with their schedules. The cube stays on
+# Vacation off only wakes the floor thermostats, at the 18 °C of off: the floors heat again with their schedules.
+# Nothing else turns on again. The cube stays on
 - id: repo_modes_vacation_off
   alias: "Modes: devices off on Vacation on"
   mode: queued
@@ -12,6 +13,24 @@
     - action: climate.turn_off
       target:
         entity_id: climate.guest_bathroom_towel_heat_guest
+    - action: script.floor_warming_set
+      data:
+        bathroom: guest
+        state: "off"
+    - action: script.floor_warming_set
+      data:
+        bathroom: master
+        state: "off"
+
+- id: repo_modes_vacation_end_floors
+  alias: "Modes: floor thermostats back on Vacation off"
+  mode: queued
+  triggers:
+    - trigger: state
+      entity_id: input_boolean.vacation
+      from: "on"
+      to: "off"
+  actions:
     - action: script.floor_warming_set
       data:
         bathroom: guest

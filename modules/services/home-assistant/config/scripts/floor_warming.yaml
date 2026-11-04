@@ -1,5 +1,6 @@
 # Bathroom floors through Tuya Local, in place of the Tuya cloud scenes:
-# the thermostat on in manual mode (heat), 30 °C for on, 18 °C for off
+# the thermostat on in manual mode (heat), 30 °C for on, 18 °C for off.
+# During Vacation off is the real off mode, so a cold room can't start the floor
 floor_warming_set:
   alias: "Floor warming: on or off"
   icon: mdi:heating-coil
@@ -16,6 +17,21 @@ floor_warming_set:
   variables:
     thermostat: "climate.thermostat_{{ bathroom }}_local"
   sequence:
+    - if: "{{ state == 'off' and is_state('input_boolean.vacation', 'on') }}"
+      then:
+        # 18 first, so it doesn't start at the old target when Vacation ends
+        - action: climate.set_temperature
+          continue_on_error: true
+          target:
+            entity_id: "{{ thermostat }}"
+          data:
+            temperature: 18
+        - action: climate.set_hvac_mode
+          target:
+            entity_id: "{{ thermostat }}"
+          data:
+            hvac_mode: "off"
+        - stop: Off for Vacation
     - action: climate.set_hvac_mode
       target:
         entity_id: "{{ thermostat }}"
