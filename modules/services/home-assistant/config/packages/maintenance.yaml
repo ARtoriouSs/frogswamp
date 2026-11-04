@@ -60,6 +60,11 @@ input_datetime:
     icon: mdi:calendar-check
     has_date: true
     has_time: false
+  car_adblue_changed:
+    name: AdBlue date
+    icon: mdi:calendar-check
+    has_date: true
+    has_time: false
 
 input_number:
   car_oil_km:
@@ -136,6 +141,14 @@ input_number:
     unit_of_measurement: km
   car_rear_discs_km:
     name: Rear discs km
+    icon: mdi:counter
+    min: 0
+    max: 999999
+    step: 1
+    mode: box
+    unit_of_measurement: km
+  car_adblue_km:
+    name: AdBlue km
     icon: mdi:counter
     min: 0
     max: 999999

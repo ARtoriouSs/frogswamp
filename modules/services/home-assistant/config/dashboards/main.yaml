@@ -816,6 +816,14 @@ views:
           - type: heading
             heading: Garage
             icon: mdi:car
+          - <<: *room_temperature
+            entity: sensor.garage_audi_a5_sportback_outside_temperature
+            primary: Garage / Car
+            icon: mdi:car
+            color: light-blue
+            grid_options:
+              columns: 6
+              rows: 2
           - &climate_car_window
             <<: *info
             entity: binary_sensor.garage_audi_a5_sportback_window_front_left
@@ -2783,12 +2791,10 @@ views:
               perform_action: button.press
               target:
                 entity_id: button.garage_audi_a5_sportback_refresh_data
-          - type: heading
+          - type: custom:frog-hint-card
             heading: Service
             icon: mdi:wrench
-          - type: heading
-            heading: Tap a service to reset it to today's date and the current mileage
-            heading_style: subtitle
+            hint: Tapping a service resets it to today's date and the current mileage. It asks first.
           - type: heading
             heading: Records
             heading_style: subtitle
@@ -2825,8 +2831,9 @@ views:
             secondary: >-
               {% set km = state_attr(entity, 'km_left') %}{% set days = state_attr(entity, 'days_left') %}
               {% if not has_value(entity) %}No data{% else %}{{ states(entity) | float(0) | round(0) | int }}%
-              {%- if km is not none %} · {{ km | abs }} km {{ 'left' if km >= 0 else 'over' }}{% endif %}
-              {%- if days is not none %} · {{ days | abs }} days {{ 'left' if days >= 0 else 'over' }}{% endif %}
+              {%- set left = ([days ~ ' days'] if days is not none and days >= 0 else []) + ([km ~ ' km'] if km is not none and km >= 0 else []) %}
+              {%- set over = ([days | abs ~ ' days'] if days is not none and days < 0 else []) + ([km | abs ~ ' km'] if km is not none and km < 0 else []) %}
+              {{- ' · left: ' ~ left | join(' · ') if left }}{{ ' · over: ' ~ over | join(' · ') if over }}
               {%- from 'car_parts.jinja' import last_service %}{{ last_service(entity | replace('sensor.car_', '')) }}{% endif %}
             icon: mdi:clipboard-check
             color: >-
@@ -2850,7 +2857,7 @@ views:
             heading_style: subtitle
           - <<: *car_part
             entity: sensor.car_oil
-            primary: Oil & filter
+            primary: Oil and Oil filter
             icon: mdi:oil
             tap_action:
               <<: *car_part_tap
@@ -2946,11 +2953,15 @@ views:
           - <<: *car_part
             entity: sensor.garage_audi_a5_sportback_adblue_range
             primary: AdBlue
-            secondary: "{{ states(entity) ~ ' km left' if has_value(entity) else 'Unavailable' }}"
+            secondary: >-
+              {% from 'car_parts.jinja' import last_service %}
+              {{ 'left: ' ~ states(entity) ~ ' km' ~ last_service('adblue') if has_value(entity) else 'Unavailable' }}
             icon: mdi:car-coolant-level
             color: "{{ 'red' if states(entity) | int(99999) < 1000 else 'green' }}"
             tap_action:
-              action: more-info
+              <<: *car_part_tap
+              data:
+                part: adblue
 
   # Opened from the Edit button on the Maintenance tab
   - title: Service data
@@ -2991,6 +3002,8 @@ views:
               - input_datetime.car_rear_pads_changed
               - input_number.car_rear_discs_km
               - input_datetime.car_rear_discs_changed
+              - input_number.car_adblue_km
+              - input_datetime.car_adblue_changed
             grid_options:
               columns: full
 
