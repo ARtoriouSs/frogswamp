@@ -62,6 +62,7 @@ Scripts → `config/scripts/<name>.yaml` (mapping). Helpers/template sensors →
 | Work calendar is old | Outside a day off, the work-calendar service hasn't read the calendar for 2 h, or can't be reached, for 30 min |
 | Internet was down | Router WAN back on after at least 1 min down. Also written to the logbook |
 | Printer ink low | A cartridge drops below 15% |
+| Fridge or freezer door open | The fridge door is open for 3 min, or the freezer door for 1 min. Works without Arm mode |
 
 ## Schedule
 
@@ -98,6 +99,12 @@ HA reads the calendar through **Remote Calendar**, added in the UI with the cale
 **Work meetings.** The `work-calendar` service (`modules/services/work-calendar`) reads the work calendar every 5 minutes and passes on only start, end and title. A meeting counts if Aleksander accepted it, it shows as busy, it isn't cancelled or all-day, and at least one other person is invited. All-day `Out of Office` events are passed on too, and meetings on those days are dropped. A meeting is cut to 09:00–18:00, so times on the Schedule calendar can differ from the real ones at the edges, and meetings fully outside these hours aren't shown. HA reads it through **Remote Calendar**, added in the UI: name `Work meetings`, URL `http://127.0.0.1:8129/work-meetings.ics`, then restart HA once so the automations find the calendar. A meeting asks for a desk lease until it ends, and the cube shows the blinking calendar page (`meeting` sign) for 30 s, 10 minutes before. Day off, Vacation, being away and the **Work meetings** button on the Schedule tab stop both. The cube sign also stops during quiet mode. New meetings reach HA within about 10 minutes. The service reads Google only when HA asks, and HA doesn't ask during a day off, apart from Remote Calendar's own read once a day, so changes made then can count late. Desk down during a meeting stays down until the next meeting, but an HA restart raises it again.
 
 **TV mode** (`script.tv_mode`) turns the TV on and opens YouTube by its link.
+
+## Arm mode
+
+`input_boolean.arm_mode`, the button on the Security tab. A `Vacation` all-day event in `Home Assistant Events` turns it on when the event starts and off when it ends. The Vacation switch, Day off and the work calendar don't change it. Turned off by hand during a vacation, it stays off. Turned on by hand, it stays on until it is turned off, or until a Vacation event ends.
+
+While it is on, `config/automations/security.yaml` sends a phone alert with the `🚨 ARM MODE:` title when the fridge or freezer door opens, or when a listed device changes: the cube, TV, thermostats, towel heat, blinds, curtains, and the car's locks, doors, windows and sunroof. Going unavailable and temperatures don't count. **Add new devices to its list.** It starts 2 minutes after Arm mode turns on, and again 2 minutes after an HA restart, so what Vacation itself turns off doesn't alert. Schedules still count: with Arm mode on by hand and no Vacation, a blind opening by its schedule sends an alert too. Car alerts come as late as the car's data does.
 
 ## Room temperatures
 

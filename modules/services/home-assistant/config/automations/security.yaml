@@ -1,0 +1,136 @@
+# Only a Vacation event in calendar.home_assistant_events counts here, not the Vacation switch.
+# It runs on the change only, so Arm mode turned off by hand during a vacation stays off
+- id: repo_security_arm_follows_vacation
+  alias: "Security: Arm mode follows the Vacation event"
+  mode: queued
+  triggers:
+    - trigger: state
+      entity_id: binary_sensor.calendar_vacation_today
+      from: "off"
+      to: "on"
+      id: "on"
+    - trigger: state
+      entity_id: binary_sensor.calendar_vacation_today
+      from: "on"
+      to: "off"
+      id: "off"
+  actions:
+    - action: "input_boolean.turn_{{ trigger.id }}"
+      target:
+        entity_id: input_boolean.arm_mode
+
+# Only real changes count: "unavailable" is never a from or to state, and temperatures aren't listed.
+# Add new devices here. The 2 min wait skips what Vacation itself turns off, and devices coming back after an HA restart
+- id: repo_security_arm_alert
+  alias: "Security: Arm mode alert"
+  mode: parallel
+  max: 25
+  triggers:
+    - trigger: state
+      id: door
+      entity_id:
+        - binary_sensor.living_room_refrigerator_fridge_door
+        - binary_sensor.living_room_refrigerator_freezer_door
+      from: "off"
+      to: "on"
+    - trigger: state
+      id: device
+      entity_id:
+        - light.cube_matrix_192_168_101_121
+        - remote.living_room_philips_tv
+        - switch.master_bathroom_towel_heat_relay
+        - binary_sensor.garage_audi_a5_sportback_doors_locked
+        - binary_sensor.garage_audi_a5_sportback_trunk_locked
+        - binary_sensor.garage_audi_a5_sportback_doors_open
+        - binary_sensor.garage_audi_a5_sportback_trunk_open
+        - binary_sensor.garage_audi_a5_sportback_hood_open
+        - binary_sensor.garage_audi_a5_sportback_windows_open
+        - binary_sensor.garage_audi_a5_sportback_sunroof_open
+      from:
+        - "on"
+        - "off"
+      to:
+        - "on"
+        - "off"
+    - trigger: state
+      id: device
+      entity_id:
+        - climate.thermostat_master_local
+        - climate.thermostat_guest_local
+        - climate.guest_bathroom_towel_heat_guest
+      from:
+        - "heat"
+        - "off"
+      to:
+        - "heat"
+        - "off"
+    # The position reports several values on the way, so wait until it stays the same
+    - trigger: state
+      id: position
+      entity_id:
+        - cover.blinds_left_door_local
+        - cover.blinds_middle_local
+        - cover.blinds_right_local
+        - cover.curtains_local
+      attribute: current_position
+      for: "00:00:20"
+  conditions:
+    - condition: state
+      entity_id: input_boolean.arm_mode
+      state: "on"
+      for: "00:02:00"
+    - >-
+      {{ trigger.id != 'position'
+         or (trigger.from_state.attributes.current_position is number
+             and trigger.to_state.attributes.current_position is number) }}
+  actions:
+    - variables:
+        change: >-
+          {% set device_class = trigger.to_state.attributes.device_class | default('') %}
+          {% set state = trigger.to_state.state %}
+          {% if trigger.id == 'position' %}
+            moved to {{ trigger.to_state.attributes.current_position }}%
+          {% elif device_class == 'lock' %}
+            {{ 'unlocked' if state == 'on' else 'locked' }}
+          {% elif device_class in ['door', 'window'] %}
+            {{ 'open' if state == 'on' else 'closed' }}
+          {% else %}
+            turned {{ 'off' if state == 'off' else 'on' }}
+          {% endif %}
+    - action: notify.mobile_app_pixel_7
+      data:
+        title: "🚨 ARM MODE: {{ trigger.to_state.name }}"
+        message: "{{ change | trim | capitalize }} at {{ now().strftime('%H:%M') }}"
+        data:
+          tag: "arm-mode-{{ trigger.entity_id }}"
+          channel: Arm mode
+          importance: high
+          priority: high
+          ttl: 0
+
+# Works with or without Arm mode, and fires once each time a door stays open
+- id: repo_security_fridge_door_open
+  alias: "Security: fridge or freezer door left open"
+  mode: parallel
+  triggers:
+    - trigger: state
+      entity_id: binary_sensor.living_room_refrigerator_fridge_door
+      to: "on"
+      for: "00:03:00"
+      variables:
+        door: Fridge
+        minutes: "3 minutes"
+    - trigger: state
+      entity_id: binary_sensor.living_room_refrigerator_freezer_door
+      to: "on"
+      for: "00:01:00"
+      variables:
+        door: Freezer
+        minutes: "1 minute"
+  actions:
+    - action: notify.mobile_app_pixel_7
+      data:
+        title: "{{ door }} door is open"
+        message: "It has been open for {{ minutes }}"
+        data:
+          tag: "door-open-{{ door | lower }}"

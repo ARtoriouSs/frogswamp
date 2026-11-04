@@ -276,7 +276,7 @@ views:
       - user: 06ec04272df9426db1d4322dfc5bda92 # Natallia
     icon: mdi:thermometer
     type: sections
-    max_columns: 3
+    max_columns: 4
     sections:
       - type: grid
         cards:
@@ -387,7 +387,7 @@ views:
             icon: mdi:shower
           - <<: *room_temperature
             entity: sensor.garage_audi_a5_sportback_outside_temperature
-            primary: Car
+            primary: Garage / Car
             icon: mdi:car
             color: light-blue
             grid_options:
@@ -420,7 +420,7 @@ views:
                 - entity: sensor.guest_bathroom_temperature
                   name: Guest bath
                 - entity: sensor.garage_audi_a5_sportback_outside_temperature
-                  name: Car
+                  name: Garage / Car
                 - entity: sensor.outside_temperature
                   name: Outside
             grid_options:
@@ -467,7 +467,7 @@ views:
                 - entity: sensor.guest_bathroom_temperature
                   name: Guest bath
                 - entity: sensor.garage_audi_a5_sportback_outside_temperature
-                  name: Car
+                  name: Garage / Car
                 - entity: sensor.outside_temperature
                   name: Outside
             grid_options:
@@ -749,6 +749,39 @@ views:
               columns: 8
               rows: 2
           - *timed_towel_guest
+
+      - type: grid
+        cards:
+          - type: heading
+            heading: Garage
+            icon: mdi:car
+          - &climate_car_window
+            <<: *info
+            entity: binary_sensor.garage_audi_a5_sportback_window_front_left
+            primary: Front left
+            secondary: "{{ 'Open' if is_state(entity, 'on') else ('Closed' if is_state(entity, 'off') else 'Unavailable') }}"
+            icon: "{{ 'mdi:window-open-variant' if is_state(entity, 'on') else 'mdi:window-closed-variant' }}"
+            color: "{{ 'red' if is_state(entity, 'on') else ('green' if is_state(entity, 'off') else 'disabled') }}"
+            vertical: true
+            grid_options:
+              columns: 6
+              rows: 2
+          - <<: *climate_car_window
+            entity: binary_sensor.garage_audi_a5_sportback_window_front_right
+            primary: Front right
+          - <<: *climate_car_window
+            entity: binary_sensor.garage_audi_a5_sportback_window_rear_left
+            primary: Rear left
+          - <<: *climate_car_window
+            entity: binary_sensor.garage_audi_a5_sportback_window_rear_right
+            primary: Rear right
+          - <<: *climate_car_window
+            entity: binary_sensor.garage_audi_a5_sportback_sunroof_open
+            primary: Sunroof
+            icon: mdi:car-select
+            grid_options:
+              columns: 12
+              rows: 2
 
   # Lights and players. The Cube Matrix is the only smart light for now
   - title: Light & media
@@ -1147,6 +1180,7 @@ views:
             entity: automation.desk_schedule
             primary: Standing breaks
             icon: mdi:desk
+            vertical: false
             grid_options:
               columns: 12
               rows: 1
@@ -1156,6 +1190,7 @@ views:
             secondary: "{{ 'Paused' if is_state(entity, 'on') else 'Running' }}"
             icon: mdi:account-group
             color: "{{ 'amber' if is_state(entity, 'on') else 'green' }}"
+            vertical: false
             grid_options:
               columns: 12
               rows: 1
@@ -1208,6 +1243,87 @@ views:
             entity: automation.cube_green_dot_at_night_and_on_vacation
             primary: Night green dot
             icon: mdi:weather-night
+
+  - title: Security
+    path: security
+    visible:
+      - user: 276c6c52cb474dd9bdf6dac5ca4fad31 # Aleksander
+      - user: 06ec04272df9426db1d4322dfc5bda92 # Natallia
+    icon: mdi:shield-home
+    type: sections
+    max_columns: 2
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: Arm mode
+            icon: mdi:shield-home
+          - <<: *toggle
+            entity: input_boolean.arm_mode
+            primary: Arm mode
+            secondary: "{{ 'Armed' if is_state(entity, 'on') else 'Not armed' }}"
+            icon: "{{ 'mdi:shield-check' if is_state(entity, 'on') else 'mdi:shield-off-outline' }}"
+            color: "{{ 'red' if is_state(entity, 'on') else 'disabled' }}"
+            grid_options:
+              columns: 12
+              rows: 2
+          - type: heading
+            heading: Kitchen
+            heading_style: subtitle
+          - &security_door
+            <<: *info
+            entity: binary_sensor.living_room_refrigerator_fridge_door
+            primary: Fridge door
+            secondary: "{{ 'Open' if is_state(entity, 'on') else ('Closed' if is_state(entity, 'off') else 'Unavailable') }}"
+            icon: "{{ 'mdi:door-open' if is_state(entity, 'on') else 'mdi:door-closed' }}"
+            color: "{{ 'red' if is_state(entity, 'on') else ('green' if is_state(entity, 'off') else 'disabled') }}"
+            vertical: true
+            grid_options:
+              columns: 6
+              rows: 2
+          - <<: *security_door
+            entity: binary_sensor.living_room_refrigerator_freezer_door
+            primary: Freezer door
+
+      - type: grid
+        cards:
+          - type: heading
+            heading: Car
+            icon: mdi:car
+          # lock sensors: off means locked
+          - &security_lock
+            <<: *security_door
+            entity: binary_sensor.garage_audi_a5_sportback_doors_locked
+            primary: Doors lock
+            secondary: "{{ 'Unlocked' if is_state(entity, 'on') else ('Locked' if is_state(entity, 'off') else 'Unavailable') }}"
+            icon: "{{ 'mdi:lock-open-variant' if is_state(entity, 'on') else 'mdi:lock' }}"
+          - <<: *security_lock
+            entity: binary_sensor.garage_audi_a5_sportback_trunk_locked
+            primary: Trunk lock
+          - <<: *security_door
+            entity: binary_sensor.garage_audi_a5_sportback_door_front_left
+            primary: Front left door
+            icon: mdi:car-door
+          - <<: *security_door
+            entity: binary_sensor.garage_audi_a5_sportback_door_front_right
+            primary: Front right door
+            icon: mdi:car-door
+          - <<: *security_door
+            entity: binary_sensor.garage_audi_a5_sportback_door_rear_left
+            primary: Rear left door
+            icon: mdi:car-door
+          - <<: *security_door
+            entity: binary_sensor.garage_audi_a5_sportback_door_rear_right
+            primary: Rear right door
+            icon: mdi:car-door
+          - <<: *security_door
+            entity: binary_sensor.garage_audi_a5_sportback_trunk_open
+            primary: Trunk
+            icon: mdi:car-back
+          - <<: *security_door
+            entity: binary_sensor.garage_audi_a5_sportback_hood_open
+            primary: Hood
+            icon: mdi:car
 
   # Range, timelines (two columns wide) and the % per device (sensors in packages/uptime.yaml)
   - title: Monitor

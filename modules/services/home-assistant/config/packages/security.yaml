@@ -1,0 +1,5 @@
+# Set by the button on the Security tab and by automations/security.yaml
+input_boolean:
+  arm_mode:
+    name: Arm mode
+    icon: mdi:shield-home
