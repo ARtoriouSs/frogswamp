@@ -1096,19 +1096,27 @@ views:
             heading: Scheduled brightness
             heading_style: subtitle
           - type: entities
+            title: Master bathroom
             grid_options:
-              columns: 6
+              columns: full
             entities:
-              - input_number.thermostat_backlight_master_day
-              - input_number.thermostat_backlight_master_night
-              - input_number.thermostat_backlight_master_vacation
+              - entity: input_number.thermostat_backlight_master_day
+                name: Day
+              - entity: input_number.thermostat_backlight_master_night
+                name: Night
+              - entity: input_number.thermostat_backlight_master_vacation
+                name: Vacation
           - type: entities
+            title: Guest bathroom
             grid_options:
-              columns: 6
+              columns: full
             entities:
-              - input_number.thermostat_backlight_guest_day
-              - input_number.thermostat_backlight_guest_night
-              - input_number.thermostat_backlight_guest_vacation
+              - entity: input_number.thermostat_backlight_guest_day
+                name: Day
+              - entity: input_number.thermostat_backlight_guest_night
+                name: Night
+              - entity: input_number.thermostat_backlight_guest_vacation
+                name: Vacation
 
   # Mushroom cards. The times are set in packages/schedule.yaml: a change made here is reset on the next HA restart
   - title: Schedule
