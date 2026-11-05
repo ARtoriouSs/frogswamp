@@ -39,12 +39,9 @@ order:
     match: href
     name: History
     order: 6
-  # Zigbee2MQTT has its own web UI, so this one opens in a new tab
-  - item: Zigbee map
-    new_item: true
-    href: http://192.168.101.10:8080/#/network
-    target: _blank
-    icon: mdi:zigbee
+  - item: /zigbee-map
+    match: href
+    name: Zigbee map
     order: 7
   - item: Bluetooth map
     new_item: true
@@ -129,6 +126,9 @@ exceptions:
         match: href
         hide: true
       - item: /map
+        match: href
+        hide: true
+      - item: /zigbee-map
         match: href
         hide: true
       - item: /calendar

@@ -1,0 +1,9 @@
+# The Zigbee2MQTT network page inside HA. Opening it sends nothing to the network:
+# a scan starts only with the Load button on that page, and it loads the Zigbee mesh
+views:
+  - title: Zigbee map
+    path: map
+    type: panel
+    cards:
+      - type: iframe
+        url: http://192.168.101.10:8080/#/network

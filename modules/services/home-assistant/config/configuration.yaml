@@ -43,3 +43,9 @@ lovelace:
       title: Main
       icon: frog:frog-face
       show_in_sidebar: true
+    zigbee-map:
+      mode: yaml
+      filename: dashboards/zigbee_map.yaml
+      title: Zigbee map
+      icon: mdi:zigbee
+      show_in_sidebar: true
