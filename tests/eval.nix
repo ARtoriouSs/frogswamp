@@ -118,10 +118,12 @@ let
         group = n: (lib.head (lib.filter (g: g ? ${n}) cfg.services.homepage-dashboard.services)).${n};
         rows = n: map (r: names (lib.head (lib.attrValues r))) (group n);
       in
-      names (group "Home") == [
-        "Home Assistant"
-        "Zigbee2MQTT"
-        "PS5-MQTT"
+      rows "Home" == [
+        [ "Home Assistant" ]
+        [
+          "Zigbee2MQTT"
+          "PS5-MQTT"
+        ]
       ]
       &&
         rows "Media" == [

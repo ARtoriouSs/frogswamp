@@ -79,6 +79,14 @@ in
             Home = {
               style = "row";
               columns = 2;
+              Hub = {
+                style = "column";
+                header = false;
+              };
+              Control = {
+                style = "column";
+                header = false;
+              };
             };
           }
           {
@@ -176,48 +184,56 @@ in
         {
           Home = [
             {
-              "Home Assistant" = {
-                href = link 8123;
-                icon = "home-assistant.png";
-                description = "Automations, devices, energy";
-                siteMonitor = local 8123;
-                widget = {
-                  type = "homeassistant";
-                  url = local 8123;
-                  key = "{{HOMEPAGE_VAR_HA_TOKEN}}";
-                  custom = [
-                    {
-                      template = "{{ states.light | selectattr('state', 'equalto', 'on') | list | length }}";
-                      label = "lights on";
-                    }
-                    {
-                      template = "{{ states.switch | selectattr('state', 'equalto', 'on') | list | length }}";
-                      label = "switches on";
-                    }
-                    {
-                      template = "{{ states.automation | selectattr('state', 'equalto', 'on') | list | length }}";
-                      label = "automations";
-                    }
-                  ];
-                };
-              };
+              Hub = [
+                {
+                  "Home Assistant" = {
+                    href = link 8123;
+                    icon = "home-assistant.png";
+                    description = "Automations, devices, energy";
+                    siteMonitor = local 8123;
+                    widget = {
+                      type = "homeassistant";
+                      url = local 8123;
+                      key = "{{HOMEPAGE_VAR_HA_TOKEN}}";
+                      custom = [
+                        {
+                          template = "{{ states.light | selectattr('state', 'equalto', 'on') | list | length }}";
+                          label = "lights on";
+                        }
+                        {
+                          template = "{{ states.switch | selectattr('state', 'equalto', 'on') | list | length }}";
+                          label = "switches on";
+                        }
+                        {
+                          template = "{{ states.automation | selectattr('state', 'equalto', 'on') | list | length }}";
+                          label = "automations";
+                        }
+                      ];
+                    };
+                  };
+                }
+              ];
             }
             {
-              Zigbee2MQTT = {
-                href = link 8080;
-                icon = "zigbee2mqtt.png";
-                description = "Zigbee devices and pairing";
-                siteMonitor = local 8080;
-              };
-            }
-            {
-              # The page is not on the LAN, it opens through ssh -L 8645:localhost:8645, see modules/README.md
-              PS5-MQTT = {
-                href = "http://localhost:8645/";
-                icon = "mdi-sony-playstation";
-                description = "PS5 pairing";
-                siteMonitor = local 8645;
-              };
+              Control = [
+                {
+                  Zigbee2MQTT = {
+                    href = link 8080;
+                    icon = "zigbee2mqtt.png";
+                    description = "Zigbee devices and pairing";
+                    siteMonitor = local 8080;
+                  };
+                }
+                {
+                  # The page is not on the LAN, it opens through ssh -L 8645:localhost:8645, see modules/README.md
+                  PS5-MQTT = {
+                    href = "http://localhost:8645/";
+                    icon = "mdi-sony-playstation";
+                    description = "PS5 pairing";
+                    siteMonitor = local 8645;
+                  };
+                }
+              ];
             }
           ];
         }
