@@ -84,6 +84,8 @@ in
           inherit (z2m) package;
           settings = {
             homeassistant.enabled = true;
+            # 11 sits under a neighbour's Wi-Fi channel 1. 25 is above our own Wi-Fi (fixed at 10, 20 MHz)
+            advanced.channel = 25;
             serial = {
               port = z2m.serialPort;
               adapter = "ember";
