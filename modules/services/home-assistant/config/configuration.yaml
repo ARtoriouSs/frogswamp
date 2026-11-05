@@ -2,8 +2,10 @@
 default_config:
 
 homeassistant:
+  name: Nowy Kamionek
   latitude: !secret latitude
   longitude: !secret longitude
+  elevation: 85
   radius: 150
   packages: !include_dir_named packages
 

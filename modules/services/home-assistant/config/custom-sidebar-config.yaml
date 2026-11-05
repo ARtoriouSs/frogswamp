@@ -39,24 +39,36 @@ order:
     match: href
     name: History
     order: 6
+  # Zigbee2MQTT has its own web UI, so this one opens in a new tab
+  - item: Zigbee map
+    new_item: true
+    href: http://192.168.101.10:8080/#/network
+    target: _blank
+    icon: mdi:zigbee
+    order: 7
+  - item: Bluetooth map
+    new_item: true
+    href: /config/bluetooth/visualization
+    icon: mdi:bluetooth
+    order: 8
     divider: true
 
   - item: /hacs
     match: href
     name: HACS
-    order: 7
+    order: 9
   - item: /neonplan3d
     match: href
     name: NeonPlan 3D
-    order: 8
+    order: 10
   - item: /media-browser
     match: href
     name: Media
-    order: 9
+    order: 11
   - item: /todo
     match: href
     name: To-do lists
-    order: 10
+    order: 12
 
   # Not in the list above. Main replaces the default dashboard
   - item: /lovelace
