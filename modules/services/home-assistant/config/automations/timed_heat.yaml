@@ -50,6 +50,33 @@
       target:
         entity_id: "input_boolean.heat_run_{{ device }}"
 
+# A heater turned on by hand has no lease, so it would run until someone turns it off. Nobody needs that at 04:00.
+# heat_run is on from before a lease turns the heater on, so a lease starting at this minute is safe
+- id: repo_timed_heat_night_cleanup
+  alias: "Timed heat: turn off heaters without a lease at 04:00"
+  triggers:
+    - trigger: time
+      at: "04:00:00"
+  actions:
+    - repeat:
+        for_each:
+          - towel_master
+          - towel_guest
+          - floor_master
+          - floor_guest
+        sequence:
+          - if: >-
+              {{ is_state('binary_sensor.heat_off_' ~ repeat.item, 'off')
+                 and is_state('input_boolean.heat_run_' ~ repeat.item, 'off')
+                 and not is_state('timer.heat_' ~ repeat.item, 'active') }}
+            then:
+              - action: script.turn_on
+                target:
+                  entity_id: script.heat_timed_off
+                data:
+                  variables:
+                    device: "{{ repeat.item }}"
+
 # Vacation ends every run. Its own automations turn the heaters off, this adds the retries
 - id: repo_timed_heat_vacation
   alias: "Timed heat: Vacation ends the runs"

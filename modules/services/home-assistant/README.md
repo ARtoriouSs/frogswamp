@@ -78,6 +78,7 @@ Workdays come from the **Workday** integration (`binary_sensor.workday_sensor_pl
 |---|---|---|
 | Wakeup | `sensor.wakeup`: the phone alarm of that morning if it rings from 04:00 to before 12:00, otherwise the fallback (workdays 09:30, weekends and holidays 11:00) | floor warming: 3 h from 1 h before. Cube night ends. Thermostat screens back to day brightness |
 | Bedtime | before a workday 00:00, before a weekend day or holiday 01:00 | floor warming and master towel heat relay: 3 h from 1 h before. Cube night starts. Thermostat screens dim 1 h after |
+| Heater cleanup | 04:00 | floors and towel heaters turned on by hand (no lease) turn off, a running lease is left alone |
 
 Workday can only be added in the UI (once, it is kept in HA's state dir): **Settings → Devices & services → Add integration → Workday**. Country Poland (the entity becomes `binary_sensor.workday_sensor_pl`), workdays Monday–Friday, excludes Saturday, Sunday and Holidays, offset 0. Without it the floors, the towel heat nights and the desk don't run (Vacation still works).
 

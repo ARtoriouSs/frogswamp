@@ -2,7 +2,8 @@
 #
 # A run is a lease: a timer that turns the heater off when it ends. Automations only ever ask for one, so they
 # can't turn off a heater someone else is using. A heater turned on by hand has no lease and runs until it is
-# turned off by hand. Only the end of a lease, the button, a manual off and Vacation turn a heater off
+# turned off by hand or until 04:00. Only the end of a lease, the button, a manual off, Vacation and the 04:00
+# cleanup turn a heater off
 
 # For automations. Starts a lease if the heater is off, extends a running one if this one ends later,
 # never shortens it. A heater that is on without a lease was turned on by hand, so it's left alone
