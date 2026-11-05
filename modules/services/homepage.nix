@@ -210,6 +210,15 @@ in
                 siteMonitor = local 8080;
               };
             }
+            {
+              # The page is not on the LAN, it opens through ssh -L 8645:localhost:8645, see modules/README.md
+              PS5-MQTT = {
+                href = "http://localhost:8645/";
+                icon = "mdi-sony-playstation";
+                description = "PS5 pairing";
+                siteMonitor = local 8645;
+              };
+            }
           ];
         }
         {

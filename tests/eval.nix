@@ -121,6 +121,7 @@ let
       names (group "Home") == [
         "Home Assistant"
         "Zigbee2MQTT"
+        "PS5-MQTT"
       ]
       &&
         rows "Media" == [
