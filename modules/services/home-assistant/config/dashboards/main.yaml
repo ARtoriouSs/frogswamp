@@ -1025,17 +1025,10 @@ views:
               - play_pause_stop
             volume_controls:
               - volume_set
-          - *run
           - <<: *run
-            entity: script.game_mode
-            primary: Game mode
-            icon: mdi:sony-playstation
-            color: blue
-            tap_action:
-              action: perform-action
-              perform_action: script.turn_on
-              target:
-                entity_id: script.game_mode
+            grid_options:
+              columns: 12
+              rows: 1
 
           - type: heading
             heading: PS5
@@ -1057,6 +1050,19 @@ views:
             icon: mdi:gamepad-variant
             media_controls: []
             volume_controls: []
+          - <<: *run
+            entity: script.game_mode
+            primary: Game mode
+            icon: mdi:sony-playstation
+            color: blue
+            grid_options:
+              columns: 12
+              rows: 1
+            tap_action:
+              action: perform-action
+              perform_action: script.turn_on
+              target:
+                entity_id: script.game_mode
 
           - type: heading
             heading: Music
