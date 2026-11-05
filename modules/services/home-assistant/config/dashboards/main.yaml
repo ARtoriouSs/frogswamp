@@ -1338,6 +1338,10 @@ views:
             entity: automation.towel_heat_master_schedule
             primary: Master towel heat
             icon: mdi:radiator
+          - <<: *sched_toggle
+            entity: automation.timed_heat_turn_off_heaters_without_a_lease_at_04_00
+            primary: Overnight cleanup
+            icon: mdi:broom
           - type: heading
             heading: Curtains and blinds
             heading_style: subtitle
