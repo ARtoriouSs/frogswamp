@@ -44,6 +44,38 @@
         data:
           tag: backup-disk
 
+- id: repo_alert_server_disk
+  alias: "Alert: server disk almost full"
+  description: The server's disk is above 85% for 10 minutes
+  triggers:
+    - trigger: numeric_state
+      entity_id: sensor.system_monitor_disk_usage_config
+      above: 85
+      for: "00:10:00"
+  actions:
+    - action: notify.mobile_app_pixel_7
+      data:
+        title: Server disk almost full
+        message: "The disk is {{ states('sensor.system_monitor_disk_usage_config') }}% full. Check: just ssh df -h /"
+        data:
+          tag: server-disk
+
+- id: repo_alert_server_temperature
+  alias: "Alert: server CPU is hot"
+  description: The server's CPU is above 85 °C for 10 minutes
+  triggers:
+    - trigger: numeric_state
+      entity_id: sensor.system_monitor_processor_temperature
+      above: 85
+      for: "00:10:00"
+  actions:
+    - action: notify.mobile_app_pixel_7
+      data:
+        title: Server CPU is hot
+        message: "The CPU is at {{ states('sensor.system_monitor_processor_temperature') }} °C. Check the airflow around the NUC"
+        data:
+          tag: server-temperature
+
 # The state trigger fires once when the 1 h is reached, not again while the device stays offline.
 # Add new devices here (one entity per device is enough)
 - id: repo_alert_device_offline

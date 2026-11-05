@@ -1543,6 +1543,41 @@ views:
           - type: heading
             heading: Server
             icon: mdi:server
+          - &server_cpu
+            <<: *info
+            entity: sensor.system_monitor_processor_use
+            primary: CPU
+            secondary: "{{ states(entity) }} %"
+            icon: mdi:cpu-64-bit
+            color: "{{ 'red' if states(entity) | float(0) >= 90 else ('amber' if states(entity) | float(0) >= 70 else 'green') }}"
+            grid_options:
+              columns: 6
+              rows: 1
+          - <<: *server_cpu
+            entity: sensor.system_monitor_processor_temperature
+            primary: CPU temperature
+            secondary: "{{ states(entity) }} °C"
+            icon: mdi:thermometer
+            color: "{{ 'red' if states(entity) | float(0) >= 85 else ('amber' if states(entity) | float(0) >= 70 else 'green') }}"
+          - <<: *server_cpu
+            entity: sensor.system_monitor_memory_usage
+            primary: RAM
+            icon: mdi:memory
+          - <<: *server_cpu
+            entity: sensor.system_monitor_disk_usage_config
+            primary: Disk
+            icon: mdi:harddisk
+            color: "{{ 'red' if states(entity) | float(0) >= 85 else ('amber' if states(entity) | float(0) >= 70 else 'green') }}"
+          # The N100 has 4 cores, so a load above 4 means work is waiting
+          - <<: *info
+            entity: sensor.system_monitor_load_5_min
+            primary: Load
+            secondary: "{{ states(entity) }} (5 min)"
+            icon: mdi:gauge
+            color: "{{ 'red' if states(entity) | float(0) >= 4 else ('amber' if states(entity) | float(0) >= 3 else 'green') }}"
+          - type: heading
+            heading: Network
+            heading_style: subtitle
           - *info
           - &hall_router
             <<: *info
