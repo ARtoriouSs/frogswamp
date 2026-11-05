@@ -1040,6 +1040,27 @@ views:
               - volume_set
 
           - type: heading
+            heading: PS5
+            heading_style: subtitle
+          - <<: *toggle
+            entity: switch.ps5_120_power
+            primary: PS5
+            secondary: "{{ {'on': 'Awake', 'off': 'Rest mode'}.get(states(entity), 'Fully off or not reachable') }}"
+            icon: mdi:sony-playstation
+            color: "{{ 'blue' if is_state(entity, 'on') else 'disabled' }}"
+            vertical: false
+            grid_options:
+              columns: 12
+              rows: 1
+          # The current game from PSN, it only shows and can't control anything
+          - <<: *player
+            entity: media_player.playstation_5
+            name: Game
+            icon: mdi:gamepad-variant
+            media_controls: []
+            volume_controls: []
+
+          - type: heading
             heading: Music
             heading_style: subtitle
           # Music Assistant player on the TV, voice commands play here too
@@ -2446,6 +2467,10 @@ views:
             entity: sensor.pc_cost_month
             primary: PC
             icon: mdi:desktop-tower-monitor
+          - <<: *device_cost
+            entity: sensor.ps5_cost_month
+            primary: PS5
+            icon: mdi:sony-playstation
 
       - type: grid
         cards:
@@ -2782,6 +2807,25 @@ views:
                   entities:
                     - entity: sensor.pc_cost_total
                       name: PC
+            grid_options:
+              columns: full
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.energy_compare
+                state: PS5
+            card:
+              type: vertical-stack
+              cards:
+                - <<: *month_graph
+                  title: PS5 usage
+                  entities:
+                    - sensor.ps5_energy
+                - <<: *month_graph
+                  title: PS5 cost
+                  entities:
+                    - entity: sensor.ps5_cost_total
+                      name: PS5
             grid_options:
               columns: full
 

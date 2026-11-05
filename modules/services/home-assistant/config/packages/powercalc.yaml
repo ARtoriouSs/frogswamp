@@ -107,6 +107,16 @@ powercalc:
       fixed:
         power: 175
 
+    # A rough guess, not measured: about 200 W in a game (menus and video use less), about 3 W in rest mode.
+    # The switch is unavailable when the PS5 is fully off, that uses almost nothing
+    - entity_id: switch.ps5_120_power
+      unique_id: repo_powercalc_ps5
+      name: PS5
+      standby_power: 3
+      unavailable_power: 0
+      fixed:
+        power: 200
+
     # Always on. Router: Huawei FG630, 12 W at most. Server: N100 mini PC, 6-10 W idle, 25 W at full load
     - name: Router
       unique_id: repo_powercalc_router

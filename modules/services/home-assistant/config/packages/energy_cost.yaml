@@ -42,6 +42,7 @@ input_select:
       - Router
       - Server
       - PC
+      - PS5
 
 template:
   - trigger:
@@ -60,6 +61,7 @@ template:
           - sensor.router_energy
           - sensor.server_energy
           - sensor.pc_energy
+          - sensor.ps5_energy
         not_to:
           - unavailable
           - unknown
@@ -165,6 +167,13 @@ template:
         state_class: total_increasing
         state: *cost_state
         attributes: *cost_attributes
+      - name: PS5 cost
+        unique_id: repo_energy_cost_ps5
+        default_entity_id: sensor.ps5_cost_total
+        unit_of_measurement: zł
+        state_class: total_increasing
+        state: *cost_state
+        attributes: *cost_attributes
 
   # The whole fixed charge is added once a month. At minute 1, so the monthly meter below has already
   # started again at midnight. A new amount counts from the next month
@@ -214,7 +223,7 @@ template:
                'sensor.master_towel_heat_cost_total', 'sensor.guest_towel_heat_cost_total',
                'sensor.tv_cost_total', 'sensor.printer_cost_total', 'sensor.cube_matrix_cost_total',
                'sensor.blinds_cost_total', 'sensor.curtains_cost_total', 'sensor.router_cost_total',
-               'sensor.server_cost_total', 'sensor.pc_cost_total'] %}
+               'sensor.server_cost_total', 'sensor.pc_cost_total', 'sensor.ps5_cost_total'] %}
             {{ parts | map('states') | map('float', 0) | sum | round(6) }}
         availability: >-
             {% set parts = ['sensor.living_room_refrigerator_cost_total',
@@ -222,7 +231,7 @@ template:
                'sensor.master_towel_heat_cost_total', 'sensor.guest_towel_heat_cost_total',
                'sensor.tv_cost_total', 'sensor.printer_cost_total', 'sensor.cube_matrix_cost_total',
                'sensor.blinds_cost_total', 'sensor.curtains_cost_total', 'sensor.router_cost_total',
-               'sensor.server_cost_total', 'sensor.pc_cost_total'] %}
+               'sensor.server_cost_total', 'sensor.pc_cost_total', 'sensor.ps5_cost_total'] %}
             {{ parts | reject('has_value') | list | count == 0 }}
       - name: Devices energy
         unique_id: repo_energy_devices
@@ -236,7 +245,7 @@ template:
                'sensor.master_towel_heat_energy', 'sensor.guest_towel_heat_energy', 'sensor.tv_energy',
                'sensor.printer_energy', 'sensor.cube_matrix_energy', 'sensor.blinds_energy',
                'sensor.curtains_energy', 'sensor.router_energy', 'sensor.server_energy',
-               'sensor.pc_energy'] %}
+               'sensor.pc_energy', 'sensor.ps5_energy'] %}
             {{ parts | map('states') | map('float', 0) | sum | round(6) }}
         availability: >-
             {% set parts = ['sensor.living_room_refrigerator_energy',
@@ -244,7 +253,7 @@ template:
                'sensor.master_towel_heat_energy', 'sensor.guest_towel_heat_energy', 'sensor.tv_energy',
                'sensor.printer_energy', 'sensor.cube_matrix_energy', 'sensor.blinds_energy',
                'sensor.curtains_energy', 'sensor.router_energy', 'sensor.server_energy',
-               'sensor.pc_energy'] %}
+               'sensor.pc_energy', 'sensor.ps5_energy'] %}
             {{ parts | reject('has_value') | list | count == 0 }}
 
 utility_meter:
@@ -286,6 +295,9 @@ utility_meter:
     cycle: monthly
   pc_cost_month:
     source: sensor.pc_cost_total
+    cycle: monthly
+  ps5_cost_month:
+    source: sensor.ps5_cost_total
     cycle: monthly
   climate_cost_month:
     source: sensor.climate_cost_total
