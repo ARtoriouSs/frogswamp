@@ -488,6 +488,11 @@ views:
             show_current: false
             grid_options:
               columns: full
+          - type: custom:weather-radar-card
+            show_zoom: true
+            height: 450px
+            grid_options:
+              columns: full
           # next_rising and next_setting jump to tomorrow once the sun has risen or set
           - &sun
             type: custom:mushroom-template-card
