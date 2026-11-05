@@ -47,6 +47,7 @@ DHCP reservations (router → DHCP → static leases), so HA finds these devices
 |---|---|---|---|
 | Yeelight Cube Matrix (office) | `192.168.101.121` | `c0:4e:30:ee:72:54` | not Tuya |
 | Management PC (wired) | `192.168.101.127` | `9c:6b:00:b7:6a:6a` | not Tuya |
+| PS5 (Wi-Fi, a cable has another MAC, so update this row and the reservation) | `192.168.101.132` | `c8:4a:a0:23:99:3c` | not Tuya |
 | Curtains | `192.168.101.101` | `bc:35:1e:d1:ff:80` | 3.5 |
 | Blinds - middle | `192.168.101.104` | `80:64:7c:be:b6:fa` | 3.5 |
 | Thermostat - Guest | `192.168.101.110` | `bc:35:1e:19:dc:f5` | 3.5 |

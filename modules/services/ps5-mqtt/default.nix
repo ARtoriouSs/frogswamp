@@ -40,12 +40,15 @@ in
           MQTT_USERNAME = "ps5";
           CREDENTIAL_STORAGE_PATH = "/config/credentials.json";
           INCLUDE_PS4_DEVICES = "false";
+          # The firewall drops replies to a broadcast, but lets through a reply to a direct request.
+          # The address is a DHCP reservation, see README
+          DEVICE_DISCOVERY_BROADCAST_ADDRESS = "192.168.101.132";
           # The pairing page has no login, and the firewall keeps it off the LAN
           FRONTEND_PORT = "8645";
           # The sensitive namespaces print the MQTT password, keep them out of the journal
           DEBUG = "@ha:ps5,@ha:ps5:*,-@ha:ps5:poll*,-@ha:ps5:check*";
         };
-        # Finds the console with UDP broadcasts, so it needs the host network
+        # Wakes the console and listens for its replies over UDP, so it needs the host network
         extraOptions = [
           "--network=host"
           "--user=${toString uid}:${toString uid}"
