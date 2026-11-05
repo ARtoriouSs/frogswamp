@@ -816,6 +816,20 @@ views:
               rows: 2
           - *timed_towel_guest
 
+          # empty heading: a gap before the next group
+          - type: heading
+            heading: ""
+          - type: heading
+            heading: All heaters
+            icon: mdi:radiator
+          - <<: *toggle
+            entity: automation.timed_heat_turn_off_heaters_without_a_lease_at_04_00
+            primary: Overnight cleanup
+            icon: mdi:broom
+            grid_options:
+              columns: 12
+              rows: 2
+
       - type: grid
         cards:
           - type: heading
