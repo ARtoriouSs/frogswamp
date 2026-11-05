@@ -16,6 +16,10 @@ in
     enable = lib.mkEnableOption "Mosquitto MQTT broker (+ Zigbee2MQTT)";
     haPasswordFile = lib.mkOption { type = lib.types.str; };
     z2mPasswordFile = lib.mkOption { type = lib.types.str; };
+    ps5PasswordFile = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+    };
     zigbee2mqtt = {
       enable = lib.mkOption {
         type = lib.types.bool;
@@ -59,6 +63,15 @@ in
                 z2m = {
                   passwordFile = cfg.z2mPasswordFile;
                   acl = [ "readwrite #" ];
+                };
+              }
+              // lib.optionalAttrs (cfg.ps5PasswordFile != null) {
+                ps5 = {
+                  passwordFile = cfg.ps5PasswordFile;
+                  acl = [
+                    "readwrite ps5-mqtt/#"
+                    "readwrite homeassistant/#"
+                  ];
                 };
               };
             }

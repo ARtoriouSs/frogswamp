@@ -156,6 +156,16 @@ let
     # the fabric holds the keys of every paired device; losing it means pairing everything again
     "matter fabric is backed up" =
       lib.hasInfix "/var/lib/matter-server" cfg.services.restic.backups.local.dynamicFilesFrom;
+    "ps5-mqtt image pinned by digest" =
+      lib.hasInfix "@sha256:" cfg.virtualisation.oci-containers.containers.ps5-mqtt.image;
+    # finds the console with UDP broadcasts
+    "ps5-mqtt on the host network" =
+      lib.elem "--network=host" cfg.virtualisation.oci-containers.containers.ps5-mqtt.extraOptions;
+    # the pairing page has no login
+    "ps5-mqtt pairing page not open on the LAN" =
+      !(lib.elem 8645 cfg.networking.firewall.allowedTCPPorts);
+    "ps5-mqtt pairing is backed up" =
+      lib.hasInfix "/var/lib/ps5-mqtt" cfg.services.restic.backups.local.dynamicFilesFrom;
     "music assistant image pinned by digest" =
       lib.hasInfix "@sha256:" cfg.virtualisation.oci-containers.containers.music-assistant.image;
     # finds and streams to players (Voice PE, Cast) on the LAN

@@ -10,6 +10,12 @@
           restartUnits = [ "${app}.service" ];
         })
       ))
+      (lib.mkIf config.frogswamp.ps5Mqtt.enable {
+        "ps5-mqtt.env" = {
+          content = "MQTT_PASSWORD=${config.sops.placeholder."mosquitto/ps5_password"}\n";
+          restartUnits = [ "podman-ps5-mqtt.service" ];
+        };
+      })
       # Homepage widget credentials, assembled from the single-value secrets
       (lib.mkIf config.frogswamp.homepage.enable {
         "homepage.env" = {
@@ -35,6 +41,9 @@
       }
       (lib.mkIf config.frogswamp.tailscale.enable {
         "tailscale/oauth_secret" = { };
+      })
+      (lib.mkIf config.frogswamp.ps5Mqtt.enable {
+        "mosquitto/ps5_password" = { };
       })
       (lib.mkIf config.frogswamp.mqtt.enable {
         "mosquitto/ha_password" = { };
@@ -111,6 +120,9 @@
     mqtt = {
       haPasswordFile = lib.mkDefault config.sops.secrets."mosquitto/ha_password".path;
       z2mPasswordFile = lib.mkDefault config.sops.secrets."mosquitto/z2m_password".path;
+      ps5PasswordFile = lib.mkIf config.frogswamp.ps5Mqtt.enable (
+        lib.mkDefault config.sops.secrets."mosquitto/ps5_password".path
+      );
       zigbee2mqtt = {
         passwordFile = lib.mkDefault config.sops.secrets."zigbee2mqtt/mqtt_password".path;
         frontendTokenFile = lib.mkDefault config.sops.secrets."zigbee2mqtt/frontend_token".path;
@@ -123,6 +135,7 @@
     jellyfin.apiKeyFile = lib.mkDefault config.sops.secrets."jellyfin/api_key".path;
     samba.passwordFile = lib.mkDefault config.sops.secrets."samba/password".path;
     homepage.environmentFile = lib.mkDefault config.sops.templates."homepage.env".path;
+    ps5Mqtt.environmentFile = lib.mkDefault config.sops.templates."ps5-mqtt.env".path;
     backup = {
       passwordFile = lib.mkDefault config.sops.secrets."restic/password".path;
       haTokenFile = lib.mkDefault config.sops.secrets."home_assistant/api_token".path;

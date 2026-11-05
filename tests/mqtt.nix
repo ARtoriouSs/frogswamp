@@ -12,6 +12,7 @@ pkgs.testers.runNixOSTest {
           enable = true;
           haPasswordFile = toString (pkgs.writeText "ha" "ha-secret");
           z2mPasswordFile = toString (pkgs.writeText "z2m" "z2m-secret");
+          ps5PasswordFile = toString (pkgs.writeText "ps5" "ps5-secret");
           zigbee2mqtt.enable = false; # no dongle in the VM
         };
       };
@@ -22,6 +23,7 @@ pkgs.testers.runNixOSTest {
     pub = "mosquitto_pub -h 127.0.0.1 -t test/topic -m hi"
     server.succeed(f"{pub} -u ha -P ha-secret")
     server.succeed(f"{pub} -u z2m -P z2m-secret")
+    server.succeed(f"{pub} -u ps5 -P ps5-secret")
     server.fail(f"{pub}")                        # anonymous rejected
     server.fail(f"{pub} -u ha -P wrong")         # bad password rejected
     # listens only on localhost

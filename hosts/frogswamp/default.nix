@@ -60,6 +60,8 @@
     voice.enable = true;
     # Spotify on the Voice PE; the Spotify login is made in its web UI (:8095)
     musicAssistant.enable = true;
+    # Wake and rest mode of the PS5 in HA; paired once in its web UI, see modules/README.md
+    ps5Mqtt.enable = true;
     # The accepted work meetings for HA, from the calendar's secret link
     workCalendar.enable = true;
     jellyfin.enable = true;

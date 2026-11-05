@@ -22,6 +22,7 @@ let
     "/var/lib/bazarr"
     "/var/lib/matter-server"
     "/var/lib/music-assistant"
+    "/var/lib/ps5-mqtt"
   ];
   sqliteDbs = [
     "/var/lib/home-assistant/home-assistant_v2.db"
@@ -45,6 +46,7 @@ let
     "/var/lib/bazarr" = "bazarr";
     "/var/lib/matter-server" = "matter-server";
     "/var/lib/music-assistant" = "music-assistant";
+    "/var/lib/ps5-mqtt" = "ps5-mqtt";
   };
   units = [
     "podman-home-assistant"
@@ -60,6 +62,7 @@ let
     "bazarr"
     "podman-matter-server"
     "podman-music-assistant"
+    "podman-ps5-mqtt"
   ];
 
   # Helpers that start apps or change their state; stopped while a restore writes that state

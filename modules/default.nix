@@ -18,6 +18,7 @@
     ./services/matter-server
     ./services/voice
     ./services/music-assistant
+    ./services/ps5-mqtt
     ./services/work-calendar
   ];
 }

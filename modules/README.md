@@ -20,6 +20,7 @@ Each module does one thing and is switched on in `hosts/frogswamp/default.nix` (
 | `services/acestream/` | Ace Stream engine (`acestream-http-proxy` container), pinned by digest | 6878, 8621 |
 | `services/football/` | Phone page: paste an Ace Stream match, play it on the TV through Chromecast or Kodi ([README](services/football/README.md)) | 8093 |
 | `services/matter-server/` | Matter Server (`matterjs-server` container) for HA's Matter integration, pinned by digest; WebSocket on localhost only | 5580 (localhost) |
+| `services/ps5-mqtt/` | PS5-MQTT container: wake and rest mode of the PS5 in HA through MQTT discovery, pinned by digest. Pair once: `ssh -L 8645:localhost:8645 pupsich@192.168.101.10`, open http://localhost:8645 | 8645 (not on the LAN) |
 | `services/media-janitor/` | Removes finished torrents, deletes watched titles (every 5 min) | |
 
 How the media parts work together: [services/media/README.md](services/media/README.md).

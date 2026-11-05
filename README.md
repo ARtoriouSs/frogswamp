@@ -98,7 +98,7 @@ Fill in these values (see also [secrets/README.md](secrets/README.md)):
 |---|---|
 | `admin/password_hash` | `mkpasswd -m yescrypt` output for the `pupsich` user (sudo, console login) |
 | `tailscale/oauth_secret` | OAuth client secret from step 1.2 |
-| `mosquitto/ha_password`, `mosquitto/z2m_password` | random, e.g. `openssl rand -base64 24` |
+| `mosquitto/ha_password`, `mosquitto/z2m_password`, `mosquitto/ps5_password` | random, e.g. `openssl rand -base64 24` |
 | `home_assistant/secrets_yaml` | content of HA's `secrets.yaml` (keys used in `config/`) |
 | `home_assistant/api_token` | leave empty for now, filled in step 1.7 |
 | `samba/password` | password for the media share |
