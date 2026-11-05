@@ -45,8 +45,8 @@ in
           DEVICE_DISCOVERY_BROADCAST_ADDRESS = "192.168.101.132";
           # The pairing page has no login, and the firewall keeps it off the LAN
           FRONTEND_PORT = "8645";
-          # The sensitive namespaces print the MQTT password, keep them out of the journal
-          DEBUG = "@ha:ps5,@ha:ps5:*,-@ha:ps5:poll*,-@ha:ps5:check*";
+          # These namespaces print the MQTT password and the pairing keys, keep them out of the journal
+          DEBUG = "@ha:ps5,@ha:ps5:*,-@ha:ps5:poll*,-@ha:ps5:check*,-@ha:ps5:webserver:playactor*";
         };
         # Wakes the console and listens for its replies over UDP, so it needs the host network
         extraOptions = [
