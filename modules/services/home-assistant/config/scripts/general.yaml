@@ -1,6 +1,6 @@
 # TV on, then YouTube. A link opens the app; the TV rejects launching apps by package name
 tv_mode:
-  alias: "TV mode"
+  alias: "Movie mode"
   icon: mdi:youtube-tv
   mode: single
   sequence:
@@ -15,3 +15,21 @@ tv_mode:
         entity_id: remote.living_room_philips_tv
       data:
         activity: https://www.youtube.com
+
+# TV and PS5 on. HA skips a turn on for an unavailable switch without an error, so say it here:
+# the voice assistant must not report that the PS5 is on
+game_mode:
+  alias: "Game mode"
+  icon: mdi:sony-playstation
+  mode: single
+  sequence:
+    - action: remote.turn_on
+      target:
+        entity_id: remote.living_room_philips_tv
+    - if: "{{ not has_value('switch.ps5_120_power') }}"
+      then:
+        - stop: "The PS5 is fully off or not reachable"
+          error: true
+    - action: switch.turn_on
+      target:
+        entity_id: switch.ps5_120_power

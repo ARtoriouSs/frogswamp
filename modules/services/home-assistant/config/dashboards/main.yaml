@@ -32,7 +32,7 @@ card_templates:
   - &run
     type: custom:mushroom-template-card
     entity: script.tv_mode
-    primary: TV mode
+    primary: Movie mode
     icon: mdi:youtube-tv
     color: red
     grid_options:
@@ -1017,19 +1017,6 @@ views:
               columns: 12
             tap_action:
               action: more-info
-          - <<: *run
-            entity: script.tv_mode
-            primary: TV mode
-            icon: mdi:youtube-tv
-            color: red
-            grid_options:
-              columns: 12
-              rows: 1
-            tap_action:
-              action: perform-action
-              perform_action: script.turn_on
-              target:
-                entity_id: script.tv_mode
           - <<: *player
             entity: media_player.philips_tv_google_cast
             name: Cast
@@ -1038,6 +1025,17 @@ views:
               - play_pause_stop
             volume_controls:
               - volume_set
+          - *run
+          - <<: *run
+            entity: script.game_mode
+            primary: Game mode
+            icon: mdi:sony-playstation
+            color: blue
+            tap_action:
+              action: perform-action
+              perform_action: script.turn_on
+              target:
+                entity_id: script.game_mode
 
           - type: heading
             heading: PS5
@@ -1078,6 +1076,9 @@ views:
             volume_controls:
               - volume_mute
               - volume_set
+          - type: heading
+            heading: Assistant
+            heading_style: subtitle
           # Ask Claude to play something, e.g. "play Metallica"
           - &assist
             type: custom:mushroom-template-card
@@ -3849,7 +3850,7 @@ views:
           - *player
           - <<: *run
             entity: script.tv_mode
-            primary: TV mode
+            primary: Movie mode
             icon: mdi:youtube-tv
             color: red
             grid_options:

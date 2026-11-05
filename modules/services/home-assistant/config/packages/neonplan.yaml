@@ -84,8 +84,8 @@ template:
           - action: script.desk_down
         turn_off: []
 
-      # On = the TV is on. A tap runs TV mode (TV on, then YouTube), the next one turns the TV off
-      - name: TV mode
+      # On = the TV is on. A tap runs Movie mode (TV on, then YouTube), the next one turns the TV off
+      - name: Movie mode
         unique_id: repo_neonplan_tv_mode
         icon: mdi:youtube-tv
         state: "{{ is_state('remote.living_room_philips_tv', 'on') }}"

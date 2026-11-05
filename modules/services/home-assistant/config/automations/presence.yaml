@@ -25,6 +25,9 @@
     - action: remote.turn_off
       target:
         entity_id: remote.living_room_philips_tv
+    - action: switch.turn_off
+      target:
+        entity_id: switch.ps5_120_power
 
 # Counts the day away for the Vacation suggestion. Unlike the one above it ignores Guest mode
 - id: repo_presence_start_day_timer
