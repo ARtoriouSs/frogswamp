@@ -1,6 +1,7 @@
 # Bathroom floors through Tuya Local, in place of the Tuya cloud scenes:
 # the thermostat on in manual mode (heat), 30 °C for on, 18 °C for off.
-# During Vacation off is the real off mode, so a cold room can't start the floor
+# During Vacation off is the real off mode, so a cold room can't start the floor.
+# Otherwise it also sets the sensor back to Internal, in case someone changed it on the screen
 floor_warming_set:
   alias: "Floor warming: on or off"
   icon: mdi:heating-coil
@@ -32,6 +33,12 @@ floor_warming_set:
           data:
             hvac_mode: "off"
         - stop: Off for Vacation
+    - action: select.select_option
+      continue_on_error: true
+      target:
+        entity_id: "select.thermostat_{{ bathroom }}_local_temperature_sensor"
+      data:
+        option: Internal
     - action: climate.set_hvac_mode
       target:
         entity_id: "{{ thermostat }}"
@@ -42,3 +49,35 @@ floor_warming_set:
         entity_id: "{{ thermostat }}"
       data:
         temperature: "{{ 30 if state == 'on' else 18 }}"
+
+# Brightness of the thermostat screens, the values are in packages/thermostat_backlight.yaml
+thermostat_backlight_set:
+  alias: "Thermostat screens: set brightness"
+  icon: mdi:brightness-6
+  mode: queued
+  fields:
+    level:
+      description: day, night or vacation
+      required: true
+      example: night
+  sequence:
+    - repeat:
+        for_each:
+          - guest
+          - master
+        sequence:
+          - variables:
+              percent: "{{ states('input_number.thermostat_backlight_' ~ repeat.item ~ '_' ~ level) | int(0) }}"
+          - if: "{{ percent == 0 }}"
+            then:
+              - action: light.turn_off
+                continue_on_error: true
+                target:
+                  entity_id: "light.thermostat_{{ repeat.item }}_local_backlight"
+            else:
+              - action: light.turn_on
+                continue_on_error: true
+                target:
+                  entity_id: "light.thermostat_{{ repeat.item }}_local_backlight"
+                data:
+                  brightness_pct: "{{ percent }}"

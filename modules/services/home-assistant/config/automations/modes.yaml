@@ -1,6 +1,6 @@
 # Vacation on also turns the devices off. The master towel heat relay is turned off in towel_heat.yaml.
-# Vacation off only wakes the floor thermostats, at the 18 °C of off: the floors heat again with their schedules.
-# Nothing else turns on again. The cube stays on
+# Vacation off wakes the floor thermostats, at the 18 °C of off: the floors heat again with their schedules.
+# Their screens go off with Vacation and come back with it. Nothing else turns on again. The cube stays on
 - id: repo_modes_vacation_off
   alias: "Modes: devices off on Vacation on"
   mode: queued
@@ -21,6 +21,9 @@
       data:
         bathroom: master
         state: "off"
+    - action: script.thermostat_backlight_set
+      data:
+        level: vacation
 
 - id: repo_modes_vacation_end_floors
   alias: "Modes: floor thermostats back on Vacation off"
@@ -39,6 +42,9 @@
       data:
         bathroom: master
         state: "off"
+    - action: script.thermostat_backlight_set
+      data:
+        level: day
 
 # Remote Calendar reads its link only once a day by itself
 - id: repo_modes_calendar_refresh

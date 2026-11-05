@@ -27,10 +27,10 @@
 
 # Again at night, in case they were opened in the evening
 - id: repo_blinds_close_night
-  alias: "Blinds: full close at 01:00"
+  alias: "Blinds: full close at 02:00"
   triggers:
     - trigger: time
-      at: "01:00:00"
+      at: "02:00:00"
   conditions:
     - condition: state
       entity_id: input_boolean.vacation

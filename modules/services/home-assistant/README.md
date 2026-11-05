@@ -76,8 +76,8 @@ Workdays come from the **Workday** integration (`binary_sensor.workday_sensor_pl
 
 | Timing | Value | Used by |
 |---|---|---|
-| Wakeup | `sensor.wakeup`: the phone alarm of that morning if it rings from 04:00 to before 12:00, otherwise the fallback (workdays 09:30, weekends and holidays 11:00) | floor warming: 3 h from 1 h before. Cube night ends |
-| Bedtime | before a workday 00:00, before a weekend day or holiday 01:00 | floor warming and master towel heat relay: 3 h from 1 h before. Cube night starts |
+| Wakeup | `sensor.wakeup`: the phone alarm of that morning if it rings from 04:00 to before 12:00, otherwise the fallback (workdays 09:30, weekends and holidays 11:00) | floor warming: 3 h from 1 h before. Cube night ends. Thermostat screens back to day brightness |
+| Bedtime | before a workday 00:00, before a weekend day or holiday 01:00 | floor warming and master towel heat relay: 3 h from 1 h before. Cube night starts. Thermostat screens dim 1 h after |
 
 Workday can only be added in the UI (once, it is kept in HA's state dir): **Settings → Devices & services → Add integration → Workday**. Country Poland (the entity becomes `binary_sensor.workday_sensor_pl`), workdays Monday–Friday, excludes Saturday, Sunday and Holidays, offset 0. Without it the floors, the towel heat nights and the desk don't run (Vacation still works).
 
@@ -92,7 +92,7 @@ HA reads the calendar through **Remote Calendar**, added in the UI with the cale
 | Mode | Stops |
 |---|---|
 | Day off | desk schedule. Also counts the day as a weekend day for the schedule (late wakeup and bedtime) |
-| Vacation | desk, floor warming, blinds, curtains. Also turns off both floor thermostats (the real off mode), guest towel heat and the master towel heat relay, and puts the cube in quiet mode. When Vacation ends the floor thermostats come back in manual mode at 18 °C, which is floor warming off. Nothing else turns on again, everything waits for its next scheduled time (the cube comes back at once, unless it is night) |
+| Vacation | desk, floor warming, blinds, curtains. Also turns off both floor thermostats (the real off mode), guest towel heat and the master towel heat relay, and puts the cube in quiet mode. Their screens go off too. When Vacation ends the floor thermostats come back in manual mode at 18 °C, which is floor warming off, and the screens come back at day brightness. Screen levels are set on the Light & media tab. Nothing else turns on again, everything waits for its next scheduled time (the cube comes back at once, unless it is night) |
 | Guests in the living room | blinds opening in the morning |
 | Nobody home automations paused (`input_boolean.location_paused`) | the nobody-home quiet mode and the count to the Vacation suggestion, which need both people's locations. Turning it on also ends a running away state |
 | Desk location rule paused (`input_boolean.desk_location_paused`) | stops the rule below, so desk automations run while Aleksander is away |

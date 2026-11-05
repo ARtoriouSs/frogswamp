@@ -1,0 +1,73 @@
+# Thermostat screens: dim 1 h after bedtime, back at wakeup. Vacation keeps them off (automations/modes.yaml)
+- id: repo_thermostat_backlight_schedule
+  alias: "Thermostat screens: night and day brightness"
+  mode: queued
+  triggers:
+    - trigger: time
+      id: wakeup
+      at:
+        entity_id: sensor.wakeup
+    - trigger: time
+      id: night_workday
+      at:
+        entity_id: input_datetime.bedtime_workday
+        offset: "01:00:00"
+    - trigger: time
+      id: night_weekend
+      at:
+        entity_id: input_datetime.bedtime_weekend
+        offset: "01:00:00"
+  conditions:
+    - condition: state
+      entity_id: input_boolean.vacation
+      state: "off"
+  actions:
+    # Same choice of the night as in floor_warming.yaml
+    - if: "{{ 'night' in trigger.id }}"
+      then:
+        - action: workday.check_date
+          target:
+            entity_id: binary_sensor.workday_sensor_pl
+          data:
+            check_date: "{{ (now() - timedelta(hours=12)).date() + timedelta(days=1) }}"
+          response_variable: workday
+        - condition: template
+          value_template: >-
+            {{ (workday['binary_sensor.workday_sensor_pl'].workday and is_state('binary_sensor.day_off_next_day', 'off'))
+               == trigger.id.endswith('workday') }}
+    - action: script.thermostat_backlight_set
+      data:
+        level: "{{ 'night' if 'night' in trigger.id else 'day' }}"
+
+# HA restores the levels after that, so changes on the Light & media tab stay. Only a fresh install has all four at 0
+- id: repo_thermostat_backlight_first_values
+  alias: "Thermostat screens: first brightness values"
+  description: Fills in the day and night levels on a fresh install
+  triggers:
+    - trigger: homeassistant
+      event: start
+  conditions:
+    - condition: numeric_state
+      entity_id:
+        - input_number.thermostat_backlight_guest_day
+        - input_number.thermostat_backlight_guest_night
+        - input_number.thermostat_backlight_master_day
+        - input_number.thermostat_backlight_master_night
+      below: 1
+  actions:
+    - repeat:
+        for_each:
+          - level: guest_day
+            value: 30
+          - level: guest_night
+            value: 5
+          - level: master_day
+            value: 10
+          - level: master_night
+            value: 2
+        sequence:
+          - action: input_number.set_value
+            target:
+              entity_id: "input_number.thermostat_backlight_{{ repeat.item.level }}"
+            data:
+              value: "{{ repeat.item.value }}"

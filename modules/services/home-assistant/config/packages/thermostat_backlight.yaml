@@ -1,0 +1,51 @@
+# Brightness of the thermostat screens in %, script.thermostat_backlight_set reads them at each change.
+# No `initial`, so HA restores them after a restart. The first values are in automations/thermostat_backlight.yaml
+input_number:
+  thermostat_backlight_guest_day:
+    name: Guest screen, day
+    icon: mdi:brightness-6
+    min: 0
+    max: 100
+    step: 1
+    mode: box
+    unit_of_measurement: "%"
+  thermostat_backlight_guest_night:
+    name: Guest screen, night
+    icon: mdi:brightness-6
+    min: 0
+    max: 100
+    step: 1
+    mode: box
+    unit_of_measurement: "%"
+  thermostat_backlight_guest_vacation:
+    name: Guest screen, vacation
+    icon: mdi:brightness-6
+    min: 0
+    max: 100
+    step: 1
+    mode: box
+    unit_of_measurement: "%"
+  thermostat_backlight_master_day:
+    name: Master screen, day
+    icon: mdi:brightness-6
+    min: 0
+    max: 100
+    step: 1
+    mode: box
+    unit_of_measurement: "%"
+  thermostat_backlight_master_night:
+    name: Master screen, night
+    icon: mdi:brightness-6
+    min: 0
+    max: 100
+    step: 1
+    mode: box
+    unit_of_measurement: "%"
+  thermostat_backlight_master_vacation:
+    name: Master screen, vacation
+    icon: mdi:brightness-6
+    min: 0
+    max: 100
+    step: 1
+    mode: box
+    unit_of_measurement: "%"

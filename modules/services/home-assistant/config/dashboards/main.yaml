@@ -1058,6 +1058,58 @@ views:
               pipeline_id: 01m5zme405yy9kmsr49dbazjpq
               start_listening: false
 
+      - type: grid
+        cards:
+          - type: heading
+            heading: Thermostat screens
+            icon: mdi:thermostat
+          - &backlight_slider
+            type: custom:mushroom-template-card
+            entity: light.thermostat_master_local_backlight
+            primary: Master bathroom
+            secondary: "{{ (state_attr(entity, 'brightness') / 2.55) | round ~ ' %' if is_state(entity, 'on') else 'Off' }}"
+            icon: mdi:brightness-6
+            color: "{{ 'amber' if is_state(entity, 'on') else 'disabled' }}"
+            grid_options:
+              columns: 6
+              rows: 2
+            features_position: bottom
+            features:
+              - type: light-brightness
+            tap_action:
+              action: more-info
+          - <<: *backlight_slider
+            entity: light.thermostat_guest_local_backlight
+            primary: Guest bathroom
+          - <<: *toggle
+            entity: automation.thermostat_screens_night_and_day_brightness
+            primary: Night dim and wakeup
+            secondary: "{{ 'On' if is_state(entity, 'on') else 'Off, screens stay as they are' }}"
+            icon: mdi:weather-night
+            color: "{{ 'amber' if is_state(entity, 'on') else 'disabled' }}"
+            vertical: false
+            grid_options:
+              columns: 12
+              rows: 1
+          # Used at the next change: wakeup, 1 h after bedtime, Vacation on or off
+          - type: heading
+            heading: Scheduled brightness
+            heading_style: subtitle
+          - type: entities
+            grid_options:
+              columns: 6
+            entities:
+              - input_number.thermostat_backlight_master_day
+              - input_number.thermostat_backlight_master_night
+              - input_number.thermostat_backlight_master_vacation
+          - type: entities
+            grid_options:
+              columns: 6
+            entities:
+              - input_number.thermostat_backlight_guest_day
+              - input_number.thermostat_backlight_guest_night
+              - input_number.thermostat_backlight_guest_vacation
+
   # Mushroom cards. The times are set in packages/schedule.yaml: a change made here is reset on the next HA restart
   - title: Schedule
     path: schedule
@@ -3226,7 +3278,7 @@ views:
           - <<: *toggle
             entity: automation.blinds_full_close_at_01_00
             primary: Close
-            secondary: at 01:00
+            secondary: at 02:00
             icon: mdi:clock-outline
           - <<: *toggle
             entity: automation.blinds_open_2_h_after_sunrise
