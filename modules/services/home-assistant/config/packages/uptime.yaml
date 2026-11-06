@@ -55,6 +55,13 @@ template:
         device_class: connectivity
         state: "{{ not is_state('media_player.living_room_philips_tv', 'unavailable') }}"
         attributes: *uptime_attributes
+      # The PC and the PS5 show the time they are turned on, not an uptime. The `running` class
+      # gets its own green in the theme, the other devices stay amber
+      - name: PS5 online
+        unique_id: repo_uptime_ps5
+        device_class: running
+        state: "{{ is_state('switch.ps5_120_power', 'on') }}"
+        attributes: *uptime_attributes
       - name: Fridge online
         unique_id: repo_uptime_fridge
         device_class: connectivity
@@ -77,7 +84,7 @@ template:
         attributes: *uptime_attributes
       - name: PC online
         unique_id: repo_uptime_pc
-        device_class: connectivity
+        device_class: running
         state: "{{ is_state('binary_sensor.pc_ping', 'on') }}"
         attributes: *uptime_attributes
       - name: Printer online
@@ -352,6 +359,36 @@ sensor:
     state: "off"
     type: ratio
     start: "{{ max(now() - timedelta(hours=744), '2026-11-02T22:14:31+01:00' | as_datetime) }}"
+    end: *uptime_end
+  - platform: history_stats
+    name: PS5 offline day
+    unique_id: repo_uptime_ps5_offline_day
+    entity_id: switch.ps5_120_power
+    state:
+      - "off"
+      - unavailable
+    type: ratio
+    start: "{{ max(now() - timedelta(hours=24), '2026-11-05T18:39:53+01:00' | as_datetime) }}"
+    end: *uptime_end
+  - platform: history_stats
+    name: PS5 offline week
+    unique_id: repo_uptime_ps5_offline_week
+    entity_id: switch.ps5_120_power
+    state:
+      - "off"
+      - unavailable
+    type: ratio
+    start: "{{ max(now() - timedelta(hours=168), '2026-11-05T18:39:53+01:00' | as_datetime) }}"
+    end: *uptime_end
+  - platform: history_stats
+    name: PS5 offline month
+    unique_id: repo_uptime_ps5_offline_month
+    entity_id: switch.ps5_120_power
+    state:
+      - "off"
+      - unavailable
+    type: ratio
+    start: "{{ max(now() - timedelta(hours=744), '2026-11-05T18:39:53+01:00' | as_datetime) }}"
     end: *uptime_end
   - platform: history_stats
     name: Printer offline day

@@ -44,6 +44,7 @@ Frogswamp:
 
       state-icon-color: "#8fa8a0"
       state-icon-active-color: "#3ddc84"
+      state-binary_sensor-running-on-color: "#3ddc84"
       switch-checked-color: "#3ddc84"
       switch-checked-button-color: "#3ddc84"
       switch-checked-track-color: "#1f6e44"
@@ -80,6 +81,7 @@ Frogswamp:
 
       state-icon-color: "#55675f"
       state-icon-active-color: "#16a34a"
+      state-binary_sensor-running-on-color: "#16a34a"
       switch-checked-color: "#16a34a"
       switch-checked-button-color: "#16a34a"
       switch-checked-track-color: "#86d6a6"

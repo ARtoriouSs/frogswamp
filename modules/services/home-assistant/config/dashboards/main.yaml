@@ -1758,6 +1758,8 @@ views:
                   name: "Blinds left / door\u200A"
                 - entity: binary_sensor.tv_online
                   name: "TV\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
+                - entity: binary_sensor.ps5_online
+                  name: "PS5\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
                 - entity: binary_sensor.fridge_online
                   name: "Fridge\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A"
             grid_options:
@@ -1779,6 +1781,8 @@ views:
                   name: "Blinds left / door\u200A"
                 - entity: binary_sensor.tv_online
                   name: "TV\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
+                - entity: binary_sensor.ps5_online
+                  name: "PS5\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
                 - entity: binary_sensor.fridge_online
                   name: "Fridge\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A"
             grid_options:
@@ -1800,6 +1804,8 @@ views:
                   name: "Blinds left / door\u200A"
                 - entity: binary_sensor.tv_online
                   name: "TV\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A\u200A\u200A"
+                - entity: binary_sensor.ps5_online
+                  name: "PS5\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
                 - entity: binary_sensor.fridge_online
                   name: "Fridge\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A"
             grid_options:
@@ -2151,6 +2157,18 @@ views:
             secondary: "{% set u = state_attr(entity, 'uptime') %}{{ (u ~ ' %') if u is not none else '—' }} · {{ 'online' if is_state(entity, 'on') else 'offline' }}"
             icon: mdi:television
             color: "{% set u = state_attr(entity, 'uptime') %}{{ 'red' if is_state(entity, 'off') else ('disabled' if u is none else ('green' if u >= 99 else ('amber' if u >= 95 else 'red'))) }}"
+            grid_options:
+              columns: 6
+              rows: 1
+            tap_action:
+              action: more-info
+          # Like the PC: off or in rest mode is normal
+          - type: custom:mushroom-template-card
+            entity: binary_sensor.ps5_online
+            primary: PS5
+            secondary: "{% set u = state_attr(entity, 'uptime') %}{{ (u ~ ' %') if u is not none else '—' }} · {{ 'on' if is_state(entity, 'on') else 'off' }}"
+            icon: mdi:sony-playstation
+            color: "{{ 'green' if is_state(entity, 'on') else 'disabled' }}"
             grid_options:
               columns: 6
               rows: 1
