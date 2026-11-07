@@ -77,7 +77,9 @@ let
       session_ttl = 6 * 3600;
       debug_log = cfg.debugLog;
       system_prompt_file = "${./system-prompt.md}";
-      home_address_file = if cfg.homeAddressFile == null then null else "${credentials}/home_address";
+      # the home's name and place come from HA's general settings, the repo is public
+      ha_config_url = "http://127.0.0.1:8123/api/config";
+      ha_token_file = "${credentials}/ha_token";
       claude-code = {
         claude = lib.getExe' cfg.claudePackage "claude";
         inherit (cfg) model;
@@ -127,11 +129,6 @@ in
     haTokenFile = lib.mkOption {
       type = lib.types.str;
       description = "Runtime path of the long-lived token of the non-admin HA user voice-agent";
-    };
-    homeAddressFile = lib.mkOption {
-      type = lib.types.nullOr lib.types.str;
-      default = null;
-      description = "Runtime path of the home address; Claude may use it in web searches. Kept out of the repo, it is public";
     };
     debugLog = lib.mkOption {
       type = lib.types.bool;
@@ -210,8 +207,7 @@ in
         LoadCredential = [
           "claude_token:${cfg.claudeTokenFile}"
           "ha_token:${cfg.haTokenFile}"
-        ]
-        ++ lib.optional (cfg.homeAddressFile != null) "home_address:${cfg.homeAddressFile}";
+        ];
         ProtectSystem = "strict";
         ProtectHome = true;
         PrivateTmp = true;

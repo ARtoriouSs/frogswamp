@@ -1,3 +1,4 @@
+import io
 import json
 import logging
 import subprocess
@@ -34,6 +35,7 @@ class FakeBackend:
         self.delay = delay
         self.text = text
         self.calls = []
+        self.system_prompts = []
         self.active = 0
         self.max_active = 0
         self.lock = threading.Lock()
@@ -41,6 +43,7 @@ class FakeBackend:
     def ask(self, prompt, system_prompt, session_id, timeout):
         with self.lock:
             self.calls.append((prompt, session_id))
+            self.system_prompts.append(system_prompt)
             self.active += 1
             self.max_active = max(self.max_active, self.active)
         try:
@@ -396,17 +399,78 @@ def test_unix_socket_server(tmp_path):
 
 # ---------- system prompt ----------
 
-def test_system_prompt_with_home_address(tmp_path):
-    (tmp_path / "prompt.md").write_text("Be short.\n")
-    (tmp_path / "address").write_text("Example street 1, City\n")
-    cfg = {"system_prompt_file": str(tmp_path / "prompt.md"), "home_address_file": str(tmp_path / "address")}
-    prompt = bridge.load_system_prompt(cfg)
-    assert prompt.startswith("Be short.")
-    assert "Example street 1, City" in prompt
-
-
-def test_system_prompt_without_home_address(tmp_path):
+def test_system_prompt_from_file(tmp_path):
     (tmp_path / "prompt.md").write_text("Be short.\n")
     assert bridge.load_system_prompt({"system_prompt_file": str(tmp_path / "prompt.md")}) == "Be short.\n"
-    cfg = {"system_prompt_file": str(tmp_path / "prompt.md"), "home_address_file": str(tmp_path / "missing")}
-    assert bridge.load_system_prompt(cfg) == "Be short.\n"
+
+
+HA_CONFIG = {"location_name": "Example street 1", "country": "PL", "latitude": 52.123456,
+             "longitude": 21.654321, "time_zone": "Europe/Warsaw", "unit_system": {}}
+
+
+def test_describe_home():
+    text = bridge.describe_home(HA_CONFIG)
+    assert "Example street 1, PL" in text
+    assert "52.123, 21.654" in text
+    assert "Europe/Warsaw" in text
+    assert bridge.describe_home({"latitude": 1.0}) == ""
+
+
+def test_home_location_is_cached_and_survives_errors():
+    now = [0.0]
+    answers = [HA_CONFIG, OSError("down")]
+    calls = []
+
+    def fetch():
+        calls.append(1)
+        a = answers.pop(0)
+        if isinstance(a, Exception):
+            raise a
+        return a
+
+    home = bridge.HomeLocation("http://ha/api/config", "/nope", ttl=3600, fetch=fetch, clock=lambda: now[0])
+    first = home.get()
+    assert "Example street 1" in first
+    now[0] = 100
+    assert home.get() == first and len(calls) == 1
+    now[0] = 4000
+    assert home.get() == first and len(calls) == 2
+    now[0] = 4001
+    with pytest.raises(IndexError):
+        home.get()  # failed read is retried at the next request, not cached
+
+
+def test_home_location_reads_token_file(tmp_path, monkeypatch):
+    token = tmp_path / "ha_token"
+    token.write_text("secret\n")
+    seen = {}
+
+    class Resp:
+        def __enter__(self):
+            return io.BytesIO(json.dumps(HA_CONFIG).encode())
+
+        def __exit__(self, *a):
+            return False
+
+    def fake_urlopen(req, timeout):
+        seen["auth"] = req.get_header("Authorization")
+        seen["timeout"] = timeout
+        return Resp()
+
+    monkeypatch.setattr(bridge.urllib.request, "urlopen", fake_urlopen)
+    assert "Example street 1" in bridge.HomeLocation("http://ha/api/config", str(token)).get()
+    assert seen == {"auth": "Bearer secret", "timeout": 2}
+
+
+def test_handler_adds_home_location_to_prompt():
+    backend = FakeBackend()
+    cfg = {"session_ttl": 300, "timeout": 20, "debug_log": False}
+    home = bridge.HomeLocation("http://ha/api/config", "/nope", fetch=lambda: HA_CONFIG)
+    srv = ThreadingHTTPServer(("127.0.0.1", 0), bridge.make_handler(cfg, backend, "Be short.", home))
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    try:
+        post("http://127.0.0.1:%d/converse" % srv.server_port, json.dumps(request("hi")).encode())
+    finally:
+        srv.shutdown()
+    assert backend.system_prompts[0].startswith("Be short.")
+    assert "Example street 1" in backend.system_prompts[0]

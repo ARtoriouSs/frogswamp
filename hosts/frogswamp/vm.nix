@@ -50,7 +50,6 @@
     voice = {
       claudeTokenFile = lib.mkForce "/etc/vm-dummy-secret";
       haTokenFile = lib.mkForce "/etc/vm-dummy-secret";
-      homeAddressFile = lib.mkForce null;
     };
     # Later tasks add service overrides here.
   };

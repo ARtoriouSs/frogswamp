@@ -24,7 +24,7 @@ phone / Voice PE ─ wake word ─▶ HA pipeline ─▶ Whisper ─▶ local ph
 
 - Only the **text** of a request after the wake word, and only when HA can't handle it locally. No audio, nothing without the wake word.
 - Claude's web searches, and pages it opens from its own search results.
-- Nothing about the home is meant to go to the web, see the rules below. The one exception is the home address, which Claude may put in searches that need a place (weather, routes, shops nearby).
+- Nothing about the home is meant to go to the web, see the rules below. The one exception is the home location, which Claude may put in searches that need a place (weather, routes, shops nearby).
 
 ## Safety rules and how they are kept
 
@@ -71,8 +71,8 @@ One named blind ("открой левые жалюзи", "open the left blind") 
 
 ## Claude's behaviour
 
-- Tone: casual everyday language; it may swear now and then, more if you do.
-- Home address: sops `voice/home_address` (`frogswamp.voice.homeAddressFile`), loaded as a credential and added to the end of the system prompt. It stays out of the repo because the repo is public.
+- Tone: casual everyday language; it may swear now and then, more if you do. It never insults you first, but may answer an insult in kind.
+- Home location: the bridge reads HA's `/api/config` (home name, country, coordinates rounded to ~100 m, time zone) with the `voice-agent` token, every hour, and adds it to the end of the system prompt. Change it in *Settings → System → General*; put the street address in the home name if Claude should know it. Nothing of it is in the repo, which is public.
 - Maintenance and energy: two read-only scripts in `home-assistant/config/packages/voice_info.yaml`. *Maintenance status* gives km and days left for car parts and the fridge filter; *Energy history* reads cost or kWh per device per day, week, month or year from HA's long-term statistics. The web guard counts both as reads.
 
 - System prompt: `system-prompt.md` (home rules, scenes first, room temperatures, secrets, memory, web).

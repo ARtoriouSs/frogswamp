@@ -17,6 +17,7 @@ import re
 import subprocess
 import threading
 import time
+import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from socketserver import ThreadingMixIn, UnixStreamServer
 from typing import NamedTuple
@@ -250,7 +251,7 @@ def valid_request(req):
     )
 
 
-def make_handler(cfg, backend, system_prompt):
+def make_handler(cfg, backend, system_prompt, home=None):
     store = SessionStore(cfg["session_ttl"])
 
     class Handler(BaseHTTPRequestHandler):
@@ -274,8 +275,9 @@ def make_handler(cfg, backend, system_prompt):
                 return self.reply(400)
             if not valid_request(req):
                 return self.reply(400)
+            prompt = system_prompt + (home.get() if home else "")
             self.reply(200, converse(
-                backend, store, req, system_prompt, cfg["timeout"], cfg["debug_log"], cfg.get("shared_session", False)
+                backend, store, req, prompt, cfg["timeout"], cfg["debug_log"], cfg.get("shared_session", False)
             ))
 
         def log_message(self, *args):
@@ -309,15 +311,54 @@ def make_server(listen, handler):
 
 def load_system_prompt(cfg):
     with open(cfg["system_prompt_file"]) as f:
-        prompt = f.read()
-    # the address is a secret, so it comes from a credential file, not from the prompt in the repo
-    path = cfg.get("home_address_file")
-    if path and os.path.exists(path):
-        with open(path) as f:
-            address = f.read().strip()
-        if address:
-            prompt += f"\nThe owner's home address: {address}\n"
-    return prompt
+        return f.read()
+
+
+def describe_home(config):
+    name = config.get("location_name")
+    if not name:
+        return ""
+    where = ", ".join(str(x) for x in (name, config.get("country")) if x)
+    text = f"\nThe owner's home location: {where}"
+    lat, lon = config.get("latitude"), config.get("longitude")
+    if isinstance(lat, (int, float)) and isinstance(lon, (int, float)):
+        # about 100 m, enough for weather and places nearby
+        text += f", coordinates {lat:.3f}, {lon:.3f}"
+    if config.get("time_zone"):
+        text += f", time zone {config['time_zone']}"
+    return text + "\n"
+
+
+class HomeLocation:
+    """The home's name and place from HA's general settings, so the public repo has no address.
+
+    Read again every hour; when HA can't answer, the last known text is used
+    """
+
+    def __init__(self, url, token_file, ttl=3600, fetch=None, clock=time.monotonic):
+        self.url, self.token_file, self.ttl, self.clock = url, token_file, ttl, clock
+        self.fetch = fetch or self.fetch_config
+        self.text, self.read_at = "", None
+
+    def fetch_config(self):
+        with open(self.token_file) as f:
+            token = f.read().strip()
+        req = urllib.request.Request(self.url, headers={"Authorization": f"Bearer {token}"})
+        with urllib.request.urlopen(req, timeout=2) as resp:
+            return json.load(resp)
+
+    def get(self):
+        now = self.clock()
+        if self.read_at is not None and now - self.read_at < self.ttl:
+            return self.text
+        try:
+            config = self.fetch()
+            self.text = describe_home(config) if isinstance(config, dict) else ""
+        except (OSError, ValueError) as e:
+            log.warning("home location not read: %s", type(e).__name__)
+            return self.text
+        self.read_at = now
+        return self.text
 
 
 def main():
@@ -327,7 +368,8 @@ def main():
         cfg = json.load(f)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     system_prompt = load_system_prompt(cfg)
-    server = make_server(cfg["listen"], make_handler(cfg, make_backend(cfg), system_prompt))
+    home = HomeLocation(cfg["ha_config_url"], cfg["ha_token_file"]) if cfg.get("ha_config_url") else None
+    server = make_server(cfg["listen"], make_handler(cfg, make_backend(cfg), system_prompt, home))
     log.info("listening on %s, backend %s", cfg["listen"], cfg["backend"])
     server.serve_forever()
 
