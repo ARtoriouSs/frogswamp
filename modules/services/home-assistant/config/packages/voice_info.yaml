@@ -62,7 +62,8 @@ script:
     description: >-
       Read only. Electricity cost (zł) or energy (kWh) per device for past days, weeks, months or years,
       from Home Assistant's long-term statistics, plus the current prices. Call it for any question about
-      past or total electricity costs or usage. Each value is the amount used in that period
+      current or past electricity costs or usage, also "this month so far". Each value is the amount used
+      in that period; the numbers are refreshed every hour
     icon: mdi:chart-bar
     mode: parallel
     fields:
@@ -79,57 +80,114 @@ script:
           select:
             options: [day, week, month, year]
       count:
-        description: How many periods back from now, including the current one
+        description: How many periods back from now, including the current one (at most 31 days, 12 weeks, 13 months, 3 years)
         default: 6
         selector:
           number:
             min: 1
-            max: 36
+            max: 31
     sequence:
       - variables:
-          devices: >-
-            {{ ['living_room_refrigerator', 'master_floor_warming', 'guest_floor_warming',
-                'master_towel_heat', 'guest_towel_heat', 'tv', 'printer', 'cube_matrix', 'blinds',
-                'curtains', 'router', 'server', 'pc', 'ps5'] }}
           use_kind: "{{ kind | default('cost') }}"
           use_period: "{{ period | default('month') }}"
-          ids: >-
-            {% if use_kind == 'energy' %}
-              {{ devices | map('regex_replace', '^(.*)$', 'sensor.\\1_energy') | list + ['sensor.devices_energy_total'] }}
-            {% else %}
-              {{ devices | map('regex_replace', '^(.*)$', 'sensor.\\1_cost_total') | list
-                 + ['sensor.climate_cost_total', 'sensor.fixed_cost_total', 'sensor.devices_cost_total'] }}
-            {% endif %}
-          start: >-
-            {% set days = {'day': 1, 'week': 7, 'month': 31, 'year': 366}[use_period] %}
-            {{ (now() - timedelta(days=days * ((count | default(6) | int) - 1))).replace(hour=0, minute=0, second=0, microsecond=0) }}
-      - action: recorder.get_statistics
-        data:
-          statistic_ids: "{{ ids }}"
-          start_time: "{{ start }}"
-          period: "{{ use_period }}"
-          types: [change]
-        response_variable: stats
-      - variables:
           result: >-
-            {% set label = {'day': '%Y-%m-%d', 'week': 'week of %Y-%m-%d', 'month': '%Y-%m', 'year': '%Y'}[use_period] %}
+            {% set table = (state_attr('sensor.energy_history_data', 'tables') or {}).get(use_period, {}).get(use_kind, {}) %}
             {% set ns = namespace(rows=[], values=[]) %}
-            {% for id, rows in stats.statistics.items() %}
+            {% for name, values in table.items() %}
               {% set ns.values = [] %}
-              {% for row in rows %}
-                {# statistics start in UTC; local time gives the right day and month #}
-                {% set ns.values = ns.values + [((row.start | string | as_datetime | as_local).strftime(label), row.change | float(0) | round(2))] %}
+              {% for label in (values.keys() | sort)[-(count | default(6) | int):] %}
+                {% set ns.values = ns.values + [(label, values[label])] %}
               {% endfor %}
-              {% set name = id | replace('sensor.', '') | replace('_cost_total', '') | replace('_energy', '') %}
               {% set ns.rows = ns.rows + [(name, dict(ns.values))] %}
             {% endfor %}
             {{ {
               'unit': 'zł' if use_kind == 'cost' else 'kWh',
               'rows_start_on': use_period,
               'per_device': dict(ns.rows),
+              'updated': states('sensor.energy_history_data'),
               'notes': 'climate = floor heating and towel heaters; fixed = the fixed monthly fee; devices = all devices together. Counting started when each sensor was created',
               'price_per_kwh_zl': states('input_number.energy_price_per_kwh'),
               'fixed_fee_per_month_zl': states('input_number.energy_price_fixed'),
             } }}
       - stop: Done
         response_variable: result
+
+# recorder.get_statistics is an admin-only action, and Assist calls the script as the non-admin
+# voice-agent user. A trigger runs without a user, so this sensor reads the statistics every hour
+# and the script above only reads its attribute. The recorder skips it (configuration.yaml)
+template:
+  - triggers:
+      - trigger: time_pattern
+        minutes: 5
+      - trigger: homeassistant
+        event: start
+      - trigger: event
+        event_type: event_template_reloaded
+    actions:
+      - variables:
+          devices: >-
+            {{ ['living_room_refrigerator', 'master_floor_warming', 'guest_floor_warming',
+                'master_towel_heat', 'guest_towel_heat', 'tv', 'printer', 'cube_matrix', 'blinds',
+                'curtains', 'router', 'server', 'pc', 'ps5'] }}
+          ids: >-
+            {{ devices | map('regex_replace', '^(.*)$', 'sensor.\\1_energy') | list + ['sensor.devices_energy_total']
+               + devices | map('regex_replace', '^(.*)$', 'sensor.\\1_cost_total') | list
+               + ['sensor.climate_cost_total', 'sensor.fixed_cost_total', 'sensor.devices_cost_total'] }}
+      - action: recorder.get_statistics
+        data:
+          statistic_ids: "{{ ids }}"
+          start_time: "{{ today_at() - timedelta(days=30) }}"
+          period: day
+          types: [change]
+        response_variable: day
+      - action: recorder.get_statistics
+        data:
+          statistic_ids: "{{ ids }}"
+          start_time: "{{ today_at() - timedelta(days=now().weekday() + 7 * 11) }}"
+          period: week
+          types: [change]
+        response_variable: week
+      - action: recorder.get_statistics
+        data:
+          statistic_ids: "{{ ids }}"
+          start_time: "{{ (today_at().replace(day=1) - timedelta(days=360)).replace(day=1) }}"
+          period: month
+          types: [change]
+        response_variable: month
+      - action: recorder.get_statistics
+        data:
+          statistic_ids: "{{ ids }}"
+          start_time: "{{ today_at().replace(month=1, day=1, year=now().year - 2) }}"
+          period: year
+          types: [change]
+        response_variable: year
+      - variables:
+          tables: >-
+            {% set labels = {'day': '%Y-%m-%d', 'week': 'week of %Y-%m-%d', 'month': '%Y-%m', 'year': '%Y'} %}
+            {% set ns = namespace(periods=[], cost=[], energy=[], values=[]) %}
+            {% for period, stats in [('day', day), ('week', week), ('month', month), ('year', year)] %}
+              {% set ns.cost = [] %}
+              {% set ns.energy = [] %}
+              {% for id, rows in stats.statistics.items() %}
+                {% set ns.values = [] %}
+                {% for row in rows %}
+                  {# statistics start in UTC; local time gives the right day and month #}
+                  {% set ns.values = ns.values + [((row.start | string | as_datetime | as_local).strftime(labels[period]), row.change | float(0) | round(2))] %}
+                {% endfor %}
+                {% set name = id | replace('sensor.', '') | replace('_cost_total', '') | replace('_energy_total', '') | replace('_energy', '') %}
+                {% if id.endswith('_cost_total') %}
+                  {% set ns.cost = ns.cost + [(name, dict(ns.values))] %}
+                {% else %}
+                  {% set ns.energy = ns.energy + [(name, dict(ns.values))] %}
+                {% endif %}
+              {% endfor %}
+              {% set ns.periods = ns.periods + [(period, {'cost': dict(ns.cost), 'energy': dict(ns.energy)})] %}
+            {% endfor %}
+            {{ dict(ns.periods) }}
+    sensor:
+      - name: Energy history data
+        unique_id: energy_history_data
+        icon: mdi:chart-bar
+        state: "{{ now().isoformat(timespec='minutes') }}"
+        attributes:
+          tables: "{{ tables }}"

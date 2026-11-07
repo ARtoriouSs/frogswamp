@@ -21,6 +21,10 @@ scene ui: !include scenes.yaml
 # A month of history for the Monitor tab's Month range (the default is 10 days)
 recorder:
   purge_keep_days: 31
+  exclude:
+    entities:
+      # Big attribute, rebuilt every hour from the statistics
+      - sensor.energy_history_data
 
 # The "frog:" icon set; www/ is mounted at /config/www/frogswamp, served as /local/frogswamp
 frontend:
