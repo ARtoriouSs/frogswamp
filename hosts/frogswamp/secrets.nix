@@ -104,6 +104,7 @@
       (lib.mkIf config.frogswamp.voice.enable {
         "voice/claude_oauth_token".restartUnits = [ "voice-bridge.service" ];
         "voice/ha_token".restartUnits = [ "voice-bridge.service" ];
+        "voice/home_address".restartUnits = [ "voice-bridge.service" ];
       })
       (lib.mkIf config.frogswamp.workCalendar.enable {
         "work_calendar/ical_url".restartUnits = [ "work-calendar.service" ];
@@ -168,6 +169,7 @@
     voice = {
       claudeTokenFile = lib.mkDefault config.sops.secrets."voice/claude_oauth_token".path;
       haTokenFile = lib.mkDefault config.sops.secrets."voice/ha_token".path;
+      homeAddressFile = lib.mkDefault config.sops.secrets."voice/home_address".path;
     };
     workCalendar = {
       urlFile = lib.mkDefault config.sops.secrets."work_calendar/ical_url".path;

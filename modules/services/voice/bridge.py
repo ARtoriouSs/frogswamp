@@ -307,14 +307,26 @@ def make_server(listen, handler):
     return ThreadingHTTPServer((host, int(port)), handler)
 
 
+def load_system_prompt(cfg):
+    with open(cfg["system_prompt_file"]) as f:
+        prompt = f.read()
+    # the address is a secret, so it comes from a credential file, not from the prompt in the repo
+    path = cfg.get("home_address_file")
+    if path and os.path.exists(path):
+        with open(path) as f:
+            address = f.read().strip()
+        if address:
+            prompt += f"\nThe owner's home address: {address}\n"
+    return prompt
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", required=True)
     with open(parser.parse_args().config) as f:
         cfg = json.load(f)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
-    with open(cfg["system_prompt_file"]) as f:
-        system_prompt = f.read()
+    system_prompt = load_system_prompt(cfg)
     server = make_server(cfg["listen"], make_handler(cfg, make_backend(cfg), system_prompt))
     log.info("listening on %s, backend %s", cfg["listen"], cfg["backend"])
     server.serve_forever()

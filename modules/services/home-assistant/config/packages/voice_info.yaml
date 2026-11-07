@@ -1,0 +1,135 @@
+# Read-only scripts for the voice assistant: they only return data. Exposed to Assist, so Claude can
+# answer "when is the next service" or "how much did the floor heating cost last month"
+script:
+  maintenance_status:
+    alias: Maintenance status
+    description: >-
+      Read only. Car service and parts (oil, filters, gearbox, inspection, brake pads and discs) and the
+      fridge water filter: how many km and days are left, when they were last changed. Call it for any
+      question about car maintenance or the fridge filter
+    icon: mdi:wrench-clock
+    mode: parallel
+    sequence:
+      - variables:
+          result: >-
+            {% set ns = namespace(car=[], wear=[]) %}
+            {% for part in ['oil', 'air_filter', 'cabin_filter', 'fuel_filter', 'gearbox_hydraulic',
+                            'gearbox_mechanical', 'inspection'] %}
+              {% set sensor = 'sensor.car_' ~ part %}
+              {% set ns.car = ns.car + [(part, {
+                'percent_left': states(sensor),
+                'km_left': state_attr(sensor, 'km_left'),
+                'days_left': state_attr(sensor, 'days_left'),
+                'last_changed': states('input_datetime.car_' ~ part ~ '_changed'),
+                'last_changed_at_km': states('input_number.car_' ~ part ~ '_km'),
+              })] %}
+            {% endfor %}
+            {% for part in ['front_pads', 'front_discs', 'rear_pads', 'rear_discs'] %}
+              {% set ns.wear = ns.wear + [(part, {
+                'km_since_change': states('sensor.car_' ~ part),
+                'last_changed': states('input_datetime.car_' ~ part ~ '_changed'),
+              })] %}
+            {% endfor %}
+            {% set car = 'sensor.garage_audi_a5_sportback_' %}
+            {% set filter_changed = states('input_datetime.fridge_filter_changed') | as_datetime(none) %}
+            {{ {
+              'car_parts': dict(ns.car),
+              'car_parts_note': 'percent_left is the lower of the km and the time limit; days_left and km_left are what is left until the next change, negative means overdue',
+              'brakes_changed_by_condition': dict(ns.wear),
+              'car_odometer_km': states(car ~ 'odometer'),
+              'car_says': {
+                'next_service_km': states(car ~ 'next_service'),
+                'next_service_in_days': states(car ~ 'service_in'),
+                'next_service_date': states(car ~ 'service_date'),
+                'next_oil_change_km': states(car ~ 'next_oil_change'),
+                'next_oil_change_in_days': states(car ~ 'oil_change_in'),
+                'next_oil_change_date': states(car ~ 'oil_change_date'),
+                'inspection_due': states('binary_sensor.garage_audi_a5_sportback_inspection_due'),
+              },
+              'fridge_filter': {
+                'percent_left': states('sensor.fridge_filter_capacity'),
+                'last_changed': states('input_datetime.fridge_filter_changed'),
+                'change_by': (filter_changed + timedelta(days=365)).date() | string if filter_changed else 'unknown',
+                'days_left': (365 - (now() - filter_changed | as_local).days) if filter_changed else 'unknown',
+                'fridge_own_usage_percent': states('sensor.living_room_refrigerator_water_filter_usage'),
+              },
+            } }}
+      - stop: Done
+        response_variable: result
+
+  energy_history:
+    alias: Energy history
+    description: >-
+      Read only. Electricity cost (zł) or energy (kWh) per device for past days, weeks, months or years,
+      from Home Assistant's long-term statistics, plus the current prices. Call it for any question about
+      past or total electricity costs or usage. Each value is the amount used in that period
+    icon: mdi:chart-bar
+    mode: parallel
+    fields:
+      kind:
+        description: cost (zł) or energy (kWh)
+        default: cost
+        selector:
+          select:
+            options: [cost, energy]
+      period:
+        description: Length of one row
+        default: month
+        selector:
+          select:
+            options: [day, week, month, year]
+      count:
+        description: How many periods back from now, including the current one
+        default: 6
+        selector:
+          number:
+            min: 1
+            max: 36
+    sequence:
+      - variables:
+          devices: >-
+            {{ ['living_room_refrigerator', 'master_floor_warming', 'guest_floor_warming',
+                'master_towel_heat', 'guest_towel_heat', 'tv', 'printer', 'cube_matrix', 'blinds',
+                'curtains', 'router', 'server', 'pc', 'ps5'] }}
+          use_kind: "{{ kind | default('cost') }}"
+          use_period: "{{ period | default('month') }}"
+          ids: >-
+            {% if use_kind == 'energy' %}
+              {{ devices | map('regex_replace', '^(.*)$', 'sensor.\\1_energy') | list + ['sensor.devices_energy_total'] }}
+            {% else %}
+              {{ devices | map('regex_replace', '^(.*)$', 'sensor.\\1_cost_total') | list
+                 + ['sensor.climate_cost_total', 'sensor.fixed_cost_total', 'sensor.devices_cost_total'] }}
+            {% endif %}
+          start: >-
+            {% set days = {'day': 1, 'week': 7, 'month': 31, 'year': 366}[use_period] %}
+            {{ (now() - timedelta(days=days * ((count | default(6) | int) - 1))).replace(hour=0, minute=0, second=0, microsecond=0) }}
+      - action: recorder.get_statistics
+        data:
+          statistic_ids: "{{ ids }}"
+          start_time: "{{ start }}"
+          period: "{{ use_period }}"
+          types: [change]
+        response_variable: stats
+      - variables:
+          result: >-
+            {% set label = {'day': '%Y-%m-%d', 'week': 'week of %Y-%m-%d', 'month': '%Y-%m', 'year': '%Y'}[use_period] %}
+            {% set ns = namespace(rows=[], values=[]) %}
+            {% for id, rows in stats.statistics.items() %}
+              {% set ns.values = [] %}
+              {% for row in rows %}
+                {# statistics start in UTC; local time gives the right day and month #}
+                {% set ns.values = ns.values + [((row.start | string | as_datetime | as_local).strftime(label), row.change | float(0) | round(2))] %}
+              {% endfor %}
+              {% set name = id | replace('sensor.', '') | replace('_cost_total', '') | replace('_energy', '') %}
+              {% set ns.rows = ns.rows + [(name, dict(ns.values))] %}
+            {% endfor %}
+            {{ {
+              'unit': 'zł' if use_kind == 'cost' else 'kWh',
+              'rows_start_on': use_period,
+              'per_device': dict(ns.rows),
+              'notes': 'climate = floor heating and towel heaters; fixed = the fixed monthly fee; devices = all devices together. Counting started when each sensor was created',
+              'price_per_kwh_zl': states('input_number.energy_price_per_kwh'),
+              'fixed_fee_per_month_zl': states('input_number.energy_price_fixed'),
+            } }}
+      - stop: Done
+        response_variable: result

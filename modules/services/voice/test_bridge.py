@@ -392,3 +392,21 @@ def test_unix_socket_server(tmp_path):
     finally:
         srv.shutdown()
         srv.server_close()
+
+
+# ---------- system prompt ----------
+
+def test_system_prompt_with_home_address(tmp_path):
+    (tmp_path / "prompt.md").write_text("Be short.\n")
+    (tmp_path / "address").write_text("Example street 1, City\n")
+    cfg = {"system_prompt_file": str(tmp_path / "prompt.md"), "home_address_file": str(tmp_path / "address")}
+    prompt = bridge.load_system_prompt(cfg)
+    assert prompt.startswith("Be short.")
+    assert "Example street 1, City" in prompt
+
+
+def test_system_prompt_without_home_address(tmp_path):
+    (tmp_path / "prompt.md").write_text("Be short.\n")
+    assert bridge.load_system_prompt({"system_prompt_file": str(tmp_path / "prompt.md")}) == "Be short.\n"
+    cfg = {"system_prompt_file": str(tmp_path / "prompt.md"), "home_address_file": str(tmp_path / "missing")}
+    assert bridge.load_system_prompt(cfg) == "Be short.\n"

@@ -24,7 +24,7 @@ phone / Voice PE ─ wake word ─▶ HA pipeline ─▶ Whisper ─▶ local ph
 
 - Only the **text** of a request after the wake word, and only when HA can't handle it locally. No audio, nothing without the wake word.
 - Claude's web searches, and pages it opens from its own search results.
-- Nothing about the home is meant to go to the web, see the rules below.
+- Nothing about the home is meant to go to the web, see the rules below. The one exception is the home address, which Claude may put in searches that need a place (weather, routes, shops nearby).
 
 ## Safety rules and how they are kept
 
@@ -70,6 +70,10 @@ Every exposed entity has Russian aliases, often also English ones (*Settings →
 One named blind ("открой левые жалюзи", "open the left blind") stays with HA's built-in phrases. The actions are in `config/packages/voice_intents.yaml`; each phrase file sets a `lang` slot so the reply comes in the same language. `nix build .#checks.x86_64-linux.test-ha-custom-sentences` checks every phrase and reply.
 
 ## Claude's behaviour
+
+- Tone: casual everyday language; it may swear now and then, more if you do.
+- Home address: sops `voice/home_address` (`frogswamp.voice.homeAddressFile`), loaded as a credential and added to the end of the system prompt. It stays out of the repo because the repo is public.
+- Maintenance and energy: two read-only scripts in `home-assistant/config/packages/voice_info.yaml`. *Maintenance status* gives km and days left for car parts and the fridge filter; *Energy history* reads cost or kWh per device per day, week, month or year from HA's long-term statistics. The web guard counts both as reads.
 
 - System prompt: `system-prompt.md` (home rules, scenes first, room temperatures, secrets, memory, web).
 - **Memory:** one session for the whole home, forgotten after 6 hours of silence or when `voice-bridge` restarts. Transcripts are kept by Claude Code for 30 days in `/var/lib/private/voice-agent/claude/projects/`.
