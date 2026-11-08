@@ -49,6 +49,15 @@ def test_search_result_allowed(tmp_path):
     assert check(tmp_path, entries, "https://weather.example/today/")[0] == 0
 
 
+def test_yandex_blocked_even_from_search(tmp_path):
+    urls = ["https://yandex.ru/maps/org/1", "https://maps.yandex.com/x", "https://ya.ru/", "https://dzen.ru/a"]
+    entries = search_turn("u1", urls)
+    for url in urls:
+        code, err = check(tmp_path, entries, url)
+        assert code == 2 and "Yandex" in err
+    assert not web_guard.blocked_host("https://notyandex.example/")
+
+
 def test_links_line_used_without_top_level_result(tmp_path):
     entries = search_turn("u1", ["https://weather.example/today"], with_top=False)
     assert check(tmp_path, entries, "https://weather.example/today")[0] == 0

@@ -2,7 +2,8 @@
 the tool call (exit code 2)
 
 fetch: WebFetch may only open pages that came back in this session's own WebSearch results.
-  Claude can't build a URL itself, so it can't put home data into a link, even if a page tells it to
+  Claude can't build a URL itself, so it can't put home data into a link, even if a page tells it to.
+  Yandex sites are never opened
 home: Home Assistant tools
   - only tools of known integrations; a new integration can add tools past HA's exposure settings
   - no network URLs in any argument; Music Assistant would fetch them from the server
@@ -13,6 +14,7 @@ home: Home Assistant tools
 import json
 import re
 import sys
+from urllib.parse import urlsplit
 
 LINKS_PREFIX = "Links: "
 HA_PREFIX = "mcp__homeassistant__"
@@ -29,6 +31,14 @@ HA_READ_TOOLS = {
 WEB_TOOLS = {"WebSearch", "WebFetch"}
 # Music Assistant's own URIs (spotify://, library://) are fine, these go out to the network
 NETWORK_URL_RE = re.compile(r"\b(?:https?|ftps?|rtsps?|rtmps?|mms|wss?|sftp)://", re.IGNORECASE)
+
+
+# the owner doesn't want Yandex used at all
+BLOCKED_HOST_RE = re.compile(r"(?:^|\.)(?:yandex\.[a-z.]+|ya\.ru|yandex|dzen\.ru|kinopoisk\.ru)$", re.IGNORECASE)
+
+
+def blocked_host(url):
+    return bool(BLOCKED_HOST_RE.search(urlsplit(url).hostname or ""))
 
 
 def norm(url):
@@ -149,6 +159,9 @@ def main(stdin=sys.stdin, stderr=sys.stderr, mode="fetch"):
     try:
         event = json.load(stdin)
         url = event["tool_input"]["url"]
+        if blocked_host(url):
+            print("Web fetch blocked: Yandex sites are not used. Pick another source", file=stderr)
+            return 2
         allowed = norm(url) in search_result_urls(event["transcript_path"])
     except Exception as e:
         print(f"Web fetch blocked: the guard could not check the URL ({type(e).__name__})", file=stderr)
