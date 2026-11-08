@@ -17,6 +17,7 @@ import re
 import subprocess
 import threading
 import time
+import urllib.error
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from socketserver import ThreadingMixIn, UnixStreamServer
@@ -320,6 +321,8 @@ def describe_home(config):
         return ""
     where = ", ".join(str(x) for x in (name, config.get("country")) if x)
     text = f"\nThe owner's home location: {where}"
+    if config.get("address"):
+        text += f", address {config['address']}"
     lat, lon = config.get("latitude"), config.get("longitude")
     if isinstance(lat, (int, float)) and isinstance(lon, (int, float)):
         # about 100 m, enough for weather and places nearby
@@ -330,22 +333,36 @@ def describe_home(config):
 
 
 class HomeLocation:
-    """The home's name and place from HA's general settings, so the public repo has no address.
+    """The home's name, place and street address from HA, so the public repo has no address.
 
     Read again every hour; when HA can't answer, the last known text is used
     """
 
-    def __init__(self, url, token_file, ttl=3600, fetch=None, clock=time.monotonic):
-        self.url, self.token_file, self.ttl, self.clock = url, token_file, ttl, clock
+    def __init__(self, url, token_file, address_url=None, ttl=3600, fetch=None, clock=time.monotonic):
+        self.url, self.token_file, self.address_url = url, token_file, address_url
+        self.ttl, self.clock = ttl, clock
         self.fetch = fetch or self.fetch_config
         self.text, self.read_at = "", None
 
     def fetch_config(self):
         with open(self.token_file) as f:
             token = f.read().strip()
-        req = urllib.request.Request(self.url, headers={"Authorization": f"Bearer {token}"})
-        with urllib.request.urlopen(req, timeout=2) as resp:
-            return json.load(resp)
+
+        def get(url):
+            req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
+            with urllib.request.urlopen(req, timeout=2) as resp:
+                return json.load(resp)
+
+        config = get(self.url)
+        if self.address_url and isinstance(config, dict):
+            # the street address is a UI helper in HA, an entity of its own
+            try:
+                state = get(self.address_url).get("state")
+            except urllib.error.HTTPError:
+                state = None
+            if state and state not in ("unknown", "unavailable"):
+                config["address"] = state
+        return config
 
     def get(self):
         now = self.clock()
@@ -368,7 +385,11 @@ def main():
         cfg = json.load(f)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     system_prompt = load_system_prompt(cfg)
-    home = HomeLocation(cfg["ha_config_url"], cfg["ha_token_file"]) if cfg.get("ha_config_url") else None
+    home = (
+        HomeLocation(cfg["ha_config_url"], cfg["ha_token_file"], cfg.get("ha_address_url"))
+        if cfg.get("ha_config_url")
+        else None
+    )
     server = make_server(cfg["listen"], make_handler(cfg, make_backend(cfg), system_prompt, home))
     log.info("listening on %s, backend %s", cfg["listen"], cfg["backend"])
     server.serve_forever()

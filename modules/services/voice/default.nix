@@ -79,6 +79,8 @@ let
       system_prompt_file = "${./system-prompt.md}";
       # the home's name and place come from HA's general settings, the repo is public
       ha_config_url = "http://127.0.0.1:8123/api/config";
+      # a template helper made in HA's UI, the street address is kept out of the repo
+      ha_address_url = "http://127.0.0.1:8123/api/states/sensor.home_address";
       ha_token_file = "${credentials}/ha_token";
       claude-code = {
         claude = lib.getExe' cfg.claudePackage "claude";

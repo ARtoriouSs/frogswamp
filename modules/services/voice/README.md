@@ -72,7 +72,7 @@ One named blind ("открой левые жалюзи", "open the left blind") 
 ## Claude's behaviour
 
 - Tone: casual everyday language; it may swear now and then, more if you do. It never insults you first, but may answer an insult in kind.
-- Home location: the bridge reads HA's `/api/config` (home name, country, coordinates rounded to ~100 m, time zone) with the `voice-agent` token, every hour, and adds it to the end of the system prompt. Change it in *Settings → System → General*; put the street address in the home name if Claude should know it. Nothing of it is in the repo, which is public.
+- Home location: the bridge reads HA's `/api/config` (home name, country, coordinates rounded to ~100 m, time zone) with the `voice-agent` token, every hour, and adds it to the end of the system prompt. Change it in *Settings → System → General*. The street address is the UI template helper `sensor.home_address` (exposed, aliases "Домашний адрес", "Адрес дома"); the bridge reads it too. Nothing of it is in the repo, which is public.
 - Maintenance and energy: two read-only scripts in `home-assistant/config/packages/voice_info.yaml`. *Maintenance status* gives km and days left for car parts and the fridge filter; *Energy history* gives cost or kWh per device per day, week, month or year. `recorder.get_statistics` is admin-only and Assist runs as `voice-agent`, so the trigger sensor `sensor.energy_history_data` reads the statistics every hour without a user and the script reads its attribute (the recorder skips it). The web guard counts both scripts as reads.
 
 - System prompt: `system-prompt.md` (home rules, scenes first, room temperatures, secrets, memory, web).

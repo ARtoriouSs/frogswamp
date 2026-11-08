@@ -443,23 +443,33 @@ def test_home_location_is_cached_and_survives_errors():
 def test_home_location_reads_token_file(tmp_path, monkeypatch):
     token = tmp_path / "ha_token"
     token.write_text("secret\n")
-    seen = {}
-
-    class Resp:
-        def __enter__(self):
-            return io.BytesIO(json.dumps(HA_CONFIG).encode())
-
-        def __exit__(self, *a):
-            return False
+    seen = []
+    answers = {
+        "http://ha/api/config": HA_CONFIG,
+        "http://ha/api/states/sensor.home_address": {"state": "Example street 2, 00-000 City"},
+    }
 
     def fake_urlopen(req, timeout):
-        seen["auth"] = req.get_header("Authorization")
-        seen["timeout"] = timeout
-        return Resp()
+        seen.append((req.full_url, req.get_header("Authorization"), timeout))
+        return io.BytesIO(json.dumps(answers[req.full_url]).encode())
 
     monkeypatch.setattr(bridge.urllib.request, "urlopen", fake_urlopen)
-    assert "Example street 1" in bridge.HomeLocation("http://ha/api/config", str(token)).get()
-    assert seen == {"auth": "Bearer secret", "timeout": 2}
+    home = bridge.HomeLocation("http://ha/api/config", str(token), "http://ha/api/states/sensor.home_address")
+    text = home.get()
+    assert "Example street 1" in text and "address Example street 2, 00-000 City" in text
+    assert all(auth == "Bearer secret" and t == 2 for _, auth, t in seen)
+
+
+def test_home_location_without_address_entity(tmp_path, monkeypatch):
+    def fake_urlopen(req, timeout):
+        if req.full_url.endswith("/config"):
+            return io.BytesIO(json.dumps(HA_CONFIG).encode())
+        raise urllib.error.HTTPError(req.full_url, 404, "Not Found", None, None)
+
+    monkeypatch.setattr(bridge.urllib.request, "urlopen", fake_urlopen)
+    (tmp_path / "token").write_text("secret")
+    text = bridge.HomeLocation("http://ha/api/config", str(tmp_path / "token"), "http://ha/api/states/sensor.x").get()
+    assert "Example street 1" in text and "address" not in text
 
 
 def test_handler_adds_home_location_to_prompt():
