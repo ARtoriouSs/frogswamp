@@ -5,7 +5,8 @@ Talk to the home in Russian or English. Speech-to-text and text-to-speech run on
 | Part | Where | What it does |
 |---|---|---|
 | Whisper (STT) | `127.0.0.1:10300` ru, `:10301` en | Speech → text. `auto` model: GigaAM for Russian, Parakeet for English |
-| Piper (TTS) | `127.0.0.1:10200` ru, `:10201` en | Text → speech. Voices are picked in the pipelines (ruslan, alan) |
+| Silero (TTS, Russian) | `127.0.0.1:10202`, `wyoming-silero` | Text → speech for the Russian pipeline, voice aidar. Model `v5_6_ru` (CC BY-NC, home use only) |
+| Piper (TTS) | `127.0.0.1:10200` ru, `:10201` en | Text → speech for English (alan); Russian ruslan is the fallback |
 | Local phrases | `home-assistant/config/custom_sentences/{ru,en}/voice.yaml` | Blinds, curtains, heating, room temperature without Claude |
 | `claude_bridge` | HA custom integration (conversation entity *Claude*) | Hands the text and the turns HA handled itself to the bridge |
 | `voice-bridge` | Unix socket `/run/voice-bridge/bridge.sock`, systemd, `DynamicUser` | Runs `claude -p` with HA's MCP server, keeps the session |
@@ -17,7 +18,7 @@ phone / Voice PE ─ wake word ─▶ HA pipeline ─▶ Whisper ─▶ local ph
                                                               ▼
                                    claude_bridge ─▶ voice-bridge ─▶ claude -p ─▶ HA MCP (exposed entities only)
                                                                            └──▶ web search / pages from results
-                                   answer text ─▶ Piper ─▶ speaker
+                                   answer text ─▶ Silero (ru) / Piper (en) ─▶ speaker
 ```
 
 ## What leaves the house
@@ -69,6 +70,13 @@ Every exposed entity has Russian aliases, often also English ones (*Settings →
 
 One named blind ("открой левые жалюзи", "open the left blind") stays with HA's built-in phrases. The actions are in `config/packages/voice_intents.yaml`; each phrase file sets a `lang` slot so the reply comes in the same language. `nix build .#checks.x86_64-linux.test-ha-custom-sentences` checks every phrase and reply.
 
+## Silero
+
+- Livelier Russian than Piper: automatic stress, questions and emphasis. First audio after about 0.6 s, a 13 s answer is ready in 1.3 s on the N100, about 600 MB of memory.
+- Silero reads only Cyrillic words. `silero/ru_text.py` writes numbers, decimals, times, units (°C, %, km, zł, kWh) and Latin words (Polish street names) out in Russian first, drops markdown, links and emoji, and splits the text into sentences, which are spoken one by one.
+- The model file is a torch package with Silero's own Python code, pinned by hash. The service has no network except localhost, no writable paths except its cache, no access to `/var/lib` or secrets, and a 3 GB memory limit.
+- Voices: aidar, eugene (male), baya, kseniya, xenia (female). The pipeline sets the voice; `frogswamp.voice.silero.voice` is the default. Back to Piper: *Settings → Voice assistants → Russian → Text-to-speech*.
+
 ## Claude's behaviour
 
 - Tone: casual everyday language; it may swear now and then, more if you do. It never insults you first, but may answer an insult in kind.
@@ -103,7 +111,7 @@ One named blind ("открой левые жалюзи", "open the left blind") 
 1. `claude setup-token` on the PC → sops `voice/claude_oauth_token`.
 2. HA user `voice-agent`: not an admin, local access only; its long-lived token → sops `voice/ha_token`. Then `just deploy`.
 3. HA integrations: *Model Context Protocol Server* (Assist API; "Require an administrator account" off), Wyoming ×4 on `localhost` with the ports above (renamed per language), *Claude bridge* (default URL `unix:/run/voice-bridge/bridge.sock`; older entries with `http://127.0.0.1:8099` are switched to it automatically).
-4. Pipelines *Russian* (preferred) and *English*: STT Whisper ru/en, agent *Claude* with "Prefer handling commands locally", TTS Piper ru/en.
+4. Pipelines *Russian* (preferred) and *English*: STT Whisper ru/en, agent *Claude* with "Prefer handling commands locally", TTS Silero aidar (Russian, Wyoming `127.0.0.1:10202`, entry *Silero ru*) and Piper alan (English).
 5. Music Assistant: add Spotify (librespot engine), then HA's Music Assistant integration.
 
 ## Switching to the API or another model

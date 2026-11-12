@@ -163,8 +163,8 @@ in
           "xenia"
           "eugene"
         ];
-        default = "xenia";
-        description = "Default voice; a pipeline can pick another one";
+        default = "aidar";
+        description = "Default voice; the Russian pipeline picks aidar itself";
       };
     };
     debugLog = lib.mkOption {
