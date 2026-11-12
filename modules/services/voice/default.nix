@@ -258,7 +258,6 @@ in
           PrivateDevices = true;
           NoNewPrivileges = true;
           ProtectProc = "invisible";
-          ProcSubset = "pid";
           ProtectKernelTunables = true;
           ProtectKernelModules = true;
           ProtectKernelLogs = true;
