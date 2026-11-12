@@ -3153,15 +3153,11 @@ views:
             items:
               - label: Other
                 hint: |-
-                  AdBlue: 15 000 km, no time limit. Refill when the car asks
+                  AdBlue: 15 000 km, no time limit. Refill when the car asks. The percentage is the car's range out of 15 000 km
           - <<: *car_part
-            entity: sensor.garage_audi_a5_sportback_adblue_range
+            entity: sensor.car_adblue
             primary: AdBlue
-            secondary: >-
-              {% from 'car_parts.jinja' import last_service %}
-              {{ 'left: ' ~ states(entity) ~ ' km' ~ last_service('adblue') if has_value(entity) else 'Unavailable' }}
             icon: mdi:car-coolant-level
-            color: "{{ 'red' if states(entity) | int(99999) < 1000 else 'green' }}"
             tap_action:
               <<: *car_part_tap
               data:

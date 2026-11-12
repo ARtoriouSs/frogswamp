@@ -261,6 +261,15 @@ template:
         state: "{% from 'car_parts.jinja' import capacity %}{{ capacity('inspection', 0, 365) }}"
         attributes:
           days_left: "{% from 'car_parts.jinja' import days_left %}{{ days_left('inspection', 365) }}"
+      # The car's own AdBlue range, a full tank is about 15 000 km
+      - name: Car AdBlue
+        unique_id: car_part_adblue
+        icon: mdi:car-coolant-level
+        unit_of_measurement: "%"
+        state: "{{ [0, [100, states('sensor.garage_audi_a5_sportback_adblue_range') | float(0) / 15000 * 100] | min] | max | round(1) }}"
+        availability: "{{ has_value('sensor.garage_audi_a5_sportback_adblue_range') }}"
+        attributes:
+          km_left: "{{ states('sensor.garage_audi_a5_sportback_adblue_range') | float(0) | round(0) | int }}"
 
       # Changed by condition, so these only count the km since the change
       - name: Car front pads
