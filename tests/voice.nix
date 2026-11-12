@@ -26,6 +26,8 @@ pkgs.testers.runNixOSTest {
           claudePackage = fakeClaude;
           claudeTokenFile = toString (pkgs.writeText "claude-token" "claude-secret");
           haTokenFile = toString (pkgs.writeText "ha-token" "ha-secret");
+          # torch and the model are heavy for the test VM; its own tests run in test-voice-bridge-unit
+          silero.enable = false;
         };
       };
       # the STT/TTS servers download their models at start, there is no internet in the test
