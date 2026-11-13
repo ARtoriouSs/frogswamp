@@ -117,16 +117,8 @@ let
     ps.wyoming
     ps.num2words
   ]);
-  languages = {
-    ru = {
-      sttPort = 10300;
-      ttsPort = 10200;
-    };
-    en = {
-      sttPort = 10301;
-      ttsPort = 10201;
-    };
-  };
+  # Russian only: English names inside Russian speech come in Cyrillic and Claude turns them back
+  sttPort = 10300;
 in
 {
   options.frogswamp.voice = {
@@ -150,11 +142,9 @@ in
       description = "Runtime path of the long-lived token of the non-admin HA user voice-agent";
     };
     silero = {
-      enable =
-        lib.mkEnableOption "Silero TTS for Russian (Wyoming on ${toString sileroPort}), livelier than Piper"
-        // {
-          default = true;
-        };
+      enable = lib.mkEnableOption "Silero TTS for Russian (Wyoming on ${toString sileroPort})" // {
+        default = true;
+      };
       voice = lib.mkOption {
         type = lib.types.enum [
           "aidar"
@@ -176,38 +166,24 @@ in
       library = lib.mkOption {
         type = lib.types.str;
         default = "auto";
-        description = "`auto` picks GigaAM for Russian and Parakeet for English";
+        description = "`auto` picks GigaAM for Russian";
       };
       model = lib.mkOption {
         type = lib.types.str;
         default = "auto";
       };
     };
-    voices = lib.mkOption {
-      type = lib.types.attrsOf lib.types.str;
-      default = {
-        ru = "ru_RU-irina-medium";
-        en = "en_US-lessac-medium";
-      };
-    };
   };
 
   config = lib.mkIf cfg.enable {
-    services.wyoming.faster-whisper.servers = lib.mapAttrs (lang: l: {
+    services.wyoming.faster-whisper.servers.ru = {
       enable = true;
-      language = lang;
+      language = "ru";
       sttLibrary = cfg.stt.library;
       inherit (cfg.stt) model;
-      uri = "tcp://127.0.0.1:${toString l.sttPort}";
+      uri = "tcp://127.0.0.1:${toString sttPort}";
       zeroconf.enable = false;
-    }) languages;
-
-    services.wyoming.piper.servers = lib.mapAttrs (lang: l: {
-      enable = true;
-      voice = cfg.voices.${lang};
-      uri = "tcp://127.0.0.1:${toString l.ttsPort}";
-      zeroconf.enable = false;
-    }) languages;
+    };
 
     # The model is a torch package with Silero's own code inside, so it runs with no network
     # (only HA on localhost talks to it), no writable paths and a memory limit

@@ -1,13 +1,12 @@
 # Voice assistant
 
-Talk to the home in Russian or English. Speech-to-text and text-to-speech run on the server. Simple home commands are handled by Home Assistant itself in about a second. Everything else (questions, chat, games, music, anything HA doesn't know) goes as **text** to Claude, which runs headless on the Claude subscription.
+Talk to the home in Russian (English names inside Russian speech work too). Speech-to-text and text-to-speech run on the server. Simple home commands are handled by Home Assistant itself in about a second. Everything else (questions, chat, games, music, anything HA doesn't know) goes as **text** to Claude, which runs headless on the Claude subscription.
 
 | Part | Where | What it does |
 |---|---|---|
-| Whisper (STT) | `127.0.0.1:10300` ru, `:10301` en | Speech → text. `auto` model: GigaAM for Russian, Parakeet for English |
-| Silero (TTS, Russian) | `127.0.0.1:10202`, `wyoming-silero` | Text → speech for the Russian pipeline, voice aidar. Model `v5_6_ru` (CC BY-NC, home use only) |
-| Piper (TTS) | `127.0.0.1:10200` ru, `:10201` en | Text → speech for English (alan); Russian ruslan is the fallback |
-| Local phrases | `home-assistant/config/custom_sentences/{ru,en}/voice.yaml` | Blinds, curtains, heating, room temperature without Claude |
+| Whisper (STT) | `127.0.0.1:10300` | Speech → text. `auto` model: GigaAM for Russian |
+| Silero (TTS) | `127.0.0.1:10202`, `wyoming-silero` | Text → speech, voice aidar. Model `v5_6_ru` (CC BY-NC, home use only) |
+| Local phrases | `home-assistant/config/custom_sentences/{ru,en}/voice.yaml` | Blinds, curtains, heating, room temperature without Claude (English ones only for typed Assist) |
 | `claude_bridge` | HA custom integration (conversation entity *Claude*) | Hands the text and the turns HA handled itself to the bridge |
 | `voice-bridge` | Unix socket `/run/voice-bridge/bridge.sock`, systemd, `DynamicUser` | Runs `claude -p` with HA's MCP server, keeps the session |
 | Music Assistant | http://192.168.101.10:8095 | Spotify (librespot) on `media_player.tv_music` |
@@ -18,7 +17,7 @@ phone / Voice PE ─ wake word ─▶ HA pipeline ─▶ Whisper ─▶ local ph
                                                               ▼
                                    claude_bridge ─▶ voice-bridge ─▶ claude -p ─▶ HA MCP (exposed entities only)
                                                                            └──▶ web search / pages from results
-                                   answer text ─▶ Silero (ru) / Piper (en) ─▶ speaker
+                                   answer text ─▶ Silero ─▶ speaker
 ```
 
 ## What leaves the house
@@ -72,10 +71,10 @@ One named blind ("открой левые жалюзи", "open the left blind") 
 
 ## Silero
 
-- Livelier Russian than Piper: automatic stress, questions and emphasis. First audio after about 0.6 s, a 13 s answer is ready in 1.3 s on the N100, about 600 MB of memory.
-- Silero reads only Cyrillic words. `silero/ru_text.py` writes numbers, decimals, times, units (°C, %, km, zł, kWh) and Latin words (Polish street names) out in Russian first, drops markdown, links and emoji, and splits the text into sentences, which are spoken one by one.
+- Livelier Russian than Piper (used before 2026-11-12): automatic stress, questions and emphasis. First audio after about 0.6 s, a 13 s answer is ready in 1.3 s on the N100, about 600 MB of memory.
+- Silero reads only Cyrillic words. The prompt asks Claude to write foreign names in Cyrillic as a Russian says them (Имэджин Драгонс). `silero/ru_text.py` writes numbers, decimals, times, units (°C, %, km, zł, kWh) and Latin words (Polish street names) out in Russian first, drops markdown, links and emoji, and splits the text into sentences, which are spoken one by one.
 - The model file is a torch package with Silero's own Python code, pinned by hash. The service has no network except localhost, no writable paths except its cache, no access to `/var/lib` or secrets, and a 3 GB memory limit.
-- Voices: aidar, eugene (male), baya, kseniya, xenia (female). The pipeline sets the voice; `frogswamp.voice.silero.voice` is the default. Back to Piper: *Settings → Voice assistants → Russian → Text-to-speech*.
+- Voices: aidar, eugene (male), baya, kseniya, xenia (female). The pipeline sets the voice; `frogswamp.voice.silero.voice` is the default. Piper was removed to save memory; to bring it back, re-add `services.wyoming.piper.servers.ru` and pick it in the pipeline.
 
 ## Claude's behaviour
 
@@ -92,7 +91,6 @@ One named blind ("открой левые жалюзи", "open the left blind") 
 | What | Time |
 |---|---|
 | STT after the phrase ends, Russian 3–4 s phrase | 1.5–2.3 s |
-| STT, English 3 s phrase | 0.8 s |
 | TTS, one sentence | 0.5–2 s |
 | Local phrase (intent stage) | < 0.1 s |
 | Free-form question via Claude | 2–3 s |
@@ -102,8 +100,8 @@ One named blind ("открой левые жалюзи", "open the left blind") 
 
 ## Using it
 
-- Phone: HA Companion app as the default digital assistant, *Russian* pipeline preferred (*English* pipeline for English).
-- From the PC: `just voice-ask "Сколько будет 2+2?"` or `just voice-ask "What time is it in Tokyo?" en` (the same request HA sends; Claude only, no local phrases).
+- Phone: HA Companion app as the default digital assistant, *Russian* pipeline preferred.
+- From the PC: `just voice-ask "Сколько будет 2+2?"` (the same request HA sends; Claude only, no local phrases).
 - Logs: `journalctl -u voice-bridge`, HA *Settings → Voice assistants → pipeline → Debug*.
 
 ## One-time setup
@@ -111,7 +109,7 @@ One named blind ("открой левые жалюзи", "open the left blind") 
 1. `claude setup-token` on the PC → sops `voice/claude_oauth_token`.
 2. HA user `voice-agent`: not an admin, local access only; its long-lived token → sops `voice/ha_token`. Then `just deploy`.
 3. HA integrations: *Model Context Protocol Server* (Assist API; "Require an administrator account" off), Wyoming ×4 on `localhost` with the ports above (renamed per language), *Claude bridge* (default URL `unix:/run/voice-bridge/bridge.sock`; older entries with `http://127.0.0.1:8099` are switched to it automatically).
-4. Pipelines *Russian* (preferred) and *English*: STT Whisper ru/en, agent *Claude* with "Prefer handling commands locally", TTS Silero aidar (Russian, Wyoming `127.0.0.1:10202`, entry *Silero ru*) and Piper alan (English).
+4. Pipeline *Russian* (preferred): STT Whisper ru, agent *Claude* with "Prefer handling commands locally", TTS Silero aidar (Wyoming `127.0.0.1:10202`, entry *Silero ru*).
 5. Music Assistant: add Spotify (librespot engine), then HA's Music Assistant integration.
 
 ## Switching to the API or another model
@@ -122,5 +120,9 @@ One named blind ("открой левые жалюзи", "open the left blind") 
 
 ## Not done yet
 
-- Voice PE in the living room: wake words "Железяка" (Russian pipeline) and "Claptrap" (English) need custom microWakeWord models and ESPHome firmware; until then "Okay Nabu" / "Hey Jarvis".
+- Voice PE in the living room: wake word "Железяка" needs a custom microWakeWord model and ESPHome firmware; until then "Okay Nabu".
 - Not tested: local phrases with the server's internet cut.
+
+## English
+
+Removed on 2026-11-13 to save about 2 GB of memory (Whisper en, Piper en and ru, the *English* pipeline). English names inside Russian speech still work: speech recognition writes them in Cyrillic and Claude turns them back for searches. Whole English sentences are not understood well.

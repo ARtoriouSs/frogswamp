@@ -30,9 +30,8 @@ pkgs.testers.runNixOSTest {
           silero.enable = false;
         };
       };
-      # the STT/TTS servers download their models at start, there is no internet in the test
+      # the STT server downloads its model at start, there is no internet in the test
       services.wyoming.faster-whisper.servers = lib.mkForce { };
-      services.wyoming.piper.servers = lib.mkForce { };
     };
   testScript = ''
     import json
