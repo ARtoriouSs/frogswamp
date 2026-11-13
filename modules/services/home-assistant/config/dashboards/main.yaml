@@ -3869,6 +3869,60 @@ views:
     max_columns: 2
     sections:
       - type: grid
+        column_span: 2
+        cards:
+          - type: heading
+            heading: Range
+            icon: mdi:calendar-range
+          - type: custom:mushroom-template-card
+            entity: input_select.wellness_range
+            primary: Month
+            icon: mdi:calendar-month
+            color: "{{ 'primary' if is_state(entity, 'Month') else 'disabled' }}"
+            vertical: true
+            grid_options:
+              columns: 4
+              rows: 2
+            tap_action:
+              action: perform-action
+              perform_action: input_select.select_option
+              target:
+                entity_id: input_select.wellness_range
+              data:
+                option: Month
+          - type: custom:mushroom-template-card
+            entity: input_select.wellness_range
+            primary: 3 months
+            icon: mdi:calendar-range
+            color: "{{ 'primary' if is_state(entity, '3 months') else 'disabled' }}"
+            vertical: true
+            grid_options:
+              columns: 4
+              rows: 2
+            tap_action:
+              action: perform-action
+              perform_action: input_select.select_option
+              target:
+                entity_id: input_select.wellness_range
+              data:
+                option: 3 months
+          - type: custom:mushroom-template-card
+            entity: input_select.wellness_range
+            primary: Year
+            icon: mdi:calendar-blank-multiple
+            color: "{{ 'primary' if is_state(entity, 'Year') else 'disabled' }}"
+            vertical: true
+            grid_options:
+              columns: 4
+              rows: 2
+            tap_action:
+              action: perform-action
+              perform_action: input_select.select_option
+              target:
+                entity_id: input_select.wellness_range
+              data:
+                option: Year
+      - type: grid
         cards:
           - type: heading
             heading: Weight
@@ -3900,12 +3954,38 @@ views:
               perform_action: script.turn_on
               target:
                 entity_id: script.weight_record
-          # After 31 days the history is purged and the card draws the long-term statistics instead
-          - type: history-graph
-            hours_to_show: 2160
-            entities:
-              - entity: sensor.weight
-                name: Weight
+          # After 31 days the history is purged and the cards draw the long-term statistics instead
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.wellness_range
+                state: Month
+            card: &weight_graph
+              type: history-graph
+              hours_to_show: 744
+              entities:
+                - entity: sensor.weight
+                  name: Weight
+            grid_options:
+              columns: full
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.wellness_range
+                state: 3 months
+            card:
+              <<: *weight_graph
+              hours_to_show: 2160
+            grid_options:
+              columns: full
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.wellness_range
+                state: Year
+            card:
+              <<: *weight_graph
+              hours_to_show: 8760
             grid_options:
               columns: full
 
@@ -3941,11 +4021,37 @@ views:
               perform_action: script.turn_on
               target:
                 entity_id: script.body_fat_record
-          - type: history-graph
-            hours_to_show: 2160
-            entities:
-              - entity: sensor.body_fat
-                name: Body fat
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.wellness_range
+                state: Month
+            card: &body_fat_graph
+              type: history-graph
+              hours_to_show: 744
+              entities:
+                - entity: sensor.body_fat
+                  name: Body fat
+            grid_options:
+              columns: full
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.wellness_range
+                state: 3 months
+            card:
+              <<: *body_fat_graph
+              hours_to_show: 2160
+            grid_options:
+              columns: full
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.wellness_range
+                state: Year
+            card:
+              <<: *body_fat_graph
+              hours_to_show: 8760
             grid_options:
               columns: full
 

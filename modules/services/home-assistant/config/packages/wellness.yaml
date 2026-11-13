@@ -1,4 +1,15 @@
 # Weight and body fat typed in by hand on the Wellness tab. The boxes only hold the numbers, the scripts save them
+input_select:
+  # The range picker of the Wellness tab, one for all its graphs
+  wellness_range:
+    name: Wellness range
+    icon: mdi:calendar-range
+    options:
+      - Month
+      - 3 months
+      - Year
+    initial: Month
+
 input_number:
   weight_input:
     name: Weight
