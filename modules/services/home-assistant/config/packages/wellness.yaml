@@ -1,0 +1,65 @@
+# Weight and body fat typed in by hand on the Wellness tab. The boxes only hold the numbers, the scripts save them
+input_number:
+  weight_input:
+    name: Weight
+    icon: mdi:scale-bathroom
+    mode: box
+    min: 30
+    max: 250
+    step: 0.1
+    unit_of_measurement: kg
+  body_fat_input:
+    name: Body fat
+    icon: mdi:water-percent
+    mode: box
+    min: 3
+    max: 60
+    step: 0.1
+    unit_of_measurement: "%"
+
+script:
+  weight_record:
+    alias: "Weight: save"
+    icon: mdi:content-save
+    sequence:
+      - event: frogswamp_weight
+        event_data:
+          weight: "{{ states('input_number.weight_input') | float }}"
+  body_fat_record:
+    alias: "Body fat: save"
+    icon: mdi:content-save
+    sequence:
+      - event: frogswamp_body_fat
+        event_data:
+          body_fat: "{{ states('input_number.body_fat_input') | float }}"
+
+# Each save is one state row, so it gets its own time. recorded_at makes a row even when the value is the same.
+# state_class keeps long-term statistics, which the graphs use after the 31-day history is purged
+template:
+  - triggers:
+      - trigger: event
+        event_type: frogswamp_weight
+    sensor:
+      - name: Weight
+        unique_id: repo_weight
+        default_entity_id: sensor.weight
+        icon: mdi:scale-bathroom
+        unit_of_measurement: kg
+        device_class: weight
+        state_class: measurement
+        state: "{{ trigger.event.data.weight | float | round(1) }}"
+        attributes:
+          recorded_at: "{{ now().isoformat() }}"
+  - triggers:
+      - trigger: event
+        event_type: frogswamp_body_fat
+    sensor:
+      - name: Body fat
+        unique_id: repo_body_fat
+        default_entity_id: sensor.body_fat
+        icon: mdi:water-percent
+        unit_of_measurement: "%"
+        state_class: measurement
+        state: "{{ trigger.event.data.body_fat | float | round(1) }}"
+        attributes:
+          recorded_at: "{{ now().isoformat() }}"

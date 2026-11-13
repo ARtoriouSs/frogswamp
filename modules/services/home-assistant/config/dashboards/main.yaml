@@ -3867,7 +3867,87 @@ views:
     icon: mdi:heart-pulse
     type: sections
     max_columns: 2
-    sections: []
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: Weight
+            icon: mdi:scale-bathroom
+          - <<: *info
+            entity: sensor.weight
+            primary: Last weight
+            secondary: >-
+              {% set at = state_attr(entity, 'recorded_at') %}
+              {{ (states(entity) ~ ' kg · ' ~ (as_datetime(at) | as_local).strftime('%d.%m.%Y %H:%M')) if at else 'No records yet' }}
+            icon: mdi:scale-bathroom
+            color: teal
+          - type: entities
+            entities:
+              - entity: input_number.weight_input
+                name: New weight
+            grid_options:
+              columns: 8
+          - <<: *run
+            entity: script.weight_record
+            primary: Save
+            icon: mdi:content-save
+            color: green
+            grid_options:
+              columns: 4
+              rows: 1
+            tap_action:
+              action: perform-action
+              perform_action: script.turn_on
+              target:
+                entity_id: script.weight_record
+          # After 31 days the history is purged and the card draws the long-term statistics instead
+          - type: history-graph
+            hours_to_show: 2160
+            entities:
+              - entity: sensor.weight
+                name: Weight
+            grid_options:
+              columns: full
+
+      - type: grid
+        cards:
+          - type: heading
+            heading: Body fat
+            icon: mdi:water-percent
+          - <<: *info
+            entity: sensor.body_fat
+            primary: Last body fat
+            secondary: >-
+              {% set at = state_attr(entity, 'recorded_at') %}
+              {{ (states(entity) ~ ' % · ' ~ (as_datetime(at) | as_local).strftime('%d.%m.%Y %H:%M')) if at else 'No records yet' }}
+            icon: mdi:water-percent
+            color: amber
+          - type: entities
+            entities:
+              - entity: input_number.body_fat_input
+                name: New body fat
+            grid_options:
+              columns: 8
+          - <<: *run
+            entity: script.body_fat_record
+            primary: Save
+            icon: mdi:content-save
+            color: green
+            grid_options:
+              columns: 4
+              rows: 1
+            tap_action:
+              action: perform-action
+              perform_action: script.turn_on
+              target:
+                entity_id: script.body_fat_record
+          - type: history-graph
+            hours_to_show: 2160
+            entities:
+              - entity: sensor.body_fat
+                name: Body fat
+            grid_options:
+              columns: full
 
   # Guests see only this view (custom-sidebar-config.yaml hides the rest of the sidebar for them).
   # It hides things, it doesn't block them: a guest can still reach any entity through the API
