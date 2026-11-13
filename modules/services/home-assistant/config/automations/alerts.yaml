@@ -95,6 +95,7 @@
         - switch.master_bathroom_towel_heat_relay
         - switch.desk_child_lock
         - binary_sensor.leak_sensor_kitchen_water_leak
+        - binary_sensor.leak_sensor_master_bathroom_water_leak
         - binary_sensor.workday_sensor_pl
       to: unavailable
       for: "01:00:00"

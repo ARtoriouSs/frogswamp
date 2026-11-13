@@ -937,7 +937,7 @@ views:
                 entity_id: script.cube_wake
           - <<: *run
             entity: script.cube_sleep
-            primary: Green dot
+            primary: Green dot / off
             icon: mdi:circle-small
             color: green
             tap_action:
@@ -1435,9 +1435,11 @@ views:
             type: custom:mushroom-template-card
             entity: binary_sensor.leak_sensor_kitchen_water_leak
             primary: Kitchen · under the sink
+            # unknown: no leak state sent since pairing, it comes with the first wet or dry change
             secondary: >-
-              {{ 'Leak!' if is_state(entity, 'on') else ('Dry' if is_state(entity, 'off') else 'Unavailable') }}
-              {%- set battery = states('sensor.leak_sensor_kitchen_battery') %}
+              {%- set state = states(entity) %}
+              {{- 'Leak!' if state == 'on' else ('Dry' if state == 'off' else ('No report yet' if state == 'unknown' else 'Unavailable')) }}
+              {%- set battery = states(entity | replace('_water_leak', '_battery')) %}
               {{- ' · battery ' ~ battery ~ '%' if battery | is_number }}
             icon: "{{ 'mdi:water-alert' if is_state(entity, 'on') else 'mdi:water-check' }}"
             color: "{{ 'red' if is_state(entity, 'on') else ('green' if is_state(entity, 'off') else 'disabled') }}"
@@ -1446,6 +1448,9 @@ views:
               rows: 1
             tap_action:
               action: more-info
+          - <<: *leak
+            entity: binary_sensor.leak_sensor_master_bathroom_water_leak
+            primary: Master bathroom · Washing machine
 
       - type: grid
         cards:
@@ -2012,6 +2017,8 @@ views:
                   name: "Thermostat\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
                 - entity: binary_sensor.master_towel_heat_relay_online
                   name: "Towel heat relay\u00A0\u200A"
+                - entity: binary_sensor.leak_sensor_master_bathroom_online
+                  name: "Leak sensor\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A"
             grid_options:
               columns: full
           - type: conditional
@@ -2027,6 +2034,8 @@ views:
                   name: "Thermostat\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
                 - entity: binary_sensor.master_towel_heat_relay_online
                   name: "Towel heat relay\u00A0\u200A"
+                - entity: binary_sensor.leak_sensor_master_bathroom_online
+                  name: "Leak sensor\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A"
             grid_options:
               columns: full
           - type: conditional
@@ -2042,6 +2051,8 @@ views:
                   name: "Thermostat\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
                 - entity: binary_sensor.master_towel_heat_relay_online
                   name: "Towel heat relay\u00A0\u200A"
+                - entity: binary_sensor.leak_sensor_master_bathroom_online
+                  name: "Leak sensor\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A"
             grid_options:
               columns: full
           - type: heading
@@ -2330,6 +2341,17 @@ views:
             primary: Towel heat relay
             secondary: "{% set u = state_attr(entity, 'uptime') %}{{ (u ~ ' %') if u is not none else '—' }} · {{ 'online' if is_state(entity, 'on') else 'offline' }}"
             icon: mdi:radiator
+            color: "{% set u = state_attr(entity, 'uptime') %}{{ 'red' if is_state(entity, 'off') else ('disabled' if u is none else ('green' if u >= 99 else ('amber' if u >= 95 else 'red'))) }}"
+            grid_options:
+              columns: 6
+              rows: 1
+            tap_action:
+              action: more-info
+          - type: custom:mushroom-template-card
+            entity: binary_sensor.leak_sensor_master_bathroom_online
+            primary: Leak sensor
+            secondary: "{% set u = state_attr(entity, 'uptime') %}{{ (u ~ ' %') if u is not none else '—' }} · {{ 'online' if is_state(entity, 'on') else 'offline' }}"
+            icon: mdi:water-alert
             color: "{% set u = state_attr(entity, 'uptime') %}{{ 'red' if is_state(entity, 'off') else ('disabled' if u is none else ('green' if u >= 99 else ('amber' if u >= 95 else 'red'))) }}"
             grid_options:
               columns: 6
@@ -2936,6 +2958,10 @@ views:
           - <<: *battery
             entity: sensor.leak_sensor_kitchen_battery
             primary: Leak sensor kitchen
+            icon: mdi:water-alert
+          - <<: *battery
+            entity: sensor.leak_sensor_master_bathroom_battery
+            primary: Leak sensor master bathroom
             icon: mdi:water-alert
       - type: grid
         cards:
@@ -3677,6 +3703,9 @@ views:
               columns: 4
               rows: 2
           - *timed_towel_master_row
+          - <<: *leak
+            entity: binary_sensor.leak_sensor_master_bathroom_water_leak
+            primary: Water leak
 
   - title: Guest bathroom
     path: guest-bathroom

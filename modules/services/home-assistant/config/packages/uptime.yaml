@@ -118,6 +118,11 @@ template:
         device_class: connectivity
         state: "{{ not is_state('switch.master_bathroom_towel_heat_relay', 'unavailable') }}"
         attributes: *uptime_attributes
+      - name: Leak sensor master bathroom online
+        unique_id: repo_uptime_leak_sensor_master_bathroom
+        device_class: connectivity
+        state: "{{ not is_state('binary_sensor.leak_sensor_master_bathroom_water_leak', 'unavailable') }}"
+        attributes: *uptime_attributes
       - name: Router online
         unique_id: repo_uptime_router
         device_class: connectivity
@@ -549,6 +554,32 @@ sensor:
     state: unavailable
     type: ratio
     start: "{{ max(now() - timedelta(hours=744), '2026-11-13T12:58:31+01:00' | as_datetime) }}"
+    end: *uptime_end
+  - platform: history_stats
+    name: Leak sensor master bathroom offline day
+    unique_id: repo_uptime_leak_sensor_master_bathroom_offline_day
+    entity_id: binary_sensor.leak_sensor_master_bathroom_water_leak
+    state: unavailable
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 24
+  - platform: history_stats
+    name: Leak sensor master bathroom offline week
+    unique_id: repo_uptime_leak_sensor_master_bathroom_offline_week
+    entity_id: binary_sensor.leak_sensor_master_bathroom_water_leak
+    state: unavailable
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 168
+  - platform: history_stats
+    name: Leak sensor master bathroom offline month
+    unique_id: repo_uptime_leak_sensor_master_bathroom_offline_month
+    entity_id: binary_sensor.leak_sensor_master_bathroom_water_leak
+    state: unavailable
+    type: ratio
+    start: "{{ max(now() - timedelta(hours=744), '2026-11-13T13:08:20+01:00' | as_datetime) }}"
     end: *uptime_end
   - platform: history_stats
     name: Router offline day

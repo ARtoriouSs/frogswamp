@@ -134,11 +134,18 @@
       to: "on"
       variables:
         place: Kitchen
+        spot: under the sink
+    - trigger: state
+      entity_id: binary_sensor.leak_sensor_master_bathroom_water_leak
+      to: "on"
+      variables:
+        place: Master bathroom
+        spot: by the washing machine
   actions:
     - action: notify.mobile_app_pixel_7
       data:
         title: "💧 Water leak - {{ place }}"
-        message: "The sensor under the sink found water at {{ now().strftime('%H:%M') }}"
+        message: "The sensor {{ spot }} found water at {{ now().strftime('%H:%M') }}"
         data:
           tag: "leak-{{ trigger.entity_id }}"
           channel: alarm_stream
