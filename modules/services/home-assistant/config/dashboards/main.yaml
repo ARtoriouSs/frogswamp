@@ -1424,8 +1424,6 @@ views:
               columns: 12
               rows: 2
 
-      - type: grid
-        cards:
           - type: heading
             heading: Water leak
             icon: mdi:water-alert
