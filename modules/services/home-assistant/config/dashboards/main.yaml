@@ -3860,6 +3860,16 @@ views:
               {{ 'green' if is_state(entity, 'off') and is_state('binary_sensor.garage_audi_a5_sportback_trunk_locked', 'off') else 'red' }}
           - *car_refresh
 
+  - title: Wellness
+    path: wellness
+    visible:
+      - user: 276c6c52cb474dd9bdf6dac5ca4fad31 # Aleksander
+      - user: 06ec04272df9426db1d4322dfc5bda92 # Natallia
+    icon: mdi:heart-pulse
+    type: sections
+    max_columns: 2
+    sections: []
+
   # Guests see only this view (custom-sidebar-config.yaml hides the rest of the sidebar for them).
   # It hides things, it doesn't block them: a guest can still reach any entity through the API
   - title: Guest

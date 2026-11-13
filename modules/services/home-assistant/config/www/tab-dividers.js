@@ -1,7 +1,7 @@
 // Vertical lines between groups of tabs on the Main dashboard. Loaded by frontend.extra_module_url in configuration.yaml
 // HA has no setting for this, so the style goes into the shadow root of the tab bar
 const DASHBOARD = "/main-yaml";
-const FIRST_TAB_OF_GROUP = ["climate", "monitor", "living-room", "guest"];
+const FIRST_TAB_OF_GROUP = ["climate", "monitor", "living-room", "wellness", "guest"];
 const REFRESH_MS = 1000;
 
 // A line only when a visible tab comes before: Guest sees one tab and needs no line
