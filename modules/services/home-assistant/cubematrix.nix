@@ -3,6 +3,6 @@
   # Updated by `just cubematrix-bump`
   owner = "ARtoriouSs";
   repo = "yeelight-cubematrix-ha";
-  rev = "360547c4fc457f31b996b3cc06ca3104070e3c04";
-  hash = "sha256-R9kbPjY60Zb7ENk2JvOfmyP8WO6PYxk26yUoJrsOmCM=";
+  rev = "2f6e2fbc579f8b8cf19b30d5403dfa06295081b6";
+  hash = "sha256-xtzh1b4+ph7kPB/ihvG4aABGjn49XbwnF2qkXkUbRwc=";
 }
