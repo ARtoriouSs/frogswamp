@@ -3661,7 +3661,7 @@ views:
     visible:
       - user: 276c6c52cb474dd9bdf6dac5ca4fad31 # Aleksander
       - user: 06ec04272df9426db1d4322dfc5bda92 # Natallia
-    icon: mdi:shower
+    icon: mdi:shower-head
     type: sections
     max_columns: 2
     sections:
@@ -3712,7 +3712,7 @@ views:
     visible:
       - user: 276c6c52cb474dd9bdf6dac5ca4fad31 # Aleksander
       - user: 06ec04272df9426db1d4322dfc5bda92 # Natallia
-    icon: mdi:bathtub
+    icon: mdi:shower
     type: sections
     max_columns: 2
     sections:
