@@ -67,6 +67,12 @@ template:
         device_class: connectivity
         state: "{{ not is_state('sensor.living_room_refrigerator_fridge_temperature', 'unavailable') }}"
         attributes: *uptime_attributes
+      # Sleeps between reports, so Z2M counts it offline only after 25 h without a message
+      - name: Leak sensor kitchen online
+        unique_id: repo_uptime_leak_sensor_kitchen
+        device_class: connectivity
+        state: "{{ not is_state('binary_sensor.leak_sensor_kitchen_water_leak', 'unavailable') }}"
+        attributes: *uptime_attributes
       - name: Curtains online
         unique_id: repo_uptime_curtains
         device_class: connectivity
@@ -517,6 +523,32 @@ sensor:
     state: unavailable
     type: ratio
     start: "{{ max(now() - timedelta(hours=744), '2026-10-24T17:00:01+02:00' | as_datetime) }}"
+    end: *uptime_end
+  - platform: history_stats
+    name: Leak sensor kitchen offline day
+    unique_id: repo_uptime_leak_sensor_kitchen_offline_day
+    entity_id: binary_sensor.leak_sensor_kitchen_water_leak
+    state: unavailable
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 24
+  - platform: history_stats
+    name: Leak sensor kitchen offline week
+    unique_id: repo_uptime_leak_sensor_kitchen_offline_week
+    entity_id: binary_sensor.leak_sensor_kitchen_water_leak
+    state: unavailable
+    type: ratio
+    end: *uptime_end
+    duration:
+      hours: 168
+  - platform: history_stats
+    name: Leak sensor kitchen offline month
+    unique_id: repo_uptime_leak_sensor_kitchen_offline_month
+    entity_id: binary_sensor.leak_sensor_kitchen_water_leak
+    state: unavailable
+    type: ratio
+    start: "{{ max(now() - timedelta(hours=744), '2026-11-13T12:58:31+01:00' | as_datetime) }}"
     end: *uptime_end
   - platform: history_stats
     name: Router offline day

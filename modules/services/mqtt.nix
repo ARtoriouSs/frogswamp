@@ -84,6 +84,9 @@ in
           inherit (z2m) package;
           settings = {
             homeassistant.enabled = true;
+            # Without it a dead device keeps its last state in HA. Mains devices are pinged after 10 min of silence,
+            # battery ones count as offline after 25 h without a message
+            availability.enabled = true;
             # 11 sits under a neighbour's Wi-Fi channel 1. 25 is above our own Wi-Fi (fixed at 10, 20 MHz)
             advanced.channel = 25;
             serial = {

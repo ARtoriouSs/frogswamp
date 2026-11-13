@@ -122,3 +122,26 @@
         message: "It has been open for {{ minutes }}"
         data:
           tag: "door-open-{{ door | lower }}"
+
+# Works with or without Arm mode. The alarm_stream channel rings like an alarm, even in Do Not Disturb.
+# No "from": a leak that comes right after the sensor or HA was offline must ring too
+- id: repo_security_water_leak
+  alias: "Security: water leak"
+  mode: parallel
+  triggers:
+    - trigger: state
+      entity_id: binary_sensor.leak_sensor_kitchen_water_leak
+      to: "on"
+      variables:
+        place: Kitchen
+  actions:
+    - action: notify.mobile_app_pixel_7
+      data:
+        title: "💧 Water leak - {{ place }}"
+        message: "The sensor under the sink found water at {{ now().strftime('%H:%M') }}"
+        data:
+          tag: "leak-{{ trigger.entity_id }}"
+          channel: alarm_stream
+          importance: high
+          priority: high
+          ttl: 0

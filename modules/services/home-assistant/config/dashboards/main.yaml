@@ -1428,6 +1428,28 @@ views:
       - type: grid
         cards:
           - type: heading
+            heading: Water leak
+            icon: mdi:water-alert
+          # The alert works without Arm mode (automations/security.yaml)
+          - &leak
+            type: custom:mushroom-template-card
+            entity: binary_sensor.leak_sensor_kitchen_water_leak
+            primary: Kitchen · under the sink
+            secondary: >-
+              {{ 'Leak!' if is_state(entity, 'on') else ('Dry' if is_state(entity, 'off') else 'Unavailable') }}
+              {%- set battery = states('sensor.leak_sensor_kitchen_battery') %}
+              {{- ' · battery ' ~ battery ~ '%' if battery | is_number }}
+            icon: "{{ 'mdi:water-alert' if is_state(entity, 'on') else 'mdi:water-check' }}"
+            color: "{{ 'red' if is_state(entity, 'on') else ('green' if is_state(entity, 'off') else 'disabled') }}"
+            grid_options:
+              columns: 12
+              rows: 1
+            tap_action:
+              action: more-info
+
+      - type: grid
+        cards:
+          - type: heading
             heading: Car
             icon: mdi:car
           # lock sensors: off means locked
@@ -1762,6 +1784,8 @@ views:
                   name: "PS5\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
                 - entity: binary_sensor.fridge_online
                   name: "Fridge\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A"
+                - entity: binary_sensor.leak_sensor_kitchen_online
+                  name: "Leak sensor\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A"
             grid_options:
               columns: full
           - type: conditional
@@ -1785,6 +1809,8 @@ views:
                   name: "PS5\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
                 - entity: binary_sensor.fridge_online
                   name: "Fridge\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A"
+                - entity: binary_sensor.leak_sensor_kitchen_online
+                  name: "Leak sensor\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A"
             grid_options:
               columns: full
           - type: conditional
@@ -1808,6 +1834,8 @@ views:
                   name: "PS5\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A\u200A"
                 - entity: binary_sensor.fridge_online
                   name: "Fridge\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A"
+                - entity: binary_sensor.leak_sensor_kitchen_online
+                  name: "Leak sensor\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u200A\u200A\u200A\u200A\u200A"
             grid_options:
               columns: full
           - type: heading
@@ -2179,6 +2207,17 @@ views:
             primary: Fridge
             secondary: "{% set u = state_attr(entity, 'uptime') %}{{ (u ~ ' %') if u is not none else '—' }} · {{ 'online' if is_state(entity, 'on') else 'offline' }}"
             icon: mdi:fridge
+            color: "{% set u = state_attr(entity, 'uptime') %}{{ 'red' if is_state(entity, 'off') else ('disabled' if u is none else ('green' if u >= 99 else ('amber' if u >= 95 else 'red'))) }}"
+            grid_options:
+              columns: 6
+              rows: 1
+            tap_action:
+              action: more-info
+          - type: custom:mushroom-template-card
+            entity: binary_sensor.leak_sensor_kitchen_online
+            primary: Leak sensor
+            secondary: "{% set u = state_attr(entity, 'uptime') %}{{ (u ~ ' %') if u is not none else '—' }} · {{ 'online' if is_state(entity, 'on') else 'offline' }}"
+            icon: mdi:water-alert
             color: "{% set u = state_attr(entity, 'uptime') %}{{ 'red' if is_state(entity, 'off') else ('disabled' if u is none else ('green' if u >= 99 else ('amber' if u >= 95 else 'red'))) }}"
             grid_options:
               columns: 6
@@ -2866,8 +2905,8 @@ views:
       - type: grid
         cards:
           - type: heading
-            heading: Batteries
-            icon: mdi:battery
+            heading: Charge
+            icon: mdi:battery-charging
           # Each device has a _battery_level and a _battery_state sensor with the same start
           - &battery
             type: custom:mushroom-template-card
@@ -2890,6 +2929,14 @@ views:
             entity: sensor.google_pixel_watch_battery_level
             primary: Watch
             icon: mdi:watch
+          # Devices with a battery to replace, not charge
+          - type: heading
+            heading: Batteries
+            icon: mdi:battery
+          - <<: *battery
+            entity: sensor.leak_sensor_kitchen_battery
+            primary: Leak sensor kitchen
+            icon: mdi:water-alert
       - type: grid
         cards:
           - type: heading
@@ -3312,6 +3359,8 @@ views:
               action: toggle
               confirmation:
                 text: "Switch ice cubes?"
+          - <<: *leak
+            primary: Water leak
 
       - type: grid
         cards:

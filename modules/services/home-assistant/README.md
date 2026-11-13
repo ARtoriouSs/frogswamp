@@ -58,13 +58,14 @@ Scripts → `config/scripts/<name>.yaml` (mapping). Helpers/template sensors →
 | Backup disk missing | `sensor.backup_disk` is `missing` for 30 min. The sensor is refreshed hourly, so it can take up to 1.5 h |
 | Server disk almost full | The server's disk is above 85% for 10 min |
 | Server CPU is hot | The CPU is above 85 °C for 10 min |
-| Device offline | A listed device is `unavailable` for 1 h. **Add new devices to its list**. Skipped while its whole integration is down |
+| Device offline | A listed device is `unavailable` for 1 h. **Add new devices to its list**. Skipped while its whole integration is down. Zigbee devices on battery count as unavailable only after 25 h without a message, so the leak sensor alerts after about 26 h |
 | Integration down | An integration with entities failed (`sensor.failed_integrations`) for 10 min. It's reloaded once by itself; the message says whether that helped. UPnP and Android TV Remote are skipped, because they often drop and come back |
 | Zigbee bridge down | Z2M disconnected for 10 min |
 | Work calendar is old | Outside a day off, the work-calendar service hasn't read the calendar for 2 h, or can't be reached, for 30 min |
 | Internet was down | Router WAN back on after at least 1 min down. Also written to the logbook |
 | Printer ink low | A cartridge drops below 15% |
 | Fridge or freezer door open | The fridge door is open for 3 min, or the freezer door for 1 min. Works without Arm mode |
+| Water leak | The kitchen leak sensor (`binary_sensor.leak_sensor_kitchen_water_leak`, under the sink) finds water. Rings on the `alarm_stream` channel, so it sounds like an alarm even in Do Not Disturb. Works without Arm mode |
 | Fridge filter | `sensor.fridge_filter_capacity` drops below 5%. Sent once, about 18 days before the year ends |
 | Car part due | A car service row drops below 2000 km left, or reaches 29 days left (checked at 10:00). Each is sent once. A part that's already past a limit stays silent until it's reset; only its card shows it |
 | AdBlue low | The car's AdBlue range drops below 2000 km |
@@ -114,7 +115,7 @@ While it is on, `config/automations/security.yaml` sends a phone alert with the 
 
 ## Maintenance
 
-The Maintenance tab shows battery levels, **add new battery devices there**, the fridge filter, and the car's fuel and odometer. The filter card counts 365 days from `input_datetime.fridge_filter_changed` (`config/packages/maintenance.yaml`), from 100% to 0%: green, yellow below 40%, red below 10%. The alert comes below 5%. Tap it and confirm after changing the filter. To enter an older date, use the Service data page (the Edit button in the Car column). The Samsung sensor next to it counts for a Samsung filter, so it's there only for comparison.
+The Maintenance tab shows battery levels: phones and watches under Charge, devices with a battery to replace (Zigbee sensors) under Batteries, **add new battery devices there**, the fridge filter, and the car's fuel and odometer. The filter card counts 365 days from `input_datetime.fridge_filter_changed` (`config/packages/maintenance.yaml`), from 100% to 0%: green, yellow below 40%, red below 10%. The alert comes below 5%. Tap it and confirm after changing the filter. To enter an older date, use the Service data page (the Edit button in the Car column). The Samsung sensor next to it counts for a Samsung filter, so it's there only for comparison.
 
 Car service rows count km and time from the last change and show the lower percentage, with the same colours. Tap one and confirm after a change: it saves today and the current odometer. Each card also shows the km and date of the last service. The odometer comes hours or days late, so correct the km on the Service data page if needed. The rules (km, days) are in `config/packages/maintenance.yaml`, and the `?` hints on the Maintenance tab repeat them, so change both, the formula in `config/custom_templates/car_parts.jinja`. Pads and discs are changed by condition, so they only show the km since the change. AdBlue shows the car's own range as a share of a full tank (15 000 km), and a tap saves its last service like the others. The data started as a copy of the Notion page `History and service`; they don't sync.
 
