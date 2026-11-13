@@ -1166,6 +1166,370 @@ views:
                 name: Vacation
 
   # Mushroom cards. The times are set in packages/schedule.yaml: a change made here is reset on the next HA restart
+  # For recording the cube demo, remove after it. Events play for 5 s (checks 10 s) like the automations do
+  - title: Cube demo
+    path: cube-demo
+    visible:
+      - user: 276c6c52cb474dd9bdf6dac5ca4fad31 # Aleksander
+    icon: mdi:cube-outline
+    type: sections
+    max_columns: 2
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: Cube Matrix
+            icon: mdi:cube-outline
+          - type: custom:mushroom-template-card
+            entity: light.cube_matrix_192_168_101_121
+            primary: Cube Matrix
+            secondary: "{{ [1, (state_attr(entity, 'brightness') / 2.55) | round] | max ~ ' %' if is_state(entity, 'on') else 'Off' }}"
+            icon: mdi:cube-outline
+            color: "{{ 'green' if is_state(entity, 'on') else 'disabled' }}"
+            grid_options:
+              columns: 12
+              rows: 2
+            features_position: bottom
+            features:
+              - type: light-brightness
+            tap_action:
+              action: toggle
+            hold_action:
+              action: more-info
+          - &cube_demo_script
+            type: custom:mushroom-template-card
+            entity: script.cube_wake
+            grid_options:
+              columns: 6
+              rows: 1
+            primary: Frogs (random)
+            icon: frog:frog-face
+            color: green
+            tap_action:
+              action: perform-action
+              perform_action: script.turn_on
+              target:
+                entity_id: script.cube_wake
+          - <<: *cube_demo_script
+            entity: script.cube_sleep
+            primary: Green dot / off
+            icon: mdi:circle-small
+            color: green
+            tap_action:
+              action: perform-action
+              perform_action: script.turn_on
+              target:
+                entity_id: script.cube_sleep
+          - <<: *cube_demo_script
+            entity: script.cube_brightness_on
+            primary: Brightness 100%
+            icon: mdi:brightness-7
+            color: amber
+            tap_action:
+              action: perform-action
+              perform_action: script.turn_on
+              target:
+                entity_id: script.cube_brightness_on
+          - <<: *cube_demo_script
+            entity: script.cube_brightness_off
+            primary: Brightness 0%
+            icon: mdi:brightness-1
+            color: grey
+            tap_action:
+              action: perform-action
+              perform_action: script.turn_on
+              target:
+                entity_id: script.cube_brightness_off
+          - type: custom:mushroom-template-card
+            entity: light.cube_matrix_192_168_101_121
+            primary: Stop
+            icon: mdi:stop
+            color: red
+            grid_options:
+              columns: 12
+              rows: 1
+            tap_action:
+              action: perform-action
+              perform_action: cubematrix.stop
+              target:
+                entity_id: light.cube_matrix_192_168_101_121
+
+          - type: heading
+            heading: Event animations
+            heading_style: subtitle
+          - &cube_demo_event
+            type: custom:mushroom-template-card
+            entity: light.cube_matrix_192_168_101_121
+            grid_options:
+              columns: 4
+              rows: 1
+            primary: Desk up
+            icon: mdi:arrow-up-bold
+            color: blue
+            tap_action:
+              action: perform-action
+              perform_action: script.cube_event
+              data:
+                preset: arrow_up
+                repeat: forever
+                duration: 5
+          - <<: *cube_demo_event
+            primary: Desk down
+            icon: mdi:arrow-down-bold
+            color: blue
+            tap_action:
+              action: perform-action
+              perform_action: script.cube_event
+              data:
+                preset: arrow_down
+                repeat: forever
+                duration: 5
+          - <<: *cube_demo_event
+            primary: Blinds open
+            icon: mdi:blinds-open
+            color: teal
+            tap_action:
+              action: perform-action
+              perform_action: script.cube_event
+              data:
+                preset: blinds_open
+                repeat: forever
+                duration: 5
+          - <<: *cube_demo_event
+            primary: Blinds close
+            icon: mdi:blinds
+            color: teal
+            tap_action:
+              action: perform-action
+              perform_action: script.cube_event
+              data:
+                preset: blinds_close
+                repeat: forever
+                duration: 5
+          - <<: *cube_demo_event
+            primary: Mode on
+            icon: mdi:check-bold
+            color: green
+            tap_action:
+              action: perform-action
+              perform_action: script.cube_event
+              data:
+                preset: check
+                repeat: forever
+                duration: 10
+          - <<: *cube_demo_event
+            primary: Mode off
+            icon: mdi:close-thick
+            color: red
+            tap_action:
+              action: perform-action
+              perform_action: script.cube_event
+              data:
+                preset: check_red
+                repeat: forever
+                duration: 10
+          - <<: *cube_demo_event
+            primary: Arrow left
+            icon: mdi:arrow-left-bold
+            color: blue
+            tap_action:
+              action: perform-action
+              perform_action: script.cube_event
+              data:
+                preset: arrow_left
+                repeat: forever
+                duration: 5
+          - <<: *cube_demo_event
+            primary: Arrow right
+            icon: mdi:arrow-right-bold
+            color: blue
+            tap_action:
+              action: perform-action
+              perform_action: script.cube_event
+              data:
+                preset: arrow_right
+                repeat: forever
+                duration: 5
+          - <<: *cube_demo_event
+            primary: Cross green
+            icon: mdi:close
+            color: green
+            tap_action:
+              action: perform-action
+              perform_action: script.cube_event
+              data:
+                preset: cross_green
+                repeat: forever
+                duration: 10
+          - <<: *cube_demo_event
+            primary: Cross red
+            icon: mdi:close
+            color: red
+            tap_action:
+              action: perform-action
+              perform_action: script.cube_event
+              data:
+                preset: cross_red
+                repeat: forever
+                duration: 10
+          - <<: *cube_demo_event
+            primary: TV cast
+            icon: mdi:play
+            color: white
+            tap_action:
+              action: perform-action
+              perform_action: script.cube_event
+              data:
+                preset: play
+                repeat: forever
+                duration: 5
+          - <<: *cube_demo_event
+            primary: Meeting
+            icon: mdi:calendar-clock
+            color: blue
+            tap_action:
+              action: perform-action
+              perform_action: script.cube_event
+              data:
+                preset: meeting
+                repeat: forever
+                duration: 5
+          - <<: *cube_demo_event
+            primary: Integration down
+            icon: mdi:alert-outline
+            color: amber
+            tap_action:
+              action: perform-action
+              perform_action: script.cube_event
+              data:
+                preset: integration_down
+                repeat: forever
+                duration: 5
+          - <<: *cube_demo_event
+            primary: Server problem
+            icon: mdi:server-off
+            color: red
+            tap_action:
+              action: perform-action
+              perform_action: script.cube_event
+              data:
+                preset: server_problem
+                repeat: forever
+                duration: 5
+          - <<: *cube_demo_event
+            primary: Coffee
+            icon: mdi:coffee
+            color: brown
+            tap_action:
+              action: perform-action
+              perform_action: script.cube_event
+              data:
+                preset: coffee
+                repeat: forever
+                duration: 5
+          - <<: *cube_demo_event
+            primary: Moon
+            icon: mdi:weather-night
+            color: yellow
+            tap_action:
+              action: perform-action
+              perform_action: script.cube_event
+              data:
+                preset: moon
+                repeat: forever
+                duration: 5
+
+      - type: grid
+        cards:
+          - type: heading
+            heading: Backgrounds
+            icon: mdi:image-filter-hdr
+          - &cube_demo_background
+            type: custom:mushroom-template-card
+            entity: select.cube_matrix_192_168_101_121_background
+            grid_options:
+              columns: 4
+              rows: 1
+            primary: Frog
+            icon: frog:frog-face
+            color: green
+            tap_action:
+              action: perform-action
+              perform_action: cubematrix.set_background
+              target:
+                entity_id: light.cube_matrix_192_168_101_121
+              data:
+                preset: frog
+          - <<: *cube_demo_background
+            primary: Jump
+            icon: frog:frog-face
+            color: green
+            tap_action:
+              action: perform-action
+              perform_action: cubematrix.set_background
+              target:
+                entity_id: light.cube_matrix_192_168_101_121
+              data:
+                preset: frog_jump
+          - <<: *cube_demo_background
+            primary: Sway
+            icon: frog:frog-face
+            color: green
+            tap_action:
+              action: perform-action
+              perform_action: cubematrix.set_background
+              target:
+                entity_id: light.cube_matrix_192_168_101_121
+              data:
+                preset: frog_sway
+          - <<: *cube_demo_background
+            primary: Blink
+            icon: frog:frog-face
+            color: green
+            tap_action:
+              action: perform-action
+              perform_action: cubematrix.set_background
+              target:
+                entity_id: light.cube_matrix_192_168_101_121
+              data:
+                preset: frog_blink
+          - <<: *cube_demo_background
+            primary: Croak
+            icon: frog:frog-face
+            color: green
+            tap_action:
+              action: perform-action
+              perform_action: cubematrix.set_background
+              target:
+                entity_id: light.cube_matrix_192_168_101_121
+              data:
+                preset: frog_croak
+          - <<: *cube_demo_background
+            primary: Dot
+            icon: mdi:circle-small
+            color: green
+            tap_action:
+              action: perform-action
+              perform_action: cubematrix.set_background
+              target:
+                entity_id: light.cube_matrix_192_168_101_121
+              data:
+                preset: dot
+          - type: custom:mushroom-template-card
+            entity: select.cube_matrix_192_168_101_121_background
+            primary: All backgrounds
+            secondary: "{{ states(entity) }}"
+            icon: mdi:image-filter-hdr
+            color: green
+            features_position: bottom
+            features:
+              - type: select-options
+            grid_options:
+              columns: 12
+              rows: 2
+            tap_action:
+              action: more-info
+
   - title: Schedule
     path: schedule
     visible:
