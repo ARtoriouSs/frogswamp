@@ -74,3 +74,13 @@ template:
         state: "{{ trigger.event.data.body_fat | float | round(1) }}"
         attributes:
           recorded_at: "{{ now().isoformat() }}"
+
+# The calories sheet, published as CSV. The link is in secrets.yaml. The browser reads it, see www/sheet-chart.js
+  - sensor:
+      - name: Calories sheet
+        unique_id: repo_calories_sheet
+        default_entity_id: sensor.calories_sheet
+        icon: mdi:google-spreadsheet
+        state: Published
+        attributes:
+          url: !secret calories_csv_url

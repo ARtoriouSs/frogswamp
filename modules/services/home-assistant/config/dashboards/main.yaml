@@ -4055,6 +4055,41 @@ views:
             grid_options:
               columns: full
 
+      # Daily rows from the calories sheet, only the days marked full
+      - type: grid
+        column_span: 2
+        cards:
+          - type: heading
+            heading: Nutrition
+            icon: mdi:food-apple
+          - &sheet_chart
+            type: custom:frog-sheet-chart
+            source: sensor.calories_sheet
+            range: input_select.wellness_range
+            date_column: 0
+            keep_column: 5
+            title: Calories
+            series:
+              - column: 1
+                name: Calories
+                unit: kcal
+                color: "#f59e0b"
+          - <<: *sheet_chart
+            title: Macros
+            series:
+              - column: 2
+                name: Fats
+                unit: g
+                color: "#eab308"
+              - column: 3
+                name: Proteins
+                unit: g
+                color: "#ef4444"
+              - column: 4
+                name: Carbohydrates
+                unit: g
+                color: "#3b82f6"
+
   # Guests see only this view (custom-sidebar-config.yaml hides the rest of the sidebar for them).
   # It hides things, it doesn't block them: a guest can still reach any entity through the API
   - title: Guest
