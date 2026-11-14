@@ -3922,160 +3922,76 @@ views:
                 entity_id: input_select.wellness_range
               data:
                 option: Year
+
+      # Daily graphs from www/daily-chart.js. Health values come from Health Connect through the Pixel 7 app
       - type: grid
+        column_span: 2
         cards:
           - type: heading
-            heading: Weight
-            icon: mdi:scale-bathroom
+            heading: Body
+            icon: mdi:human
           - <<: *info
-            entity: sensor.weight
-            primary: Last weight
+            entity: sensor.health_weight
+            primary: Last weighing
             secondary: >-
-              {% set at = state_attr(entity, 'recorded_at') %}
-              {{ (states(entity) ~ ' kg · ' ~ (as_datetime(at) | as_local).strftime('%d.%m.%Y %H:%M')) if at else 'No records yet' }}
+              {% set fat = states('sensor.health_body_fat') %}
+              {{ (states(entity) ~ ' kg' ~ (' · ' ~ fat ~ ' % fat' if has_value('sensor.health_body_fat') else '')) if has_value(entity) else 'No data from Health Connect' }}
             icon: mdi:scale-bathroom
             color: teal
-          - type: entities
-            entities:
-              - entity: input_number.weight_input
-                name: New weight
-            grid_options:
-              columns: 8
-          - <<: *run
-            entity: script.weight_record
-            primary: Save
-            icon: mdi:content-save
-            color: green
-            grid_options:
-              columns: 4
-              rows: 1
-            tap_action:
-              action: perform-action
-              perform_action: script.turn_on
-              target:
-                entity_id: script.weight_record
-          # After 31 days the history is purged and the cards draw the long-term statistics instead
-          - type: conditional
-            conditions:
-              - condition: state
-                entity: input_select.wellness_range
-                state: Month
-            card: &weight_graph
-              type: history-graph
-              hours_to_show: 744
-              entities:
-                - entity: sensor.weight
-                  name: Weight
-            grid_options:
-              columns: full
-          - type: conditional
-            conditions:
-              - condition: state
-                entity: input_select.wellness_range
-                state: 3 months
-            card:
-              <<: *weight_graph
-              hours_to_show: 2160
-            grid_options:
-              columns: full
-          - type: conditional
-            conditions:
-              - condition: state
-                entity: input_select.wellness_range
-                state: Year
-            card:
-              <<: *weight_graph
-              hours_to_show: 8760
-            grid_options:
-              columns: full
+          - &daily_chart
+            type: custom:frog-daily-chart
+            range: input_select.wellness_range
+            title: Body composition
+            series:
+              - entity: sensor.health_weight
+                stat: mean
+                name: Weight
+                unit: kg
+                color: "#14b8a6"
+              - entity: sensor.health_body_water_mass
+                stat: mean
+                name: Body water
+                unit: kg
+                color: "#3b82f6"
+              - entity: sensor.health_bone_mass
+                stat: mean
+                name: Bone mass
+                unit: kg
+                color: "#a3a3a3"
+              - entity: sensor.health_body_fat
+                stat: mean
+                name: Body fat
+                unit: "%"
+                color: "#f59e0b"
+                axis: right
 
-      - type: grid
-        cards:
-          - type: heading
-            heading: Body fat
-            icon: mdi:water-percent
-          - <<: *info
-            entity: sensor.body_fat
-            primary: Last body fat
-            secondary: >-
-              {% set at = state_attr(entity, 'recorded_at') %}
-              {{ (states(entity) ~ ' % · ' ~ (as_datetime(at) | as_local).strftime('%d.%m.%Y %H:%M')) if at else 'No records yet' }}
-            icon: mdi:water-percent
-            color: amber
-          - type: entities
-            entities:
-              - entity: input_number.body_fat_input
-                name: New body fat
-            grid_options:
-              columns: 8
-          - <<: *run
-            entity: script.body_fat_record
-            primary: Save
-            icon: mdi:content-save
-            color: green
-            grid_options:
-              columns: 4
-              rows: 1
-            tap_action:
-              action: perform-action
-              perform_action: script.turn_on
-              target:
-                entity_id: script.body_fat_record
-          - type: conditional
-            conditions:
-              - condition: state
-                entity: input_select.wellness_range
-                state: Month
-            card: &body_fat_graph
-              type: history-graph
-              hours_to_show: 744
-              entities:
-                - entity: sensor.body_fat
-                  name: Body fat
-            grid_options:
-              columns: full
-          - type: conditional
-            conditions:
-              - condition: state
-                entity: input_select.wellness_range
-                state: 3 months
-            card:
-              <<: *body_fat_graph
-              hours_to_show: 2160
-            grid_options:
-              columns: full
-          - type: conditional
-            conditions:
-              - condition: state
-                entity: input_select.wellness_range
-                state: Year
-            card:
-              <<: *body_fat_graph
-              hours_to_show: 8760
-            grid_options:
-              columns: full
-
-      # Daily rows from the calories sheet, only the days marked full
+      # The sheet has the eaten calories and macros. Only the days marked full are drawn
       - type: grid
         column_span: 2
         cards:
           - type: heading
             heading: Nutrition
             icon: mdi:food-apple
-          - &sheet_chart
-            type: custom:frog-sheet-chart
-            source: sensor.calories_sheet
-            range: input_select.wellness_range
-            date_column: 0
-            keep_column: 5
-            title: Calories
+          - <<: *daily_chart
+            title: Calories in vs out
+            sheet: &calories_sheet
+              source: sensor.calories_sheet
+              date_column: 0
+              keep_column: 5
             series:
               - column: 1
-                name: Calories
+                name: Eaten
                 unit: kcal
                 color: "#f59e0b"
-          - <<: *sheet_chart
+              - entity: sensor.pixel_7_total_calories_burned
+                stat: change
+                name: Burned
+                unit: kcal
+                color: "#ef4444"
+                skip_today: true
+          - <<: *daily_chart
             title: Macros
+            sheet: *calories_sheet
             series:
               - column: 2
                 name: Fats
@@ -4089,6 +4005,58 @@ views:
                 name: Carbohydrates
                 unit: g
                 color: "#3b82f6"
+
+      - type: grid
+        cards:
+          - type: heading
+            heading: Activity
+            icon: mdi:walk
+          - <<: *daily_chart
+            title: Steps
+            series:
+              - entity: sensor.pixel_7_daily_steps
+                stat: change
+                name: Steps
+                color: "#22c55e"
+
+      - type: grid
+        cards:
+          - type: heading
+            heading: Sleep
+            icon: mdi:sleep
+          - <<: *daily_chart
+            title: Sleep, h
+            series:
+              - entity: sensor.health_sleep
+                stat: max
+                name: Sleep
+                unit: h
+                color: "#8b5cf6"
+
+      - type: grid
+        column_span: 2
+        cards:
+          - type: heading
+            heading: Heart
+            icon: mdi:heart-pulse
+          - <<: *daily_chart
+            title: Heart rate, bpm
+            series:
+              - entity: sensor.health_heart_rate
+                stat: max
+                name: Max
+                unit: bpm
+                color: "#f87171"
+              - entity: sensor.health_heart_rate
+                stat: mean
+                name: Average
+                unit: bpm
+                color: "#ef4444"
+              - entity: sensor.health_resting_heart_rate
+                stat: mean
+                name: Resting
+                unit: bpm
+                color: "#991b1b"
 
   # Guests see only this view (custom-sidebar-config.yaml hides the rest of the sidebar for them).
   # It hides things, it doesn't block them: a guest can still reach any entity through the API

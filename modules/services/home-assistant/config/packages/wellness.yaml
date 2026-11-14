@@ -1,4 +1,5 @@
-# Weight and body fat typed in by hand on the Wellness tab. The boxes only hold the numbers, the scripts save them
+# The Wellness tab. Its graphs are custom:frog-daily-chart cards (www/daily-chart.js) that draw daily
+# long-term statistics and the calories sheet
 input_select:
   # The range picker of the Wellness tab, one for all its graphs
   wellness_range:
@@ -10,72 +11,76 @@ input_select:
       - Year
     initial: Month
 
-input_number:
-  weight_input:
-    name: Weight
-    icon: mdi:scale-bathroom
-    mode: box
-    min: 30
-    max: 250
-    step: 0.1
-    unit_of_measurement: kg
-  body_fat_input:
-    name: Body fat
-    icon: mdi:water-percent
-    mode: box
-    min: 3
-    max: 60
-    step: 0.1
-    unit_of_measurement: "%"
-
-script:
-  weight_record:
-    alias: "Weight: save"
-    icon: mdi:content-save
-    sequence:
-      - event: frogswamp_weight
-        event_data:
-          weight: "{{ states('input_number.weight_input') | float }}"
-  body_fat_record:
-    alias: "Body fat: save"
-    icon: mdi:content-save
-    sequence:
-      - event: frogswamp_body_fat
-        event_data:
-          body_fat: "{{ states('input_number.body_fat_input') | float }}"
-
-# Each save is one state row, so it gets its own time. recorded_at makes a row even when the value is the same.
-# state_class keeps long-term statistics, which the graphs use after the 31-day history is purged
+# Health Connect values from the Pixel 7 Companion app. The app's sensors have no state_class, so HA keeps
+# no long-term statistics for them and the graphs would end after the 31-day history. These copies keep them
 template:
-  - triggers:
-      - trigger: event
-        event_type: frogswamp_weight
-    sensor:
-      - name: Weight
-        unique_id: repo_weight
-        default_entity_id: sensor.weight
+  - sensor:
+      - name: Health weight
+        unique_id: repo_health_weight
+        default_entity_id: sensor.health_weight
         icon: mdi:scale-bathroom
         unit_of_measurement: kg
         device_class: weight
         state_class: measurement
-        state: "{{ trigger.event.data.weight | float | round(1) }}"
-        attributes:
-          recorded_at: "{{ now().isoformat() }}"
-  - triggers:
-      - trigger: event
-        event_type: frogswamp_body_fat
-    sensor:
-      - name: Body fat
-        unique_id: repo_body_fat
-        default_entity_id: sensor.body_fat
+        availability: "{{ has_value('sensor.pixel_7_weight') }}"
+        state: "{{ (states('sensor.pixel_7_weight') | float / 1000) | round(2) }}"
+      - name: Health body fat
+        unique_id: repo_health_body_fat
+        default_entity_id: sensor.health_body_fat
         icon: mdi:water-percent
         unit_of_measurement: "%"
         state_class: measurement
-        state: "{{ trigger.event.data.body_fat | float | round(1) }}"
-        attributes:
-          recorded_at: "{{ now().isoformat() }}"
+        availability: "{{ has_value('sensor.pixel_7_body_fat') }}"
+        state: "{{ states('sensor.pixel_7_body_fat') | float | round(1) }}"
+      - name: Health bone mass
+        unique_id: repo_health_bone_mass
+        default_entity_id: sensor.health_bone_mass
+        icon: mdi:bone
+        unit_of_measurement: kg
+        device_class: weight
+        state_class: measurement
+        availability: "{{ has_value('sensor.pixel_7_bone_mass') }}"
+        state: "{{ (states('sensor.pixel_7_bone_mass') | float / 1000) | round(2) }}"
+      - name: Health body water mass
+        unique_id: repo_health_body_water_mass
+        default_entity_id: sensor.health_body_water_mass
+        icon: mdi:water
+        unit_of_measurement: kg
+        device_class: weight
+        state_class: measurement
+        availability: "{{ has_value('sensor.pixel_7_body_water_mass') }}"
+        state: "{{ (states('sensor.pixel_7_body_water_mass') | float / 1000) | round(2) }}"
+      - name: Health heart rate
+        unique_id: repo_health_heart_rate
+        default_entity_id: sensor.health_heart_rate
+        icon: mdi:heart-pulse
+        unit_of_measurement: bpm
+        state_class: measurement
+        availability: "{{ has_value('sensor.pixel_7_heart_rate') }}"
+        state: "{{ states('sensor.pixel_7_heart_rate') | float | round(0) }}"
+      - name: Health resting heart rate
+        unique_id: repo_health_resting_heart_rate
+        default_entity_id: sensor.health_resting_heart_rate
+        icon: mdi:heart
+        unit_of_measurement: bpm
+        state_class: measurement
+        availability: "{{ has_value('sensor.pixel_7_resting_heart_rate') }}"
+        state: "{{ states('sensor.pixel_7_resting_heart_rate') | float | round(0) }}"
+      # The last sleep segment, only on the day it ended. Otherwise the daily max would also give
+      # yesterday's sleep to the morning before the new segment arrives
+      - name: Health sleep
+        unique_id: repo_health_sleep
+        default_entity_id: sensor.health_sleep
+        icon: mdi:sleep
+        unit_of_measurement: h
+        state_class: measurement
+        availability: >-
+          {% set end = state_attr('sensor.pixel_7_sleep_segment', 'end') %}
+          {{ has_value('sensor.pixel_7_sleep_segment') and end is number
+             and (end / 1000) | timestamp_custom('%Y-%m-%d') == now().strftime('%Y-%m-%d') }}
+        state: "{{ (states('sensor.pixel_7_sleep_segment') | float / 3600000) | round(2) }}"
 
-# The calories sheet, published as CSV. The link is in secrets.yaml. The browser reads it, see www/sheet-chart.js
+  # The calories sheet, published as CSV. The link is in secrets.yaml. The browser reads it, see www/daily-chart.js
   - sensor:
       - name: Calories sheet
         unique_id: repo_calories_sheet

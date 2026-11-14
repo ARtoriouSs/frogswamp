@@ -35,7 +35,7 @@ frontend:
     - /local/frogswamp/tab-dividers.js?v=2
     - /local/frogswamp/hint-card.js
     - /local/frogswamp/calendar-resize.js
-    - /local/frogswamp/sheet-chart.js?v=1
+    - /local/frogswamp/daily-chart.js?v=1
     # Installed through HACS, its config is custom-sidebar-config.yaml
     - /hacsfiles/custom-sidebar/custom-sidebar-plugin.js
   themes: !include_dir_merge_named themes
