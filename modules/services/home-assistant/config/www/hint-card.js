@@ -102,4 +102,12 @@ class FrogHintCard extends HTMLElement {
   }
 }
 
-if (!customElements.get("frog-hint-card")) customElements.define("frog-hint-card", FrogHintCard);
+// HA puts its own registry in place of window.customElements while it starts, and it doesn't see an element
+// defined in the browser's registry before that: the card stays "Custom element doesn't exist" until a reload.
+// So define it once HA has started (5 s at most)
+const defineWhenReady = (name, element) =>
+  Promise.race([customElements.whenDefined("home-assistant"), new Promise((resolve) => setTimeout(resolve, 5000))]).then(
+    () => window.customElements.get(name) || window.customElements.define(name, element)
+  );
+
+defineWhenReady("frog-hint-card", FrogHintCard);

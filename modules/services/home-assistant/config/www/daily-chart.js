@@ -271,7 +271,9 @@ class FrogDailyChart extends HTMLElement {
             .map((line) => `<span><i style="background:${line.color}"></i>${line.name}${line.unit ? `, ${line.unit}` : ""}</span>`)
             .join("")}</div>`
         : "";
+    // A custom element is inline by default and has no width, the chart takes its width from this host
     root.innerHTML = `<style>
+      :host { display: block; }
       ha-card { padding: 12px 16px; }
       .title { font-size: 16px; font-weight: 500; margin-bottom: 8px; }
       .legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--secondary-text-color); margin-bottom: 4px; }
@@ -343,4 +345,12 @@ class FrogDailyChart extends HTMLElement {
   }
 }
 
-if (!customElements.get("frog-daily-chart")) customElements.define("frog-daily-chart", FrogDailyChart);
+// HA puts its own registry in place of window.customElements while it starts, and it doesn't see an element
+// defined in the browser's registry before that: the card stays "Custom element doesn't exist" until a reload.
+// So define it once HA has started (5 s at most)
+const defineWhenReady = (name, element) =>
+  Promise.race([customElements.whenDefined("home-assistant"), new Promise((resolve) => setTimeout(resolve, 5000))]).then(
+    () => window.customElements.get(name) || window.customElements.define(name, element)
+  );
+
+defineWhenReady("frog-daily-chart", FrogDailyChart);

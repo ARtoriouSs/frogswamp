@@ -101,9 +101,15 @@ class FrogPresence extends HTMLElement {
     return person;
   }
 }
-customElements.define("frog-presence", FrogPresence);
+// HA puts its own registry in place of window.customElements while it starts, and it doesn't see an element
+// defined in the browser's registry before that: the card stays "Custom element doesn't exist" until a reload.
+// So define it once HA has started (5 s at most)
+const defineWhenReady = (name, element) =>
+  Promise.race([customElements.whenDefined("home-assistant"), new Promise((resolve) => setTimeout(resolve, 5000))]).then(
+    () => window.customElements.get(name) || window.customElements.define(name, element)
+  );
 
-const widget = document.createElement("frog-presence");
+let widget = null;
 
 // Polling also puts the widget back when the sidebar redraws its items
 const refresh = () => {
@@ -116,7 +122,7 @@ const refresh = () => {
   const items = sidebar?.shadowRoot?.querySelectorAll("ha-list-item-base, ha-list-item-button") ?? [];
   const mapItem = Array.from(items).find((item) => item.href === "/map");
   if (!hass?.user || !mapItem || HIDDEN_FOR_USERS.includes(hass.user.name)) {
-    widget.remove();
+    widget?.remove();
     return;
   }
   // Same CSS order as Map and right after it in the DOM keeps the two together
@@ -125,5 +131,9 @@ const refresh = () => {
   widget.update(hass);
 };
 
-setInterval(refresh, REFRESH_MS);
-refresh();
+// The widget is made after its element is defined, so it is a FrogPresence with update()
+defineWhenReady("frog-presence", FrogPresence).then(() => {
+  widget = document.createElement("frog-presence");
+  setInterval(refresh, REFRESH_MS);
+  refresh();
+});
