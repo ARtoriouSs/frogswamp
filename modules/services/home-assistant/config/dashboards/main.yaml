@@ -578,10 +578,10 @@ views:
             icon: mdi:car-side
           - type: custom:mushroom-template-card
             entity: sensor.air_pressure
-            primary: Pressure
+            primary: Pressure · phone / watch
             secondary: >-
               {{ 'Unavailable' if states(entity) in ['unavailable', 'unknown'] else
-                 states(entity) ~ ' hPa · from the ' ~ state_attr(entity, 'source') }}
+                 states(entity) ~ ' hPa · where the ' ~ state_attr(entity, 'source') ~ ' is, maybe not home' }}
             icon: mdi:gauge
             color: blue
             grid_options:
@@ -589,12 +589,6 @@ views:
               rows: 1
             tap_action:
               action: more-info
-          - type: custom:frog-hint-card
-            items:
-              - label: Phone and watch
-                hint: |-
-                  Pressure comes from the barometer of the phone (Pixel 7). When the phone has no value, from the watch (Pixel Watch).
-                  The watch reads about 2 hPa higher
 
       - type: grid
         cards:
