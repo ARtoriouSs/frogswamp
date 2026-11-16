@@ -4290,6 +4290,62 @@ views:
                 unit: h
                 color: "#f97316"
                 axis: right
+          # When sleep and exercise happened, from the raw states. HA keeps them for 31 days, so only Day and Week
+          - type: heading
+            heading: Sleep and exercise timeline
+            heading_style: subtitle
+          - &activity_range
+            type: custom:mushroom-template-card
+            entity: input_select.wellness_activity_range
+            primary: Day
+            icon: mdi:calendar-today
+            color: "{{ 'primary' if is_state(entity, config.primary) else 'disabled' }}"
+            vertical: false
+            grid_options:
+              columns: 6
+              rows: 1
+            tap_action:
+              action: perform-action
+              perform_action: input_select.select_option
+              target:
+                entity_id: input_select.wellness_activity_range
+              data:
+                option: Day
+          - <<: *activity_range
+            primary: Week
+            icon: mdi:calendar-week
+            tap_action:
+              action: perform-action
+              perform_action: input_select.select_option
+              target:
+                entity_id: input_select.wellness_activity_range
+              data:
+                option: Week
+          - &activity_timeline
+            type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.wellness_activity_range
+                state: Day
+            card:
+              type: history-graph
+              hours_to_show: 24
+              entities:
+                - entity: sensor.google_pixel_watch_activity_state
+                  name: Activity
+            grid_options:
+              columns: full
+          - <<: *activity_timeline
+            conditions:
+              - condition: state
+                entity: input_select.wellness_activity_range
+                state: Week
+            card:
+              type: history-graph
+              hours_to_show: 168
+              entities:
+                - entity: sensor.google_pixel_watch_activity_state
+                  name: Activity
 
       - type: grid
         column_span: 2
