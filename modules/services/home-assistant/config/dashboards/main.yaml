@@ -2201,13 +2201,18 @@ views:
               columns: full
       - type: grid
         cards:
+          # A bar filled to the uptime, see www/bar-card.js
           - type: heading
             heading: Uptime
             icon: mdi:percent
           - type: heading
             heading: Living room
             heading_style: subtitle
-          - type: custom:mushroom-template-card
+          - type: custom:frog-bar-card
+            card_type: custom:mushroom-template-card
+            bar:
+              attribute: uptime
+              steps: {0: red, 95: amber, 99: green}
             entity: binary_sensor.blinds_right_online
             primary: Blinds right
             secondary: "{% set u = state_attr(entity, 'uptime') %}{{ (u ~ ' %') if u is not none else '—' }} · {{ 'online' if is_state(entity, 'on') else 'offline' }}"
@@ -2218,7 +2223,11 @@ views:
               rows: 1
             tap_action:
               action: more-info
-          - type: custom:mushroom-template-card
+          - type: custom:frog-bar-card
+            card_type: custom:mushroom-template-card
+            bar:
+              attribute: uptime
+              steps: {0: red, 95: amber, 99: green}
             entity: binary_sensor.blinds_middle_online
             primary: Blinds middle
             secondary: "{% set u = state_attr(entity, 'uptime') %}{{ (u ~ ' %') if u is not none else '—' }} · {{ 'online' if is_state(entity, 'on') else 'offline' }}"
@@ -2229,7 +2238,11 @@ views:
               rows: 1
             tap_action:
               action: more-info
-          - type: custom:mushroom-template-card
+          - type: custom:frog-bar-card
+            card_type: custom:mushroom-template-card
+            bar:
+              attribute: uptime
+              steps: {0: red, 95: amber, 99: green}
             entity: binary_sensor.blinds_left_door_online
             primary: Blinds left / door
             secondary: "{% set u = state_attr(entity, 'uptime') %}{{ (u ~ ' %') if u is not none else '—' }} · {{ 'online' if is_state(entity, 'on') else 'offline' }}"
@@ -2240,7 +2253,11 @@ views:
               rows: 1
             tap_action:
               action: more-info
-          - type: custom:mushroom-template-card
+          - type: custom:frog-bar-card
+            card_type: custom:mushroom-template-card
+            bar:
+              attribute: uptime
+              steps: {0: red, 95: amber, 99: green}
             entity: binary_sensor.tv_online
             primary: TV
             secondary: "{% set u = state_attr(entity, 'uptime') %}{{ (u ~ ' %') if u is not none else '—' }} · {{ 'online' if is_state(entity, 'on') else 'offline' }}"
@@ -2252,7 +2269,11 @@ views:
             tap_action:
               action: more-info
           # Like the PC: off or in rest mode is normal
-          - type: custom:mushroom-template-card
+          - type: custom:frog-bar-card
+            card_type: custom:mushroom-template-card
+            bar:
+              attribute: uptime
+              color: blue
             entity: binary_sensor.ps5_online
             primary: PS5
             secondary: "{% set u = state_attr(entity, 'uptime') %}{{ (u ~ ' %') if u is not none else '—' }} · {{ 'on' if is_state(entity, 'on') else 'off' }}"
@@ -2263,7 +2284,11 @@ views:
               rows: 1
             tap_action:
               action: more-info
-          - type: custom:mushroom-template-card
+          - type: custom:frog-bar-card
+            card_type: custom:mushroom-template-card
+            bar:
+              attribute: uptime
+              steps: {0: red, 95: amber, 99: green}
             entity: binary_sensor.fridge_online
             primary: Fridge
             secondary: "{% set u = state_attr(entity, 'uptime') %}{{ (u ~ ' %') if u is not none else '—' }} · {{ 'online' if is_state(entity, 'on') else 'offline' }}"
@@ -2274,7 +2299,11 @@ views:
               rows: 1
             tap_action:
               action: more-info
-          - type: custom:mushroom-template-card
+          - type: custom:frog-bar-card
+            card_type: custom:mushroom-template-card
+            bar:
+              attribute: uptime
+              steps: {0: red, 95: amber, 99: green}
             entity: binary_sensor.leak_sensor_kitchen_online
             primary: Leak sensor
             secondary: "{% set u = state_attr(entity, 'uptime') %}{{ (u ~ ' %') if u is not none else '—' }} · {{ 'online' if is_state(entity, 'on') else 'offline' }}"
@@ -2288,7 +2317,11 @@ views:
           - type: heading
             heading: Bedroom
             heading_style: subtitle
-          - type: custom:mushroom-template-card
+          - type: custom:frog-bar-card
+            card_type: custom:mushroom-template-card
+            bar:
+              attribute: uptime
+              steps: {0: red, 95: amber, 99: green}
             entity: binary_sensor.curtains_online
             primary: Curtains
             secondary: "{% set u = state_attr(entity, 'uptime') %}{{ (u ~ ' %') if u is not none else '—' }} · {{ 'online' if is_state(entity, 'on') else 'offline' }}"
@@ -2302,7 +2335,11 @@ views:
           - type: heading
             heading: Office
             heading_style: subtitle
-          - type: custom:mushroom-template-card
+          - type: custom:frog-bar-card
+            card_type: custom:mushroom-template-card
+            bar:
+              attribute: uptime
+              steps: {0: red, 95: amber, 99: green}
             entity: binary_sensor.desk_online
             primary: Desk
             secondary: "{% set u = state_attr(entity, 'uptime') %}{{ (u ~ ' %') if u is not none else '—' }} · {{ 'online' if is_state(entity, 'on') else 'offline' }}"
@@ -2313,7 +2350,11 @@ views:
               rows: 1
             tap_action:
               action: more-info
-          - type: custom:mushroom-template-card
+          - type: custom:frog-bar-card
+            card_type: custom:mushroom-template-card
+            bar:
+              attribute: uptime
+              steps: {0: red, 95: amber, 99: green}
             entity: binary_sensor.cube_online
             primary: Cube
             secondary: "{% set u = state_attr(entity, 'uptime') %}{{ (u ~ ' %') if u is not none else '—' }} · {{ 'online' if is_state(entity, 'on') else 'offline' }}"
@@ -2324,7 +2365,11 @@ views:
               rows: 1
             tap_action:
               action: more-info
-          - type: custom:mushroom-template-card
+          - type: custom:frog-bar-card
+            card_type: custom:mushroom-template-card
+            bar:
+              attribute: uptime
+              steps: {0: red, 95: amber, 99: green}
             entity: binary_sensor.printer_online
             primary: Printer
             secondary: "{% set u = state_attr(entity, 'uptime') %}{{ (u ~ ' %') if u is not none else '—' }} · {{ 'online' if is_state(entity, 'on') else 'offline' }}"
@@ -2336,7 +2381,11 @@ views:
             tap_action:
               action: more-info
           # A PC that is off is normal, so no red and no uptime colours here
-          - type: custom:mushroom-template-card
+          - type: custom:frog-bar-card
+            card_type: custom:mushroom-template-card
+            bar:
+              attribute: uptime
+              color: blue
             entity: binary_sensor.pc_online
             primary: PC
             secondary: "{% set u = state_attr(entity, 'uptime') %}{{ (u ~ ' %') if u is not none else '—' }} · {{ 'online' if is_state(entity, 'on') else 'offline' }}"
@@ -2350,7 +2399,11 @@ views:
           - type: heading
             heading: Guest bathroom
             heading_style: subtitle
-          - type: custom:mushroom-template-card
+          - type: custom:frog-bar-card
+            card_type: custom:mushroom-template-card
+            bar:
+              attribute: uptime
+              steps: {0: red, 95: amber, 99: green}
             entity: binary_sensor.guest_thermostat_online
             primary: Thermostat
             secondary: "{% set u = state_attr(entity, 'uptime') %}{{ (u ~ ' %') if u is not none else '—' }} · {{ 'online' if is_state(entity, 'on') else 'offline' }}"
@@ -2361,7 +2414,11 @@ views:
               rows: 1
             tap_action:
               action: more-info
-          - type: custom:mushroom-template-card
+          - type: custom:frog-bar-card
+            card_type: custom:mushroom-template-card
+            bar:
+              attribute: uptime
+              steps: {0: red, 95: amber, 99: green}
             entity: binary_sensor.guest_towel_heat_online
             primary: Towel heat
             secondary: "{% set u = state_attr(entity, 'uptime') %}{{ (u ~ ' %') if u is not none else '—' }} · {{ 'online' if is_state(entity, 'on') else 'offline' }}"
@@ -2375,7 +2432,11 @@ views:
           - type: heading
             heading: Master bathroom
             heading_style: subtitle
-          - type: custom:mushroom-template-card
+          - type: custom:frog-bar-card
+            card_type: custom:mushroom-template-card
+            bar:
+              attribute: uptime
+              steps: {0: red, 95: amber, 99: green}
             entity: binary_sensor.master_thermostat_online
             primary: Thermostat
             secondary: "{% set u = state_attr(entity, 'uptime') %}{{ (u ~ ' %') if u is not none else '—' }} · {{ 'online' if is_state(entity, 'on') else 'offline' }}"
@@ -2386,7 +2447,11 @@ views:
               rows: 1
             tap_action:
               action: more-info
-          - type: custom:mushroom-template-card
+          - type: custom:frog-bar-card
+            card_type: custom:mushroom-template-card
+            bar:
+              attribute: uptime
+              steps: {0: red, 95: amber, 99: green}
             entity: binary_sensor.master_towel_heat_relay_online
             primary: Towel heat relay
             secondary: "{% set u = state_attr(entity, 'uptime') %}{{ (u ~ ' %') if u is not none else '—' }} · {{ 'online' if is_state(entity, 'on') else 'offline' }}"
@@ -2397,7 +2462,11 @@ views:
               rows: 1
             tap_action:
               action: more-info
-          - type: custom:mushroom-template-card
+          - type: custom:frog-bar-card
+            card_type: custom:mushroom-template-card
+            bar:
+              attribute: uptime
+              steps: {0: red, 95: amber, 99: green}
             entity: binary_sensor.leak_sensor_master_bathroom_online
             primary: Leak sensor
             secondary: "{% set u = state_attr(entity, 'uptime') %}{{ (u ~ ' %') if u is not none else '—' }} · {{ 'online' if is_state(entity, 'on') else 'offline' }}"
@@ -2411,7 +2480,11 @@ views:
           - type: heading
             heading: Server
             heading_style: subtitle
-          - type: custom:mushroom-template-card
+          - type: custom:frog-bar-card
+            card_type: custom:mushroom-template-card
+            bar:
+              attribute: uptime
+              steps: {0: red, 95: amber, 99: green}
             entity: binary_sensor.router_online
             primary: Router
             secondary: "{% set u = state_attr(entity, 'uptime') %}{{ (u ~ ' %') if u is not none else '—' }} · {{ 'online' if is_state(entity, 'on') else 'offline' }}"
@@ -2422,7 +2495,11 @@ views:
               rows: 1
             tap_action:
               action: more-info
-          - type: custom:mushroom-template-card
+          - type: custom:frog-bar-card
+            card_type: custom:mushroom-template-card
+            bar:
+              attribute: uptime
+              steps: {0: red, 95: amber, 99: green}
             entity: binary_sensor.zigbee_bridge_online
             primary: Zigbee bridge
             secondary: "{% set u = state_attr(entity, 'uptime') %}{{ (u ~ ' %') if u is not none else '—' }} · {{ 'online' if is_state(entity, 'on') else 'offline' }}"
@@ -2436,7 +2513,11 @@ views:
           - type: heading
             heading: Garage
             heading_style: subtitle
-          - type: custom:mushroom-template-card
+          - type: custom:frog-bar-card
+            card_type: custom:mushroom-template-card
+            bar:
+              attribute: uptime
+              steps: {0: red, 95: amber, 99: green}
             entity: binary_sensor.audi_online
             primary: Audi
             secondary: "{% set u = state_attr(entity, 'uptime') %}{{ (u ~ ' %') if u is not none else '—' }} · {{ 'online' if is_state(entity, 'on') else 'offline' }}"
@@ -2979,15 +3060,28 @@ views:
           - type: heading
             heading: Charge
             icon: mdi:battery-charging
-          # A bar filled to the level, see www/battery-card.js
+          # Each device has a _battery_level and a _battery_state sensor with the same start.
+          # A bar filled to the level, see www/bar-card.js
           - &battery
-            type: custom:frog-battery-card
+            type: custom:frog-bar-card
+            card_type: custom:mushroom-template-card
+            bar:
+              steps: {0: red, 25: yellow, 75: green}
             entity: sensor.pixel_7_battery_level
-            name: Phone
+            primary: Phone
+            secondary: >-
+              {% if states(entity) in ['unavailable', 'unknown'] %}Unavailable
+              {% else %}{{ states(entity) }}%{{ ' · charging' if is_state(entity | replace('_level', '_state'), 'charging') }}
+              {% endif %}
             icon: mdi:cellphone
+            color: >-
+              {% set level = states(entity) | float(-1) %}
+              {{ 'disabled' if level < 0 else ('red' if level < 25 else ('yellow' if level < 75 else 'green')) }}
             grid_options:
               columns: 8
               rows: 1
+            tap_action:
+              action: more-info
           - &battery_cycles
             <<: *info
             entity: sensor.pixel_7_battery_cycle_count
@@ -3000,7 +3094,7 @@ views:
               rows: 1
           - <<: *battery
             entity: sensor.google_pixel_watch_battery_level
-            name: Watch
+            primary: Watch
             icon: mdi:watch
           - <<: *battery_cycles
             entity: sensor.google_pixel_watch_battery_cycle_count
@@ -3008,20 +3102,23 @@ views:
           - type: heading
             heading: Batteries
             icon: mdi:battery
-          - <<: *battery
+          - &replaceable_battery
+            type: custom:mushroom-template-card
             entity: sensor.leak_sensor_kitchen_battery
-            name: Leak sensor kitchen
+            primary: Leak sensor kitchen
+            secondary: "{{ 'Unavailable' if states(entity) in ['unavailable', 'unknown'] else states(entity) ~ '%' }}"
             icon: mdi:water-alert
+            color: >-
+              {% set level = states(entity) | float(-1) %}
+              {{ 'disabled' if level < 0 else ('red' if level < 25 else ('yellow' if level < 75 else 'green')) }}
             grid_options:
               columns: 12
               rows: 1
-          - <<: *battery
+            tap_action:
+              action: more-info
+          - <<: *replaceable_battery
             entity: sensor.leak_sensor_master_bathroom_battery
-            name: Leak sensor master bathroom
-            icon: mdi:water-alert
-            grid_options:
-              columns: 12
-              rows: 1
+            primary: Leak sensor master bathroom
       - type: grid
         cards:
           - type: heading
@@ -3145,8 +3242,12 @@ views:
               - label: Inspection
                 hint: |-
                   Inspection: 365 days, no km limit
+          # A bar filled to the percentage, see www/bar-card.js
           - &car_part
-            type: custom:mushroom-template-card
+            type: custom:frog-bar-card
+            card_type: custom:mushroom-template-card
+            bar:
+              steps: {0: red, 10: yellow, 40: green}
             entity: sensor.car_inspection
             primary: Inspection
             secondary: >-
@@ -3224,6 +3325,7 @@ views:
           # Changed by condition, so there is no percentage, only the km since the change
           - &car_part_km
             <<: *car_part
+            bar: null
             entity: sensor.car_front_pads
             primary: Front pads
             secondary: >-
