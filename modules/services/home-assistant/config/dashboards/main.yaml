@@ -2209,7 +2209,6 @@ views:
             heading: Living room
             heading_style: subtitle
           - type: custom:frog-bar-card
-            card_type: custom:mushroom-template-card
             bar:
               attribute: uptime
               steps: {0: red, 95: amber, 99: green}
@@ -2224,7 +2223,6 @@ views:
             tap_action:
               action: more-info
           - type: custom:frog-bar-card
-            card_type: custom:mushroom-template-card
             bar:
               attribute: uptime
               steps: {0: red, 95: amber, 99: green}
@@ -2239,7 +2237,6 @@ views:
             tap_action:
               action: more-info
           - type: custom:frog-bar-card
-            card_type: custom:mushroom-template-card
             bar:
               attribute: uptime
               steps: {0: red, 95: amber, 99: green}
@@ -2254,7 +2251,6 @@ views:
             tap_action:
               action: more-info
           - type: custom:frog-bar-card
-            card_type: custom:mushroom-template-card
             bar:
               attribute: uptime
               steps: {0: red, 95: amber, 99: green}
@@ -2270,7 +2266,6 @@ views:
               action: more-info
           # Like the PC: off or in rest mode is normal
           - type: custom:frog-bar-card
-            card_type: custom:mushroom-template-card
             bar:
               attribute: uptime
               color: blue
@@ -2285,7 +2280,6 @@ views:
             tap_action:
               action: more-info
           - type: custom:frog-bar-card
-            card_type: custom:mushroom-template-card
             bar:
               attribute: uptime
               steps: {0: red, 95: amber, 99: green}
@@ -2300,7 +2294,6 @@ views:
             tap_action:
               action: more-info
           - type: custom:frog-bar-card
-            card_type: custom:mushroom-template-card
             bar:
               attribute: uptime
               steps: {0: red, 95: amber, 99: green}
@@ -2318,7 +2311,6 @@ views:
             heading: Bedroom
             heading_style: subtitle
           - type: custom:frog-bar-card
-            card_type: custom:mushroom-template-card
             bar:
               attribute: uptime
               steps: {0: red, 95: amber, 99: green}
@@ -2336,7 +2328,6 @@ views:
             heading: Office
             heading_style: subtitle
           - type: custom:frog-bar-card
-            card_type: custom:mushroom-template-card
             bar:
               attribute: uptime
               steps: {0: red, 95: amber, 99: green}
@@ -2351,7 +2342,6 @@ views:
             tap_action:
               action: more-info
           - type: custom:frog-bar-card
-            card_type: custom:mushroom-template-card
             bar:
               attribute: uptime
               steps: {0: red, 95: amber, 99: green}
@@ -2366,7 +2356,6 @@ views:
             tap_action:
               action: more-info
           - type: custom:frog-bar-card
-            card_type: custom:mushroom-template-card
             bar:
               attribute: uptime
               steps: {0: red, 95: amber, 99: green}
@@ -2382,7 +2371,6 @@ views:
               action: more-info
           # A PC that is off is normal, so no red and no uptime colours here
           - type: custom:frog-bar-card
-            card_type: custom:mushroom-template-card
             bar:
               attribute: uptime
               color: blue
@@ -2400,7 +2388,6 @@ views:
             heading: Guest bathroom
             heading_style: subtitle
           - type: custom:frog-bar-card
-            card_type: custom:mushroom-template-card
             bar:
               attribute: uptime
               steps: {0: red, 95: amber, 99: green}
@@ -2415,7 +2402,6 @@ views:
             tap_action:
               action: more-info
           - type: custom:frog-bar-card
-            card_type: custom:mushroom-template-card
             bar:
               attribute: uptime
               steps: {0: red, 95: amber, 99: green}
@@ -2433,7 +2419,6 @@ views:
             heading: Master bathroom
             heading_style: subtitle
           - type: custom:frog-bar-card
-            card_type: custom:mushroom-template-card
             bar:
               attribute: uptime
               steps: {0: red, 95: amber, 99: green}
@@ -2448,7 +2433,6 @@ views:
             tap_action:
               action: more-info
           - type: custom:frog-bar-card
-            card_type: custom:mushroom-template-card
             bar:
               attribute: uptime
               steps: {0: red, 95: amber, 99: green}
@@ -2463,7 +2447,6 @@ views:
             tap_action:
               action: more-info
           - type: custom:frog-bar-card
-            card_type: custom:mushroom-template-card
             bar:
               attribute: uptime
               steps: {0: red, 95: amber, 99: green}
@@ -2481,7 +2464,6 @@ views:
             heading: Server
             heading_style: subtitle
           - type: custom:frog-bar-card
-            card_type: custom:mushroom-template-card
             bar:
               attribute: uptime
               steps: {0: red, 95: amber, 99: green}
@@ -2496,7 +2478,6 @@ views:
             tap_action:
               action: more-info
           - type: custom:frog-bar-card
-            card_type: custom:mushroom-template-card
             bar:
               attribute: uptime
               steps: {0: red, 95: amber, 99: green}
@@ -2514,7 +2495,6 @@ views:
             heading: Garage
             heading_style: subtitle
           - type: custom:frog-bar-card
-            card_type: custom:mushroom-template-card
             bar:
               attribute: uptime
               steps: {0: red, 95: amber, 99: green}
@@ -3064,7 +3044,6 @@ views:
           # A bar filled to the level, see www/bar-card.js
           - &battery
             type: custom:frog-bar-card
-            card_type: custom:mushroom-template-card
             bar:
               steps: {0: red, 25: yellow, 75: green}
             entity: sensor.pixel_7_battery_level
@@ -3245,7 +3224,6 @@ views:
           # A bar filled to the percentage, see www/bar-card.js
           - &car_part
             type: custom:frog-bar-card
-            card_type: custom:mushroom-template-card
             bar:
               steps: {0: red, 10: yellow, 40: green}
             entity: sensor.car_inspection
