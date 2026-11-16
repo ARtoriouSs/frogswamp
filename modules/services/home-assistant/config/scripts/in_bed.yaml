@@ -1,7 +1,7 @@
 # "In bed": the buttons on the Remote, Schedule and Bedroom tabs and the voice assistant ("Мы спим", "Спокойной ночи").
 # Ends both floors, cuts a towel heat lease to 1 h at most, turns off the TV and the PS5 (rest mode),
 # puts the cube in quiet mode and closes the curtains.
-# A towel heater turned on by hand (no lease) is left alone, the 04:00 cleanup turns it off
+# A towel heater turned on by hand (no lease) is left alone, the 04:00 cleanup turns off the master one
 in_bed:
   alias: "In bed"
   icon: mdi:bed-clock

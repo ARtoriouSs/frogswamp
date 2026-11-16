@@ -32,7 +32,8 @@ card_templates:
   - &run
     type: custom:mushroom-template-card
     entity: script.tv_mode
-    primary: Movie mode
+    # Only the name on the buttons, the script stays tv_mode
+    primary: Movie time
     icon: mdi:youtube-tv
     color: red
     grid_options:
@@ -1169,7 +1170,7 @@ views:
           - &game_mode
             <<: *run
             entity: script.game_mode
-            primary: Game mode
+            primary: Game time
             icon: mdi:sony-playstation
             color: blue
             grid_options:
@@ -3188,6 +3189,13 @@ views:
           - <<: *replaceable_battery
             entity: sensor.leak_sensor_master_bathroom_battery
             primary: Leak sensor master bathroom
+          # The same cards as on the Monitor tab
+          - type: heading
+            heading: Printer ink
+            icon: mdi:printer
+          - *ink
+          - *printer_black
+          - *printer_colour
       - type: grid
         cards:
           - type: heading
@@ -4026,9 +4034,6 @@ views:
             primary: Temperature
             secondary: "{{ 'Unavailable' if states(entity) in ['unavailable', 'unknown'] else states(entity) ~ ' °C' }}"
             icon: mdi:thermometer
-          - *info
-          - *hall_router
-          - *hall_speedtest
           - *hall_qbittorrent
           - *hall_slow_downloads
           - *hall_zigbee_pairing
@@ -4483,7 +4488,7 @@ views:
           - *player
           - <<: *run
             entity: script.tv_mode
-            primary: Movie mode
+            primary: Movie time
             icon: mdi:youtube-tv
             color: red
             grid_options:

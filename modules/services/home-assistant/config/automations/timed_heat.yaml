@@ -52,6 +52,7 @@
 
 # A heater turned on by hand has no lease, so it would run until someone turns it off. Nobody needs that at 04:00.
 # heat_run is on from before a lease turns the heater on, so a lease starting at this minute is safe
+# The guest towel heat is left alone: guests may keep it on through the night
 - id: repo_timed_heat_night_cleanup
   alias: "Timed heat: turn off heaters without a lease at 04:00"
   triggers:
@@ -61,7 +62,6 @@
     - repeat:
         for_each:
           - towel_master
-          - towel_guest
           - floor_master
           - floor_guest
         sequence:
