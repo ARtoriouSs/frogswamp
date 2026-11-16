@@ -2979,24 +2979,15 @@ views:
           - type: heading
             heading: Charge
             icon: mdi:battery-charging
-          # Each device has a _battery_level and a _battery_state sensor with the same start
+          # A bar filled to the level, see www/battery-card.js
           - &battery
-            type: custom:mushroom-template-card
+            type: custom:frog-battery-card
             entity: sensor.pixel_7_battery_level
-            primary: Phone
-            secondary: >-
-              {% if states(entity) in ['unavailable', 'unknown'] %}Unavailable
-              {% else %}{{ states(entity) }}%{{ ' · charging' if is_state(entity | replace('_level', '_state'), 'charging') }}
-              {% endif %}
+            name: Phone
             icon: mdi:cellphone
-            color: >-
-              {% set level = states(entity) | float(-1) %}
-              {{ 'disabled' if level < 0 else ('red' if level <= 15 else ('yellow' if level <= 30 else 'green')) }}
             grid_options:
               columns: 8
               rows: 1
-            tap_action:
-              action: more-info
           - &battery_cycles
             <<: *info
             entity: sensor.pixel_7_battery_cycle_count
@@ -3009,7 +3000,7 @@ views:
               rows: 1
           - <<: *battery
             entity: sensor.google_pixel_watch_battery_level
-            primary: Watch
+            name: Watch
             icon: mdi:watch
           - <<: *battery_cycles
             entity: sensor.google_pixel_watch_battery_cycle_count
@@ -3019,14 +3010,14 @@ views:
             icon: mdi:battery
           - <<: *battery
             entity: sensor.leak_sensor_kitchen_battery
-            primary: Leak sensor kitchen
+            name: Leak sensor kitchen
             icon: mdi:water-alert
             grid_options:
               columns: 12
               rows: 1
           - <<: *battery
             entity: sensor.leak_sensor_master_bathroom_battery
-            primary: Leak sensor master bathroom
+            name: Leak sensor master bathroom
             icon: mdi:water-alert
             grid_options:
               columns: 12
