@@ -834,7 +834,8 @@ views:
               columns: 4
               rows: 2
           - *timed_floor_guest
-          - <<: *thermostat
+          - &towel_guest
+            <<: *thermostat
             entity: climate.guest_bathroom_towel_heat_guest
             primary: Towel heat
             icon: mdi:radiator
@@ -842,10 +843,23 @@ views:
               action: toggle
             hold_action:
               action: more-info
+          # Runs only while the guests mode in the living room is on
+          - &towel_guest_schedule
+            <<: *toggle
+            entity: automation.towel_heat_guest_schedule
+            primary: Towel schedule
+            secondary: >-
+              {{ 'Off' if is_state(entity, 'off')
+                 else ('On' if is_state('input_boolean.guests_in_living_room', 'on') else 'Waits for guests') }}
+            icon: mdi:calendar-clock
             grid_options:
-              columns: 8
+              columns: 6
               rows: 2
-          - *timed_towel_guest
+          - &timed_towel_guest_row
+            <<: *timed_towel_guest
+            grid_options:
+              columns: 6
+              rows: 2
 
           # empty heading: a gap before the next group
           - type: heading
@@ -1407,9 +1421,20 @@ views:
             primary: Master towel heat
             icon: mdi:radiator
           - <<: *sched_toggle
+            entity: automation.towel_heat_guest_schedule
+            primary: Guest towel heat
+            secondary: >-
+              {{ 'Off' if is_state(entity, 'off')
+                 else ('On' if is_state('input_boolean.guests_in_living_room', 'on') else 'Waits for guests') }}
+            icon: mdi:radiator
+          - <<: *sched_toggle
             entity: automation.timed_heat_turn_off_heaters_without_a_lease_at_04_00
             primary: Overnight cleanup
             icon: mdi:broom
+            vertical: false
+            grid_options:
+              columns: 12
+              rows: 1
           - type: heading
             heading: Curtains and blinds
             heading_style: subtitle
@@ -3928,18 +3953,9 @@ views:
               columns: 4
               rows: 2
           - *timed_floor_guest
-          - <<: *thermostat
-            entity: climate.guest_bathroom_towel_heat_guest
-            primary: Towel heat
-            icon: mdi:radiator
-            tap_action:
-              action: toggle
-            hold_action:
-              action: more-info
-            grid_options:
-              columns: 8
-              rows: 2
-          - *timed_towel_guest
+          - *towel_guest
+          - *towel_guest_schedule
+          - *timed_towel_guest_row
 
   - title: Hall
     path: hall
