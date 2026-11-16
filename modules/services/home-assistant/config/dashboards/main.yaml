@@ -1108,7 +1108,8 @@ views:
               columns: 12
             tap_action:
               action: more-info
-          - <<: *player
+          - &tv_cast
+            <<: *player
             entity: media_player.philips_tv_google_cast
             name: Cast
             icon: mdi:cast
@@ -1116,7 +1117,8 @@ views:
               - play_pause_stop
             volume_controls:
               - volume_set
-          - <<: *run
+          - &movie_mode
+            <<: *run
             grid_options:
               columns: 12
               rows: 1
@@ -1124,7 +1126,8 @@ views:
           - type: heading
             heading: PS5
             heading_style: subtitle
-          - <<: *toggle
+          - &ps5_power
+            <<: *toggle
             entity: switch.ps5_120_power
             primary: PS5
             secondary: "{{ {'on': 'Awake', 'off': 'Rest mode'}.get(states(entity), 'Fully off or not reachable') }}"
@@ -1135,13 +1138,15 @@ views:
               columns: 12
               rows: 1
           # The current game from PSN, it only shows and can't control anything
-          - <<: *player
+          - &ps5_game
+            <<: *player
             entity: media_player.playstation_5
             name: Game
             icon: mdi:gamepad-variant
             media_controls: []
             volume_controls: []
-          - <<: *run
+          - &game_mode
+            <<: *run
             entity: script.game_mode
             primary: Game mode
             icon: mdi:sony-playstation
@@ -3510,18 +3515,19 @@ views:
               action: toggle
               confirmation:
                 text: "Switch Guests mode?"
-          - type: custom:mushroom-template-card
-            entity: media_player.living_room_philips_tv
-            primary: TV
-            secondary: "{{ state_attr(entity, 'media_title') or states(entity) | capitalize }}"
-            icon: mdi:television
-            color: "{{ 'blue' if is_state(entity, 'on') or is_state(entity, 'playing') else 'disabled' }}"
-            grid_options:
-              columns: 6
-              rows: 1
-            tap_action:
-              action: more-info
-          - *run
+          # The same cards as on the Light & media tab
+          - type: heading
+            heading: TV
+            heading_style: subtitle
+          - *player
+          - *tv_cast
+          - *movie_mode
+          - type: heading
+            heading: PS5
+            heading_style: subtitle
+          - *ps5_power
+          - *ps5_game
+          - *game_mode
 
           - type: heading
             heading: Fridge
@@ -3961,7 +3967,6 @@ views:
           - *hall_slow_downloads
           - *hall_zigbee_pairing
           - *hall_restart_bridge
-          - *hall_failed_integrations
 
   - title: Balcony
     path: balcony
