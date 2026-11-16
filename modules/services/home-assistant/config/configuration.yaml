@@ -34,7 +34,7 @@ frontend:
     # HA serves /local with a 31-day cache, so bump ?v= after a change or browsers keep the old file
     - /local/frogswamp/tab-dividers.js?v=2
     - /local/frogswamp/hint-card.js
-    - /local/frogswamp/bar-card.js?v=2
+    - /local/frogswamp/bar-card.js?v=3
     - /local/frogswamp/calendar-resize.js
     - /local/frogswamp/daily-chart.js?v=2
     # Installed through HACS, its config is custom-sidebar-config.yaml

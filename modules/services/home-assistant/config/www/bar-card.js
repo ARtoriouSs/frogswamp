@@ -8,6 +8,7 @@
 //   icon: mdi:cellphone
 //   color: "{{ 'red' if states(entity) | float(0) < 25 else 'green' }}"
 //   multiline_secondary: true              (optional, the text may wrap)
+//   vertical: true                         (optional, the icon above the text, for tall narrow cards)
 //   bar:
 //     attribute: uptime                   (optional, the value is the entity state by default)
 //     steps: {0: red, 25: yellow, 75: green}   (the colour of the highest step at or below the value)
@@ -87,6 +88,8 @@ class FrogBarCard extends HTMLElement {
       .secondary.multiline { white-space: normal; }
       .bar { height: 6px; margin-top: 4px; border-radius: 3px; background: var(--divider-color); overflow: hidden; }
       .bar[hidden] { display: none; }
+      ha-card.vertical { flex-direction: column; justify-content: center; gap: 6px; text-align: center; }
+      ha-card.vertical .info { flex: none; width: 100%; }
       .fill { height: 100%; border-radius: 3px; transition: width 0.4s; }
     </style>
     <ha-card>
@@ -119,6 +122,7 @@ class FrogBarCard extends HTMLElement {
   render() {
     const root = this.shadowRoot;
     if (!root || !this.config) return;
+    root.querySelector("ha-card").classList.toggle("vertical", !!this.config.vertical);
     const color = cssColor(this.value("color"));
     const icon = root.querySelector(".icon");
     icon.style.color = color;

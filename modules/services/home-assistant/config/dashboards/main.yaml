@@ -1613,6 +1613,9 @@ views:
               action: more-info
           - &printer_black
             <<: *ink
+            type: custom:frog-bar-card
+            bar:
+              steps: {0: red, 15: grey}
             entity: sensor.office_hp_tango_black_cartridge
             primary: Black
             secondary: "{{ states(entity) }} %"
@@ -1620,6 +1623,9 @@ views:
             color: "{{ 'red' if states(entity) | int(100) < 15 else 'grey' }}"
           - &printer_colour
             <<: *ink
+            type: custom:frog-bar-card
+            bar:
+              steps: {0: red, 15: pink}
             entity: sensor.office_printer_tri_color_cartridge
             primary: Colour
             secondary: "{{ states(entity) }} %"
@@ -1631,8 +1637,12 @@ views:
           - type: heading
             heading: Server
             icon: mdi:server
+          # Usage cards have a bar, see www/bar-card.js. High is bad here
           - &server_cpu
             <<: *info
+            type: custom:frog-bar-card
+            bar:
+              steps: {0: green, 70: amber, 90: red}
             entity: sensor.system_monitor_processor_use
             primary: CPU
             secondary: "{{ states(entity) }} %"
@@ -1643,6 +1653,7 @@ views:
               rows: 1
           - <<: *server_cpu
             entity: sensor.system_monitor_processor_temperature
+            bar: null
             primary: CPU temperature
             secondary: "{{ states(entity) }} °C"
             icon: mdi:thermometer
@@ -1653,6 +1664,8 @@ views:
             icon: mdi:memory
           - <<: *server_cpu
             entity: sensor.system_monitor_disk_usage_config
+            bar:
+              steps: {0: green, 70: amber, 85: red}
             primary: Disk
             icon: mdi:harddisk
             color: "{{ 'red' if states(entity) | float(0) >= 85 else ('amber' if states(entity) | float(0) >= 70 else 'green') }}"
@@ -1669,6 +1682,7 @@ views:
           # Batteries slow down from about 40 °C; automations/alerts.yaml warns from 42 °C
           - &device_battery_temperature
             <<: *server_cpu
+            bar: null
             entity: sensor.pixel_7_battery_temperature
             primary: Phone battery
             secondary: "{{ 'Unavailable' if states(entity) in ['unavailable', 'unknown'] else states(entity) ~ ' °C' }}"
@@ -3082,7 +3096,9 @@ views:
             heading: Batteries
             icon: mdi:battery
           - &replaceable_battery
-            type: custom:mushroom-template-card
+            type: custom:frog-bar-card
+            bar:
+              steps: {0: red, 25: yellow, 75: green}
             entity: sensor.leak_sensor_kitchen_battery
             primary: Leak sensor kitchen
             secondary: "{{ 'Unavailable' if states(entity) in ['unavailable', 'unknown'] else states(entity) ~ '%' }}"
@@ -3103,7 +3119,9 @@ views:
           - type: heading
             heading: Water filter
             icon: mdi:filter
-          - type: custom:mushroom-template-card
+          - type: custom:frog-bar-card
+            bar:
+              steps: {0: red, 10: yellow, 40: green}
             entity: sensor.fridge_filter_capacity
             primary: Filter capacity
             secondary: >-
@@ -3126,7 +3144,9 @@ views:
             hold_action:
               action: more-info
           # Counts for a Samsung filter, so it's only for comparison with the card above
-          - type: custom:mushroom-template-card
+          - type: custom:frog-bar-card
+            bar:
+              color: grey
             entity: sensor.living_room_refrigerator_water_filter_usage
             primary: Samsung filter sensor
             secondary: >-
@@ -3151,6 +3171,9 @@ views:
             heading_style: subtitle
           - &car_fuel
             <<: *info
+            type: custom:frog-bar-card
+            bar:
+              steps: {0: red, 15: amber}
             entity: sensor.garage_audi_a5_sportback_fuel_level
             primary: Fuel
             secondary: "{{ states(entity) }} % · {{ states('sensor.garage_audi_a5_sportback_range') }} km"
@@ -3158,6 +3181,7 @@ views:
             color: "{{ 'red' if states(entity) | int(100) < 15 else 'amber' }}"
           - <<: *car_fuel
             entity: sensor.garage_audi_a5_sportback_odometer
+            bar: null
             primary: Odometer
             secondary: &odometer_km "{{ states(entity) | int(0) | string | regex_replace('(?<=\\d)(?=(\\d{3})+$)', ' ') }} km"
             icon: mdi:counter
@@ -3165,6 +3189,7 @@ views:
           # The car's own oil counter
           - <<: *car_fuel
             entity: sensor.garage_audi_a5_sportback_next_oil_change
+            bar: null
             primary: Car oil sensor
             secondary: *odometer_km
             icon: mdi:oil
@@ -3990,6 +4015,7 @@ views:
             vertical: true
           - <<: *car
             entity: sensor.garage_audi_a5_sportback_odometer
+            bar: null
             primary: Odometer
             secondary: *odometer_km
             icon: mdi:counter
@@ -3997,6 +4023,7 @@ views:
           # lock sensors: off means locked
           - <<: *car
             entity: binary_sensor.garage_audi_a5_sportback_doors_locked
+            bar: null
             primary: Lock
             secondary: >-
               {% set doors = is_state(entity, 'off') %}{% set trunk = is_state('binary_sensor.garage_audi_a5_sportback_trunk_locked', 'off') %}
