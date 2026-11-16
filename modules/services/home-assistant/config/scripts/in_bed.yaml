@@ -1,0 +1,51 @@
+# "In bed": the buttons on the Remote, Schedule and Bedroom tabs and the voice assistant ("Мы спим", "Спокойной ночи").
+# Ends both floors, cuts a towel heat lease to 1 h at most, puts the cube in quiet mode and closes the curtains.
+# A towel heater turned on by hand (no lease) is left alone, the 04:00 cleanup turns it off
+in_bed:
+  alias: "In bed"
+  icon: mdi:bed-clock
+  mode: single
+  sequence:
+    - repeat:
+        for_each:
+          - floor_master
+          - floor_guest
+        sequence:
+          # heat_timed_off retries until the floor confirms off. A floor already off and without a lease is skipped
+          - if: >-
+              {{ is_state('timer.heat_' ~ repeat.item, 'active')
+                 or is_state('binary_sensor.heat_off_' ~ repeat.item, 'off') }}
+            then:
+              - action: timer.cancel
+                target:
+                  entity_id: "timer.heat_{{ repeat.item }}"
+              - action: script.turn_on
+                target:
+                  entity_id: script.heat_timed_off
+                data:
+                  variables:
+                    device: "{{ repeat.item }}"
+    - repeat:
+        for_each:
+          - towel_master
+          - towel_guest
+        sequence:
+          - variables:
+              timer_id: "timer.heat_{{ repeat.item }}"
+          - if: >-
+              {{ is_state(timer_id, 'active')
+                 and (as_datetime(state_attr(timer_id, 'finishes_at')) - now()).total_seconds() > 3600 }}
+            then:
+              - action: timer.start
+                target:
+                  entity_id: "{{ timer_id }}"
+                data:
+                  duration: "01:00:00"
+    # Cube night on is the cube's "off": the green dot at 0% until the wakeup (automations/cube.yaml)
+    - action: input_boolean.turn_on
+      target:
+        entity_id: input_boolean.cube_night
+    - if: "{{ not is_state('cover.bedroom_curtains_local', 'closed') }}"
+      then:
+        - action: script.curtains_close
+          continue_on_error: true

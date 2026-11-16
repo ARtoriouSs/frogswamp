@@ -256,6 +256,21 @@ views:
               rows: 2
           # The timed buttons: 3 h on, a tap while it runs ends it (scripts/timed_heat.yaml)
           - *timed_towel_master
+          # Floors off, towel lease 1 h at most, cube quiet, curtains closed (scripts/in_bed.yaml)
+          - &in_bed
+            <<: *remote
+            entity: script.in_bed
+            primary: In bed
+            icon: mdi:bed-clock
+            color: indigo
+            grid_options:
+              columns: 12
+              rows: 2
+            tap_action:
+              action: perform-action
+              perform_action: script.turn_on
+              target:
+                entity_id: script.in_bed
 
   # NeonPlan 3D model of the flat. It's drawn in NeonPlan's own editor and kept in its .storage, not in the repo
   - title: NeonPlan
@@ -1280,6 +1295,11 @@ views:
             secondary: Before a weekend day or holiday
             icon: mdi:beach
             color: indigo
+          - <<: *in_bed
+            vertical: false
+            grid_options:
+              columns: 12
+              rows: 1
 
       - type: grid
         column_span: 2
@@ -3519,6 +3539,11 @@ views:
             entity: automation.curtains_close_at_sunset
             primary: Close at sunset
             icon: mdi:weather-sunset-down
+            vertical: false
+            grid_options:
+              columns: 12
+              rows: 1
+          - <<: *in_bed
             vertical: false
             grid_options:
               columns: 12
