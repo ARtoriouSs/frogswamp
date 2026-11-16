@@ -3,7 +3,7 @@
 # only asks for a lease (script.heat_lease) and never turns the heater off, the end of the lease does.
 # Workday or weekend bedtime is picked by the Workday integration for the next day.
 # Vacation on turns it off. Vacation off doesn't turn it on, the next night does.
-# The guest towel heat has the same schedule, but only while the guests mode in the living room is on
+# The guest towel heat has the same schedule, but only while a guests mode is on (living room, office or both)
 - id: repo_towel_heat_master_schedule
   alias: "Towel heat: master schedule"
   description: Master bathroom towel heat relay, 3 h from 1 h before bedtime, off during Vacation
@@ -70,7 +70,7 @@
 
 - id: repo_towel_heat_guest_schedule
   alias: "Towel heat: guest schedule"
-  description: Guest bathroom towel heat, like the master one, only while guests are in the living room
+  description: Guest bathroom towel heat, like the master one, only while guests are in the living room or the office
   mode: queued
   variables:
     device: towel_guest
@@ -86,9 +86,14 @@
             - condition: state
               entity_id: input_boolean.vacation
               state: "off"
-            - condition: state
-              entity_id: input_boolean.guests_in_living_room
-              state: "on"
+            - condition: or
+              conditions:
+                - condition: state
+                  entity_id: input_boolean.guests_in_living_room
+                  state: "on"
+                - condition: state
+                  entity_id: input_boolean.guests_in_office
+                  state: "on"
   actions: *towel_heat_actions
 
 # Guest towel heat gets its full target on every turn on, from any place: card, voice, button, app or the device.

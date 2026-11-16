@@ -843,14 +843,21 @@ views:
               action: toggle
             hold_action:
               action: more-info
-          # Runs only while the guests mode in the living room is on
+          # Runs only while a guests mode is on, living room or office
           - &towel_guest_schedule
             <<: *toggle
             entity: automation.towel_heat_guest_schedule
             primary: Towel schedule
             secondary: >-
               {{ 'Off' if is_state(entity, 'off')
-                 else ('On' if is_state('input_boolean.guests_in_living_room', 'on') else 'Waits for guests') }}
+                 else ('On' if is_state('input_boolean.guests_in_living_room', 'on')
+                               or is_state('input_boolean.guests_in_office', 'on') else 'Waits for guests') }}
+            # frog-bar-card for its hint, no bar
+            type: custom:frog-bar-card
+            bar: null
+            hint: |-
+              Works only when a guests mode is on: in the living room, in the office, or both.
+              Then it heats the guest towels like the master schedule: 3 h from 1 h before bedtime
             icon: mdi:calendar-clock
             grid_options:
               columns: 6
@@ -1263,6 +1270,19 @@ views:
               action: toggle
               confirmation:
                 text: "Switch Vacation mode?"
+          - &guests_living_room
+            <<: *sched_toggle
+            entity: input_boolean.guests_in_living_room
+            primary: Guests in living room
+            icon: mdi:account-multiple
+            tap_action:
+              action: toggle
+              confirmation:
+                text: "Switch Guests mode?"
+          - &guests_office
+            <<: *guests_living_room
+            entity: input_boolean.guests_in_office
+            primary: Guests in office
           - type: heading
             heading: ""
           - type: heading
@@ -1425,7 +1445,14 @@ views:
             primary: Guest towel heat
             secondary: >-
               {{ 'Off' if is_state(entity, 'off')
-                 else ('On' if is_state('input_boolean.guests_in_living_room', 'on') else 'Waits for guests') }}
+                 else ('On' if is_state('input_boolean.guests_in_living_room', 'on')
+                               or is_state('input_boolean.guests_in_office', 'on') else 'Waits for guests') }}
+            # frog-bar-card for its hint, no bar
+            type: custom:frog-bar-card
+            bar: null
+            hint: |-
+              Works only when a guests mode is on: in the living room, in the office, or both.
+              Then it heats the guest towels like the master schedule: 3 h from 1 h before bedtime
             icon: mdi:radiator
           - <<: *sched_toggle
             entity: automation.timed_heat_turn_off_heaters_without_a_lease_at_04_00
@@ -3738,6 +3765,12 @@ views:
           - type: heading
             heading: Office
             icon: mdi:chair-rolling
+          - <<: *guests_office
+            primary: Guests
+            vertical: false
+            grid_options:
+              columns: 12
+              rows: 1
           - <<: *toggle
             entity: automation.desk_schedule
             primary: Desk schedule

@@ -14,8 +14,11 @@
 //     steps: {0: red, 25: yellow, 75: green}   (the colour of the highest step at or below the value)
 //     color: grey                         (optional, one colour instead of steps)
 //   bar: null                             (no bar, for a merged card that has no percentage)
+//   hint: Text of the hint                (optional, a "?" in the corner that shows it on hover, focus or tap)
 const TEMPLATE_KEYS = ["primary", "secondary", "icon", "color"];
 const HOLD_MS = 500;
+const GAP = 8;
+const HINT_WIDTH = 320;
 
 const isTemplate = (value) => typeof value === "string" && (value.includes("{{") || value.includes("{%"));
 const cssColor = (name) => (!name ? "var(--disabled-color)" : name.startsWith("#") || name.startsWith("rgb") ? name : `var(--${name}-color)`);
@@ -78,7 +81,7 @@ class FrogBarCard extends HTMLElement {
 
   build() {
     this.attachShadow({ mode: "open" }).innerHTML = `<style>
-      ha-card { height: 100%; box-sizing: border-box; padding: 8px 12px; display: flex; align-items: center; gap: 10px;
+      ha-card { position: relative; height: 100%; box-sizing: border-box; padding: 8px 12px; display: flex; align-items: center; gap: 10px;
                 cursor: pointer; user-select: none; }
       .icon { flex: none; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
               --mdc-icon-size: 20px; }
@@ -91,11 +94,26 @@ class FrogBarCard extends HTMLElement {
       ha-card.vertical { flex-direction: column; justify-content: center; gap: 6px; text-align: center; }
       ha-card.vertical .info { flex: none; width: 100%; }
       .fill { height: 100%; border-radius: 3px; transition: width 0.4s; }
+      .hint {
+        all: unset; position: absolute; top: 6px; right: 6px; width: 18px; height: 18px; border-radius: 50%;
+        text-align: center; font-size: 12px; line-height: 18px; cursor: help;
+        color: var(--text-primary-color, #fff); background: var(--primary-color);
+      }
+      .hint[hidden] { display: none; }
+      .hint:focus-visible { outline: 2px solid var(--primary-text-color); }
+      .tip {
+        display: none; position: fixed; z-index: 1000; box-sizing: border-box; padding: 10px 12px; border-radius: 8px;
+        max-width: min(${HINT_WIDTH}px, calc(100vw - ${2 * GAP}px)); white-space: pre-line; font-size: 13px; line-height: 1.4;
+        text-align: left; color: var(--primary-text-color); background: var(--card-background-color, #222);
+        border: 1px solid var(--divider-color); box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+      }
     </style>
     <ha-card>
       <div class="icon"><ha-icon></ha-icon></div>
       <div class="info"><div class="primary"></div><div class="secondary"></div><div class="bar"><div class="fill"></div></div></div>
-    </ha-card>`;
+      <button class="hint" hidden>?</button>
+    </ha-card>
+    <div class="tip" role="tooltip"></div>`;
     const card = this.shadowRoot.querySelector("ha-card");
     let timer = null;
     let held = false;
@@ -105,6 +123,34 @@ class FrogBarCard extends HTMLElement {
     });
     for (const name of ["pointerup", "pointerleave", "pointercancel"]) card.addEventListener(name, () => clearTimeout(timer));
     card.addEventListener("click", () => held || this.action("tap"));
+    this.buildHint();
+  }
+
+  // The "?" doesn't start the card's tap or hold. A touch screen has no hover: a tap opens the hint, a second tap closes it
+  buildHint() {
+    const button = this.shadowRoot.querySelector(".hint");
+    const tip = this.shadowRoot.querySelector(".tip");
+    const show = () => {
+      tip.textContent = this.config.hint;
+      tip.style.display = "block";
+      const place = button.getBoundingClientRect();
+      const size = tip.getBoundingClientRect();
+      const below = place.bottom + GAP;
+      const top = below + size.height > window.innerHeight ? place.top - size.height - GAP : below;
+      tip.style.left = `${Math.max(GAP, Math.min(place.right - size.width, window.innerWidth - size.width - GAP))}px`;
+      tip.style.top = `${Math.max(GAP, top)}px`;
+    };
+    const hide = () => (tip.style.display = "none");
+    button.addEventListener("pointerdown", (event) => event.stopPropagation());
+    button.addEventListener("pointerenter", (event) => event.pointerType === "mouse" && show());
+    button.addEventListener("pointerleave", (event) => event.pointerType === "mouse" && hide());
+    button.addEventListener("focus", show);
+    button.addEventListener("blur", hide);
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      if (event.pointerType !== "mouse" && tip.style.display === "block") hide();
+      else show();
+    });
   }
 
   // HA does the action itself, with the confirmation dialog
@@ -123,6 +169,9 @@ class FrogBarCard extends HTMLElement {
     const root = this.shadowRoot;
     if (!root || !this.config) return;
     root.querySelector("ha-card").classList.toggle("vertical", !!this.config.vertical);
+    const hint = root.querySelector(".hint");
+    hint.hidden = !this.config.hint;
+    hint.setAttribute("aria-label", `About ${this.value("primary") ?? this.config.entity}`);
     const color = cssColor(this.value("color"));
     const icon = root.querySelector(".icon");
     icon.style.color = color;

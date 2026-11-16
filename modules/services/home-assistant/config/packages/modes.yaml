@@ -10,6 +10,9 @@ input_boolean:
   guests_in_living_room:
     name: Guests in the living room
     icon: mdi:account-multiple
+  guests_in_office:
+    name: Guests in the office
+    icon: mdi:account-multiple
 
 # calendar.home_assistant_events comes from Remote Calendar, added in the UI (its secret link stays in HA storage).
 # All-day events count, titled "Vacation" or "Day off". Case, spaces and dashes in the title don't matter.
