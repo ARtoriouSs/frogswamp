@@ -6,18 +6,12 @@ input_select:
     name: Wellness range
     icon: mdi:calendar-range
     options:
+      - Day
+      - Week
       - Month
       - 3 months
       - Year
     initial: Month
-  # The range of the sleep and exercise timeline, separate from the daily graphs
-  wellness_activity_range:
-    name: Wellness activity range
-    icon: mdi:calendar-today
-    options:
-      - Day
-      - Week
-    initial: Day
 
 # Health Connect values from the Pixel 7 Companion app. The app's sensors have no state_class, so HA keeps
 # no long-term statistics for them and the graphs would end after the 31-day history. These copies keep them

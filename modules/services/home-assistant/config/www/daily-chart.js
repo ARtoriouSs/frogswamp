@@ -1,8 +1,10 @@
-// A line chart with one point per day. A series comes from a Google Sheet published as CSV (read by the browser)
+// A line chart with one point per day, or one per 5 minutes for Day. A series comes from a Google Sheet published as CSV (read by the browser)
 // or from the HA long-term statistics of an entity. Loaded by frontend.extra_module_url in configuration.yaml.
 //   type: custom:frog-daily-chart
 //   title: Calories
-//   range: input_select.wellness_range  (Month / 3 months / Year)
+//   range: input_select.wellness_range  (Day / Week / Month / 3 months / Year)
+//                                       Day is today from midnight in 5-minute statistics (HA keeps them for 10 days):
+//                                       change series add up through the day, sheet values are a flat line
 //   sheet:                              (only for column series)
 //     source: sensor.calories_sheet     (its url attribute is the CSV link, from secrets.yaml)
 //     date_column: 0
@@ -22,7 +24,8 @@
 //       stat: change                    (a list of entities draws the highest value of each day)
 //       skip_today: true                (optional, today is not over yet)
 const DAY_MS = 24 * 60 * 60 * 1000;
-const RANGE_DAYS = { Month: 30, "3 months": 91, Year: 365 };
+const RANGE_DAYS = { Day: 1, Week: 7, Month: 30, "3 months": 91, Year: 365 };
+const FIVE_MINUTES_MS = 5 * 60 * 1000;
 const CACHE_MS = 10 * 60 * 1000;
 const HEIGHT = 200;
 const PAD = { left: 44, right: 12, top: 12, bottom: 24 };
@@ -91,6 +94,9 @@ const formatDay = (time) => {
   return `${String(date.getDate()).padStart(2, "0")}.${String(date.getMonth() + 1).padStart(2, "0")}`;
 };
 
+const formatHour = (time) => `${String(new Date(time).getHours()).padStart(2, "0")}:00`;
+const formatTime = (time) => new Date(time).toTimeString().slice(0, 5);
+
 const formatValue = (value) => (Math.abs(value) >= 100 ? Math.round(value) : Math.round(value * 10) / 10);
 
 class FrogDailyChart extends HTMLElement {
@@ -102,8 +108,14 @@ class FrogDailyChart extends HTMLElement {
     if (!this.shadowRoot) this.attachShadow({ mode: "open" });
     this.rows = null;
     this.stats = null;
+    this.todayStats = null;
     this.error = null;
     this.loaded = 0;
+    this.todayLoaded = 0;
+  }
+
+  get isDay() {
+    return this.range === "Day";
   }
 
   set hass(hass) {
@@ -114,6 +126,7 @@ class FrogDailyChart extends HTMLElement {
       this.range = range;
       this.render();
     }
+    if (this.isDay && Date.now() - this.todayLoaded > FIVE_MINUTES_MS) this.loadToday();
   }
 
   connectedCallback() {
@@ -156,16 +169,63 @@ class FrogDailyChart extends HTMLElement {
     );
   }
 
-  points() {
+  // Today in 5-minute statistics, read again every 5 minutes while Day is picked
+  loadToday() {
+    this.todayLoaded = Date.now();
+    const entities = this.config.series.filter((line) => line.entity);
+    if (!entities.length) return ((this.todayStats = {}), this.render());
+    this._hass
+      .callWS({
+        type: "recorder/statistics_during_period",
+        start_time: new Date(startOfDay(Date.now())).toISOString(),
+        statistic_ids: [...new Set(entities.flatMap((line) => [line.entity].flat()))],
+        period: "5minute",
+        types: [...new Set(entities.map((line) => line.stat || "mean"))],
+      })
+      .then(
+        (stats) => ((this.todayStats = stats), this.render()),
+        (error) => ((this.error = error.message || String(error)), this.render())
+      );
+  }
+
+  // Today: a change series is a running total from midnight, a list of entities takes the highest total at each time
+  todayPoints() {
+    const start = startOfDay(Date.now());
+    const end = start + DAY_MS;
+    const lines = this.config.series.map((line) => {
+      const scale = line.scale ?? 1;
+      if (line.column !== undefined) {
+        const today = this.points(1).lines[this.config.series.indexOf(line)];
+        const value = today.find((point) => point.time === start)?.value;
+        const flat = value === undefined ? [] : [{ time: start, value }, { time: Date.now(), value }];
+        return Object.assign(flat, { flat: true });
+      }
+      const highest = new Map();
+      for (const entity of [line.entity].flat()) {
+        let total = 0;
+        for (const stat of this.todayStats[entity] || []) {
+          const value = stat[line.stat || "mean"];
+          if (value === null || value === undefined) continue;
+          const time = (typeof stat.start === "number" ? stat.start : Date.parse(stat.start)) + FIVE_MINUTES_MS;
+          const point = line.stat === "change" ? (total += value) : value;
+          highest.set(time, Math.max(highest.get(time) ?? -Infinity, point * scale));
+        }
+      }
+      return [...highest].map(([time, value]) => ({ time, value })).sort((a, b) => a.time - b.time);
+    });
+    return { start, end, lines, step: FIVE_MINUTES_MS };
+  }
+
+  points(daysOverride) {
     const { sheet = {}, series } = this.config;
-    const days = RANGE_DAYS[this.range] || RANGE_DAYS.Month;
+    const days = daysOverride || RANGE_DAYS[this.range] || RANGE_DAYS.Month;
     const end = startOfDay(Date.now());
     const start = end - (days - 1) * DAY_MS;
     const lines = series.map((line) => {
       const points = [];
       const add = (time, value) => {
         if (value === null || value === undefined || time < start || time > end) return;
-        if (line.skip_today && time === end) return;
+        if (line.skip_today && time === end && !daysOverride) return;
         points.push({ time, value: value * (line.scale ?? 1) });
       };
       if (line.column !== undefined) {
@@ -188,7 +248,7 @@ class FrogDailyChart extends HTMLElement {
       }
       return points.sort((a, b) => a.time - b.time);
     });
-    return { start, end, lines };
+    return { start, end, lines, step: DAY_MS };
   }
 
   render() {
@@ -197,11 +257,11 @@ class FrogDailyChart extends HTMLElement {
     const width = Math.max(this.clientWidth - 32, 200);
     let body;
     if (this.error) body = `<div class="note">${this.error}</div>`;
-    else if (!this.rows || !this.stats) body = `<div class="note">Loading…</div>`;
+    else if (!this.rows || !this.stats || (this.isDay && !this.todayStats)) body = `<div class="note">Loading…</div>`;
     else {
-      const { start, end, lines } = this.points();
+      const { start, end, lines, step } = this.isDay ? this.todayPoints() : this.points();
       body = lines.some((line) => line.length)
-        ? this.chart(width, start, end, lines)
+        ? this.chart(width, start, end, lines, step)
         : `<div class="note">No data in this range yet</div>`;
     }
     const { title, series } = this.config;
@@ -235,7 +295,7 @@ class FrogDailyChart extends HTMLElement {
     return { low: Math.max(0, low - margin), high: high + margin };
   }
 
-  chart(width, start, end, lines) {
+  chart(width, start, end, lines, step) {
     const scales = { left: this.scale(lines, "left"), right: this.scale(lines, "right") };
     const right = scales.right ? RIGHT_AXIS_WIDTH : PAD.right;
     const plotWidth = width - PAD.left - right;
@@ -258,23 +318,25 @@ class FrogDailyChart extends HTMLElement {
       }
     }
     const ticks = Math.min(6, Math.floor(plotWidth / 70));
+    const tickStep = this.isDay ? 60 * 60 * 1000 : DAY_MS;
+    const format = this.isDay ? formatHour : formatDay;
     for (let i = 0; i <= ticks; i++) {
-      const time = start + Math.round(((end - start) / DAY_MS) * (i / ticks)) * DAY_MS;
-      svg += `<text x="${x(time)}" y="${HEIGHT - 6}" text-anchor="middle">${formatDay(time)}</text>`;
+      const time = start + Math.round(((end - start) / tickStep) * (i / ticks)) * tickStep;
+      svg += `<text x="${x(time)}" y="${HEIGHT - 6}" text-anchor="middle">${format(time)}</text>`;
     }
 
     lines.forEach((line, index) => {
       const { color, name, unit = "", axis = "left" } = this.config.series[index];
-      // A missing day breaks the line
+      // A missing day (or 5 minutes for Day) breaks the line. Dots only when there are few points
       let path = "";
       line.forEach((point, i) => {
-        const joined = i > 0 && point.time - line[i - 1].time <= DAY_MS * 1.5;
+        const joined = i > 0 && (line.flat || point.time - line[i - 1].time <= step * 1.5);
         path += `${joined ? "L" : "M"}${x(point.time)},${y(point.value, axis)}`;
       });
       svg += `<path d="${path}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round"/>`;
-      for (const point of line) {
+      for (const point of line.length > 60 ? [] : line) {
         svg += `<circle cx="${x(point.time)}" cy="${y(point.value, axis)}" r="3" fill="${color}">
-          <title>${formatDay(point.time)} · ${name} ${formatValue(point.value)} ${unit}</title></circle>`;
+          <title>${(this.isDay ? formatTime : formatDay)(point.time)} · ${name} ${formatValue(point.value)} ${unit}</title></circle>`;
       }
     });
     return `<svg width="${width}" height="${HEIGHT}" viewBox="0 0 ${width} ${HEIGHT}">${svg}</svg>`;

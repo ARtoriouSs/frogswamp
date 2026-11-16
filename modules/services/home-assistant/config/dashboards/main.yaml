@@ -4119,54 +4119,65 @@ views:
           - type: heading
             heading: Range
             icon: mdi:calendar-range
-          - type: custom:mushroom-template-card
-            entity: input_select.wellness_range
-            primary: Month
-            icon: mdi:calendar-month
-            color: "{{ 'primary' if is_state(entity, 'Month') else 'disabled' }}"
-            vertical: true
+          # One row for all the graphs below. Day is today in 5-minute steps, see www/daily-chart.js
+          - type: horizontal-stack
             grid_options:
-              columns: 4
-              rows: 2
-            tap_action:
-              action: perform-action
-              perform_action: input_select.select_option
-              target:
-                entity_id: input_select.wellness_range
-              data:
-                option: Month
-          - type: custom:mushroom-template-card
-            entity: input_select.wellness_range
-            primary: 3 months
-            icon: mdi:calendar-range
-            color: "{{ 'primary' if is_state(entity, '3 months') else 'disabled' }}"
-            vertical: true
-            grid_options:
-              columns: 4
-              rows: 2
-            tap_action:
-              action: perform-action
-              perform_action: input_select.select_option
-              target:
-                entity_id: input_select.wellness_range
-              data:
-                option: 3 months
-          - type: custom:mushroom-template-card
-            entity: input_select.wellness_range
-            primary: Year
-            icon: mdi:calendar-blank-multiple
-            color: "{{ 'primary' if is_state(entity, 'Year') else 'disabled' }}"
-            vertical: true
-            grid_options:
-              columns: 4
-              rows: 2
-            tap_action:
-              action: perform-action
-              perform_action: input_select.select_option
-              target:
-                entity_id: input_select.wellness_range
-              data:
-                option: Year
+              columns: full
+            cards:
+              - &wellness_range_button
+                type: custom:mushroom-template-card
+                entity: input_select.wellness_range
+                primary: Day
+                icon: mdi:calendar-today
+                color: "{{ 'primary' if is_state(entity, config.primary) else 'disabled' }}"
+                vertical: true
+                tap_action:
+                  action: perform-action
+                  perform_action: input_select.select_option
+                  target:
+                    entity_id: input_select.wellness_range
+                  data:
+                    option: Day
+              - <<: *wellness_range_button
+                primary: Week
+                icon: mdi:calendar-week
+                tap_action:
+                  action: perform-action
+                  perform_action: input_select.select_option
+                  target:
+                    entity_id: input_select.wellness_range
+                  data:
+                    option: Week
+              - <<: *wellness_range_button
+                primary: Month
+                icon: mdi:calendar-month
+                tap_action:
+                  action: perform-action
+                  perform_action: input_select.select_option
+                  target:
+                    entity_id: input_select.wellness_range
+                  data:
+                    option: Month
+              - <<: *wellness_range_button
+                primary: 3 months
+                icon: mdi:calendar-range
+                tap_action:
+                  action: perform-action
+                  perform_action: input_select.select_option
+                  target:
+                    entity_id: input_select.wellness_range
+                  data:
+                    option: 3 months
+              - <<: *wellness_range_button
+                primary: Year
+                icon: mdi:calendar-blank-multiple
+                tap_action:
+                  action: perform-action
+                  perform_action: input_select.select_option
+                  target:
+                    entity_id: input_select.wellness_range
+                  data:
+                    option: Year
 
       # Daily graphs from www/daily-chart.js. Health values come from Health Connect through the Pixel 7 app
       - type: grid
@@ -4307,42 +4318,16 @@ views:
                 unit: h
                 color: "#f97316"
                 axis: right
-          # When sleep and exercise happened, from the raw states. HA keeps them for 31 days, so only Day and Week
+          # When sleep and exercise happened, from the raw states, by the range at the top. Day is the last 24 h.
+          # HA keeps raw states for 31 days, so 3 months and Year show those 31 days
           - type: heading
             heading: Sleep and exercise timeline
             heading_style: subtitle
-          - &activity_range
-            type: custom:mushroom-template-card
-            entity: input_select.wellness_activity_range
-            primary: Day
-            icon: mdi:calendar-today
-            color: "{{ 'primary' if is_state(entity, config.primary) else 'disabled' }}"
-            vertical: false
-            grid_options:
-              columns: 6
-              rows: 1
-            tap_action:
-              action: perform-action
-              perform_action: input_select.select_option
-              target:
-                entity_id: input_select.wellness_activity_range
-              data:
-                option: Day
-          - <<: *activity_range
-            primary: Week
-            icon: mdi:calendar-week
-            tap_action:
-              action: perform-action
-              perform_action: input_select.select_option
-              target:
-                entity_id: input_select.wellness_activity_range
-              data:
-                option: Week
           - &activity_timeline
             type: conditional
             conditions:
               - condition: state
-                entity: input_select.wellness_activity_range
+                entity: input_select.wellness_range
                 state: Day
             card:
               type: history-graph
@@ -4355,11 +4340,33 @@ views:
           - <<: *activity_timeline
             conditions:
               - condition: state
-                entity: input_select.wellness_activity_range
+                entity: input_select.wellness_range
                 state: Week
             card:
               type: history-graph
               hours_to_show: 168
+              entities:
+                - entity: sensor.google_pixel_watch_activity_state
+                  name: Activity
+          - <<: *activity_timeline
+            conditions:
+              - condition: state
+                entity: input_select.wellness_range
+                state: Month
+            card:
+              type: history-graph
+              hours_to_show: 720
+              entities:
+                - entity: sensor.google_pixel_watch_activity_state
+                  name: Activity
+          - <<: *activity_timeline
+            conditions:
+              - condition: state
+                entity: input_select.wellness_range
+                state: [3 months, Year]
+            card:
+              type: history-graph
+              hours_to_show: 744
               entities:
                 - entity: sensor.google_pixel_watch_activity_state
                   name: Activity
