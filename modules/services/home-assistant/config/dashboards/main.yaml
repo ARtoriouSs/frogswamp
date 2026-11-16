@@ -3128,26 +3128,43 @@ views:
               {% set level = states(entity) | float(-1) %}
               {{ 'disabled' if level < 0 else ('red' if level < 25 else ('yellow' if level < 75 else 'green')) }}
             grid_options:
-              columns: 8
+              columns: 6
               rows: 1
             tap_action:
               action: more-info
-          - &battery_cycles
-            <<: *info
-            entity: sensor.pixel_7_battery_cycle_count
-            primary: Cycles
-            secondary: "{{ 'Unavailable' if states(entity) in ['unavailable', 'unknown'] else states(entity) }}"
-            icon: mdi:battery-sync
-            color: grey
+          # Estimated from the cycle count, see packages/battery_wear.yaml
+          - &battery_wear
+            type: custom:frog-bar-card
+            bar:
+              steps: {0: red, 70: yellow, 80: green}
+            entity: sensor.phone_battery_capacity_estimate
+            primary: Battery health
+            secondary: >-
+              {{ 'Unavailable' if states(entity) in ['unavailable', 'unknown']
+                 else '~' ~ states(entity) ~ '% · ' ~ state_attr(entity, 'cycles') ~ ' cycles' }}
+            icon: mdi:battery-heart-variant
+            color: >-
+              {% set level = states(entity) | float(-1) %}
+              {{ 'disabled' if level < 0 else ('red' if level < 70 else ('yellow' if level < 80 else 'green')) }}
+            hint: |-
+              An estimate from the cycle count, not measured.
+              Pixel 7 is rated for 80% after ~800 cycles. Below 80% wear speeds up: shorter days, sudden shutdowns.
+              Heat and long time at 100% wear it the most
             grid_options:
-              columns: 4
+              columns: 6
               rows: 1
+            tap_action:
+              action: more-info
           - <<: *battery
             entity: sensor.google_pixel_watch_battery_level
             primary: Watch
             icon: mdi:watch
-          - <<: *battery_cycles
-            entity: sensor.google_pixel_watch_battery_cycle_count
+          - <<: *battery_wear
+            entity: sensor.watch_battery_capacity_estimate
+            hint: |-
+              An estimate from the cycle count, not measured.
+              No official number for the Pixel Watch: 80% after 500-800 cycles is usual, 600 is used here.
+              Heat and long time at 100% wear it the most
           # Devices with a battery to replace, not charge
           - type: heading
             heading: Batteries

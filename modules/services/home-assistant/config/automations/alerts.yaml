@@ -97,6 +97,28 @@
         data:
           tag: "battery-hot-{{ device | lower }}"
 
+# Heat at a high charge wears the battery the most. Fires once when all three are true for 5 minutes
+- id: repo_alert_phone_warm_full_charge
+  alias: "Alert: phone charges to full while warm"
+  description: The phone is charging above 80% with the battery at 38 °C or more for 5 minutes
+  triggers:
+    - trigger: template
+      value_template: >-
+        {{ is_state('binary_sensor.pixel_7_is_charging', 'on')
+           and states('sensor.pixel_7_battery_level') | float(0) >= 80
+           and states('sensor.pixel_7_battery_temperature') | float(0) >= 38 }}
+      for: "00:05:00"
+  actions:
+    - action: notify.mobile_app_pixel_7
+      data:
+        title: Phone charges to full while warm
+        message: >-
+          The battery is at {{ states('sensor.pixel_7_battery_level') }}% and
+          {{ states('sensor.pixel_7_battery_temperature') }} °C. Heat at a high charge wears it the most:
+          unplug it or let it cool down
+        data:
+          tag: battery-warm-charge
+
 # The state trigger fires once when the 1 h is reached, not again while the device stays offline.
 # Add new devices here (one entity per device is enough)
 - id: repo_alert_device_offline

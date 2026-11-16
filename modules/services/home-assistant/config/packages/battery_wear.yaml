@@ -1,0 +1,28 @@
+# A rough estimate of how much of the original capacity the phone and watch batteries still hold, from the
+# cycle count, shown on the Maintenance tab. Not measured: Android only says good / overheat / dead.
+# Straight line to 80% at the rated cycles: Google rates Pixel 3-7 batteries for 80% after ~800 cycles.
+# For the Pixel Watch there's no official number, 500-800 is usual for small batteries, 600 is used here
+template:
+  - sensor:
+      - name: Phone battery capacity estimate
+        unique_id: repo_phone_battery_capacity_estimate
+        default_entity_id: sensor.phone_battery_capacity_estimate
+        icon: mdi:battery-heart-variant
+        unit_of_measurement: "%"
+        state_class: measurement
+        availability: "{{ has_value('sensor.pixel_7_battery_cycle_count') }}"
+        state: "{{ [0, 100 - 20 * states('sensor.pixel_7_battery_cycle_count') | float / 800] | max | round(0) }}"
+        attributes:
+          cycles: "{{ states('sensor.pixel_7_battery_cycle_count') | int(0) }}"
+          rated_cycles: 800
+      - name: Watch battery capacity estimate
+        unique_id: repo_watch_battery_capacity_estimate
+        default_entity_id: sensor.watch_battery_capacity_estimate
+        icon: mdi:battery-heart-variant
+        unit_of_measurement: "%"
+        state_class: measurement
+        availability: "{{ has_value('sensor.google_pixel_watch_battery_cycle_count') }}"
+        state: "{{ [0, 100 - 20 * states('sensor.google_pixel_watch_battery_cycle_count') | float / 600] | max | round(0) }}"
+        attributes:
+          cycles: "{{ states('sensor.google_pixel_watch_battery_cycle_count') | int(0) }}"
+          rated_cycles: 600
