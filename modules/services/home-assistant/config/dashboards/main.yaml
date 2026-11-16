@@ -4011,11 +4011,18 @@ views:
                 name: Eaten
                 unit: kcal
                 color: "#f59e0b"
-              - entity: sensor.pixel_7_total_calories_burned
+              # Two sources while we compare them: the watch's own count and the Health Connect total
+              - entity: sensor.google_pixel_watch_daily_calories
                 stat: change
-                name: Burned
+                name: Burned (watch)
                 unit: kcal
                 color: "#ef4444"
+                skip_today: true
+              - entity: sensor.pixel_7_total_calories_burned
+                stat: change
+                name: Burned (Health Connect)
+                unit: kcal
+                color: "#a855f7"
                 skip_today: true
           - <<: *daily_chart
             title: Macros
@@ -4042,7 +4049,8 @@ views:
           - <<: *daily_chart
             title: Steps
             series:
-              - entity: sensor.pixel_7_daily_steps
+              # The phone counts only while carried, the watch only while worn
+              - entity: [sensor.pixel_7_daily_steps, sensor.google_pixel_watch_daily_steps]
                 stat: change
                 name: Steps
                 color: "#22c55e"
@@ -4069,20 +4077,22 @@ views:
             icon: mdi:heart-pulse
           - <<: *daily_chart
             title: Heart rate, bpm
+            # From the watch directly. Health Connect gets no heart rate from Google Health, so no resting value:
+            # the lowest of the day, usually during sleep, is the closest
             series:
-              - entity: sensor.health_heart_rate
+              - entity: sensor.google_pixel_watch_heart_rate
                 stat: max
                 name: Max
                 unit: bpm
                 color: "#f87171"
-              - entity: sensor.health_heart_rate
+              - entity: sensor.google_pixel_watch_heart_rate
                 stat: mean
                 name: Average
                 unit: bpm
                 color: "#ef4444"
-              - entity: sensor.health_resting_heart_rate
-                stat: mean
-                name: Resting
+              - entity: sensor.google_pixel_watch_heart_rate
+                stat: min
+                name: Lowest
                 unit: bpm
                 color: "#991b1b"
 

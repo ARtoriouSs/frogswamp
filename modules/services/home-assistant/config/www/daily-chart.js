@@ -18,6 +18,8 @@
 //       unit: kcal
 //       color: "#ef4444"
 //       axis: right                     (optional, a second scale on the right)
+//     - entity: [sensor.phone_steps, sensor.watch_steps]
+//       stat: change                    (a list of entities draws the highest value of each day)
 //       skip_today: true                (optional, today is not over yet)
 const DAY_MS = 24 * 60 * 60 * 1000;
 const RANGE_DAYS = { Month: 30, "3 months": 91, Year: 365 };
@@ -137,12 +139,13 @@ class FrogDailyChart extends HTMLElement {
     const { sheet, series } = this.config;
     const url = sheet ? this._hass.states[sheet.source]?.attributes.url : null;
     const entities = series.filter((line) => line.entity);
+    const ids = entities.flatMap((line) => [line.entity].flat());
     const rows = url ? fetchSheet(url) : Promise.resolve([]);
     const stats = entities.length
       ? this._hass.callWS({
           type: "recorder/statistics_during_period",
           start_time: new Date(startOfDay(Date.now()) - RANGE_DAYS.Year * DAY_MS).toISOString(),
-          statistic_ids: [...new Set(entities.map((line) => line.entity))],
+          statistic_ids: [...new Set(ids)],
           period: "day",
           types: [...new Set(entities.map((line) => line.stat || "mean"))],
         })
@@ -173,10 +176,15 @@ class FrogDailyChart extends HTMLElement {
           add(date.getTime(), parseNumber(row[line.column]));
         }
       } else {
-        for (const stat of this.stats[line.entity] || []) {
-          const time = typeof stat.start === "number" ? stat.start : Date.parse(stat.start);
-          add(startOfDay(time), stat[line.stat || "mean"]);
+        const highest = new Map();
+        for (const entity of [line.entity].flat()) {
+          for (const stat of this.stats[entity] || []) {
+            const time = startOfDay(typeof stat.start === "number" ? stat.start : Date.parse(stat.start));
+            const value = stat[line.stat || "mean"];
+            if (value !== null && value !== undefined) highest.set(time, Math.max(highest.get(time) ?? -Infinity, value));
+          }
         }
+        highest.forEach((value, time) => add(time, value));
       }
       return points.sort((a, b) => a.time - b.time);
     });
