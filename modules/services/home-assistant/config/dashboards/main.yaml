@@ -576,6 +576,25 @@ views:
             entity: sensor.air_quality_nitrogen_dioxide
             primary: NO₂
             icon: mdi:car-side
+          - type: custom:mushroom-template-card
+            entity: sensor.air_pressure
+            primary: Pressure
+            secondary: >-
+              {{ 'Unavailable' if states(entity) in ['unavailable', 'unknown'] else
+                 states(entity) ~ ' hPa · from the ' ~ state_attr(entity, 'source') }}
+            icon: mdi:gauge
+            color: blue
+            grid_options:
+              columns: 12
+              rows: 1
+            tap_action:
+              action: more-info
+          - type: custom:frog-hint-card
+            items:
+              - label: Phone and watch
+                hint: |-
+                  Pressure comes from the barometer of the phone (Pixel 7). When the phone has no value, from the watch (Pixel Watch).
+                  The watch reads about 2 hPa higher
 
       - type: grid
         cards:
@@ -1650,6 +1669,23 @@ views:
             secondary: "{{ states(entity) }} (5 min)"
             icon: mdi:gauge
             color: "{{ 'red' if states(entity) | float(0) >= 4 else ('amber' if states(entity) | float(0) >= 3 else 'green') }}"
+          - type: heading
+            heading: Phone & watch
+            heading_style: subtitle
+          # Batteries slow down from about 40 °C; automations/alerts.yaml warns from 42 °C
+          - &device_battery_temperature
+            <<: *server_cpu
+            entity: sensor.pixel_7_battery_temperature
+            primary: Phone battery
+            secondary: "{{ 'Unavailable' if states(entity) in ['unavailable', 'unknown'] else states(entity) ~ ' °C' }}"
+            icon: mdi:cellphone
+            color: >-
+              {% set value = states(entity) | float(-1) %}
+              {{ 'disabled' if value < 0 else ('red' if value >= 42 else ('amber' if value >= 38 else 'green')) }}
+          - <<: *device_battery_temperature
+            entity: sensor.google_pixel_watch_battery_temperature
+            primary: Watch battery
+            icon: mdi:watch
           - type: heading
             heading: Network
             heading_style: subtitle
@@ -2963,14 +2999,26 @@ views:
               {% set level = states(entity) | float(-1) %}
               {{ 'disabled' if level < 0 else ('red' if level <= 15 else ('yellow' if level <= 30 else 'green')) }}
             grid_options:
-              columns: 12
+              columns: 8
               rows: 1
             tap_action:
               action: more-info
+          - &battery_cycles
+            <<: *info
+            entity: sensor.pixel_7_battery_cycle_count
+            primary: Cycles
+            secondary: "{{ 'Unavailable' if states(entity) in ['unavailable', 'unknown'] else states(entity) }}"
+            icon: mdi:battery-sync
+            color: grey
+            grid_options:
+              columns: 4
+              rows: 1
           - <<: *battery
             entity: sensor.google_pixel_watch_battery_level
             primary: Watch
             icon: mdi:watch
+          - <<: *battery_cycles
+            entity: sensor.google_pixel_watch_battery_cycle_count
           # Devices with a battery to replace, not charge
           - type: heading
             heading: Batteries
@@ -2979,10 +3027,16 @@ views:
             entity: sensor.leak_sensor_kitchen_battery
             primary: Leak sensor kitchen
             icon: mdi:water-alert
+            grid_options:
+              columns: 12
+              rows: 1
           - <<: *battery
             entity: sensor.leak_sensor_master_bathroom_battery
             primary: Leak sensor master bathroom
             icon: mdi:water-alert
+            grid_options:
+              columns: 12
+              rows: 1
       - type: grid
         cards:
           - type: heading
@@ -4068,6 +4122,28 @@ views:
                 name: Sleep
                 unit: h
                 color: "#8b5cf6"
+
+      - type: grid
+        column_span: 2
+        cards:
+          - type: heading
+            heading: Watch activity
+            icon: mdi:watch
+          - <<: *daily_chart
+            title: Sleep and exercise, h
+            # From the watch's activity state, only since 16.11.2026. Sleep is counted from 18:00 to 18:00
+            series:
+              - entity: sensor.watch_sleep
+                stat: max
+                name: Sleep
+                unit: h
+                color: "#8b5cf6"
+              - entity: sensor.watch_exercise
+                stat: max
+                name: Exercise
+                unit: h
+                color: "#f97316"
+                axis: right
 
       - type: grid
         column_span: 2

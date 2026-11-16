@@ -1,0 +1,18 @@
+# Air pressure from the barometers of the phone and the watch, shown under Air on the Climate tab.
+# The phone first; the watch when the phone has no value (they differ by about 2 hPa)
+template:
+  - sensor:
+      - name: Air pressure
+        unique_id: repo_air_pressure
+        default_entity_id: sensor.air_pressure
+        icon: mdi:gauge
+        unit_of_measurement: hPa
+        device_class: atmospheric_pressure
+        state_class: measurement
+        availability: "{{ has_value('sensor.pixel_7_pressure_sensor') or has_value('sensor.google_pixel_watch_pressure_sensor') }}"
+        state: >-
+          {% set source = 'sensor.pixel_7_pressure_sensor' if has_value('sensor.pixel_7_pressure_sensor')
+             else 'sensor.google_pixel_watch_pressure_sensor' %}
+          {{ states(source) | float | round(1) }}
+        attributes:
+          source: "{{ 'phone' if has_value('sensor.pixel_7_pressure_sensor') else 'watch' }}"

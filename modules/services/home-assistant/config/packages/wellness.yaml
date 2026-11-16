@@ -89,3 +89,24 @@ template:
         state: Published
         attributes:
           url: !secret calories_csv_url
+
+# Hours asleep and in exercise from the watch's activity state. The daily max of each goes to the
+# long-term statistics, so the graph keeps them after the 31-day history is gone
+sensor:
+  # From 18:00 to 18:00, so a night that crosses midnight counts as one, on the day it ends
+  - platform: history_stats
+    name: Watch sleep
+    unique_id: repo_watch_sleep
+    entity_id: sensor.google_pixel_watch_activity_state
+    state: asleep
+    type: time
+    start: "{{ today_at('18:00') - timedelta(days=1 if now() < today_at('18:00') else 0) }}"
+    end: "{{ now() }}"
+  - platform: history_stats
+    name: Watch exercise
+    unique_id: repo_watch_exercise
+    entity_id: sensor.google_pixel_watch_activity_state
+    state: exercise
+    type: time
+    start: "{{ today_at() }}"
+    end: "{{ now() }}"

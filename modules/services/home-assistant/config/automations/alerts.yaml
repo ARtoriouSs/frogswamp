@@ -76,6 +76,27 @@
         data:
           tag: server-temperature
 
+- id: repo_alert_battery_temperature
+  alias: "Alert: phone or watch battery is hot"
+  description: The battery of the phone or the watch is above 42 °C for 5 minutes
+  mode: parallel
+  triggers:
+    - trigger: numeric_state
+      entity_id:
+        - sensor.pixel_7_battery_temperature
+        - sensor.google_pixel_watch_battery_temperature
+      above: 42
+      for: "00:05:00"
+  actions:
+    - variables:
+        device: "{{ 'Phone' if 'pixel_7' in trigger.entity_id else 'Watch' }}"
+    - action: notify.mobile_app_pixel_7
+      data:
+        title: "{{ device }} battery is hot"
+        message: "The battery is at {{ trigger.to_state.state }} °C. Stop charging or heavy use and let it cool down"
+        data:
+          tag: "battery-hot-{{ device | lower }}"
+
 # The state trigger fires once when the 1 h is reached, not again while the device stays offline.
 # Add new devices here (one entity per device is enough)
 - id: repo_alert_device_offline
