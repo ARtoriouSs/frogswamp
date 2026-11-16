@@ -256,7 +256,7 @@ views:
               rows: 2
           # The timed buttons: 3 h on, a tap while it runs ends it (scripts/timed_heat.yaml)
           - *timed_towel_master
-          # Floors off, towel lease 1 h at most, cube quiet, curtains closed (scripts/in_bed.yaml)
+          # Floors off, towel lease 1 h at most, TV and PS5 off, cube quiet, curtains closed (scripts/in_bed.yaml)
           - &in_bed
             <<: *remote
             entity: script.in_bed

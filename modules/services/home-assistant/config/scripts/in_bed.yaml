@@ -1,5 +1,6 @@
 # "In bed": the buttons on the Remote, Schedule and Bedroom tabs and the voice assistant ("Мы спим", "Спокойной ночи").
-# Ends both floors, cuts a towel heat lease to 1 h at most, puts the cube in quiet mode and closes the curtains.
+# Ends both floors, cuts a towel heat lease to 1 h at most, turns off the TV and the PS5 (rest mode),
+# puts the cube in quiet mode and closes the curtains.
 # A towel heater turned on by hand (no lease) is left alone, the 04:00 cleanup turns it off
 in_bed:
   alias: "In bed"
@@ -41,6 +42,15 @@ in_bed:
                   entity_id: "{{ timer_id }}"
                 data:
                   duration: "01:00:00"
+    # Like the last person leaving (automations/presence.yaml): PS5 off is its rest mode
+    - action: remote.turn_off
+      continue_on_error: true
+      target:
+        entity_id: remote.living_room_philips_tv
+    - action: switch.turn_off
+      continue_on_error: true
+      target:
+        entity_id: switch.ps5_120_power
     # Cube night on is the cube's "off": the green dot at 0% until the wakeup (automations/cube.yaml)
     - action: input_boolean.turn_on
       target:
