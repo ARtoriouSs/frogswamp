@@ -213,6 +213,41 @@
         data:
           tag: work-calendar
 
+# Meals stop reaching the Wellness charts without this, for example after the Notion token was removed
+- id: repo_alert_nutrition_stale
+  alias: "Alert: nutrition sync is old"
+  description: The nutrition-sync service hasn't read Notion for 1 hour
+  triggers:
+    - trigger: template
+      value_template: >-
+        {% set t = as_timestamp(states('sensor.nutrition_last_read'), none) %}
+        {{ t is none or now().timestamp() - t > 3600 }}
+      for: "00:30:00"
+  actions:
+    - action: notify.mobile_app_pixel_7
+      data:
+        title: Nutrition sync is old
+        message: "Meals don't reach HA. Check: just ssh journalctl -u nutrition-sync"
+        data:
+          tag: nutrition
+
+# The Google login can expire or be removed; meals then still reach HA, only Google misses them
+- id: repo_alert_nutrition_google
+  alias: "Alert: Google Health login"
+  description: nutrition-sync can't write to Google Health for 1 hour
+  triggers:
+    - trigger: state
+      entity_id: binary_sensor.nutrition_google_ok
+      to: "off"
+      for: "01:00:00"
+  actions:
+    - action: notify.mobile_app_pixel_7
+      data:
+        title: Google Health login
+        message: "Meals don't reach Google Health. Run: just nutrition-google-auth, then just secrets and just deploy"
+        data:
+          tag: nutrition-google
+
 - id: repo_alert_zigbee_bridge
   alias: "Alert: Zigbee bridge down"
   description: Zigbee2MQTT is disconnected for 10 minutes

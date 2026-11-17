@@ -4226,13 +4226,22 @@ views:
                 color: "#f59e0b"
                 axis: right
 
-      # The sheet has the eaten calories and macros. Only the days marked full are drawn
+      # Eaten calories and macros from the Notion log (nutrition-sync). Only the days marked full are drawn
       - type: grid
         column_span: 2
         cards:
           - type: heading
             heading: Nutrition
             icon: mdi:food-apple
+          - <<: *info
+            entity: sensor.nutrition_today_kcal
+            primary: Eaten today
+            secondary: >-
+              {% if has_value(entity) %}
+              {{ states(entity) | int }} kcal · F {{ states('sensor.nutrition_today_fats') }} · P {{ states('sensor.nutrition_today_proteins') }} · C {{ states('sensor.nutrition_today_carbohydrates') }} g
+              {% else %}No data from nutrition-sync{% endif %}
+            icon: mdi:food-apple
+            color: amber
           - <<: *daily_chart
             title: Calories in vs out
             sheet: &calories_sheet

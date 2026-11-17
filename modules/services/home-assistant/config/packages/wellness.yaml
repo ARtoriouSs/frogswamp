@@ -82,7 +82,8 @@ template:
              and (end / 1000) | timestamp_custom('%Y-%m-%d') == now().strftime('%Y-%m-%d') }}
         state: "{{ (states('sensor.pixel_7_sleep_segment') | float / 3600000) | round(2) }}"
 
-  # The calories sheet, published as CSV. The link is in secrets.yaml. The browser reads it, see www/daily-chart.js
+  # The daily calories CSV. The nutrition-sync service builds it from the Notion log, HA serves it from www/nutrition.
+  # The browser reads it, see www/daily-chart.js
   - sensor:
       - name: Calories sheet
         unique_id: repo_calories_sheet
@@ -90,7 +91,47 @@ template:
         icon: mdi:google-spreadsheet
         state: Published
         attributes:
-          url: !secret calories_csv_url
+          url: /local/nutrition/daily.csv
+
+# Today's meals and the sync health from the nutrition-sync service (modules/services/nutrition)
+rest:
+  - resource: http://127.0.0.1:8131/status
+    scan_interval: 300
+    sensor:
+      - name: Nutrition today kcal
+        unique_id: repo_nutrition_today_kcal
+        icon: mdi:food-apple
+        unit_of_measurement: kcal
+        state_class: measurement
+        value_template: "{{ value_json.today.kcal }}"
+      - name: Nutrition today fats
+        unique_id: repo_nutrition_today_fats
+        icon: mdi:oil
+        unit_of_measurement: g
+        state_class: measurement
+        value_template: "{{ value_json.today.fats }}"
+      - name: Nutrition today proteins
+        unique_id: repo_nutrition_today_proteins
+        icon: mdi:food-drumstick
+        unit_of_measurement: g
+        state_class: measurement
+        value_template: "{{ value_json.today.proteins }}"
+      - name: Nutrition today carbohydrates
+        unique_id: repo_nutrition_today_carbohydrates
+        icon: mdi:bread-slice
+        unit_of_measurement: g
+        state_class: measurement
+        value_template: "{{ value_json.today.carbohydrates }}"
+      - name: Nutrition last read
+        unique_id: repo_nutrition_last_read
+        device_class: timestamp
+        icon: mdi:database-sync
+        value_template: "{{ value_json.last_read }}"
+    binary_sensor:
+      - name: Nutrition Google ok
+        unique_id: repo_nutrition_google_ok
+        icon: mdi:google
+        value_template: "{{ value_json.google.ok }}"
 
 # Hours asleep and in exercise from the watch's activity state. The daily max of each goes to the
 # long-term statistics, so the graph keeps them after the 31-day history is gone
