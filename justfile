@@ -169,6 +169,10 @@ ha-check:
     if grep -qE 'Invalid config|Failed config|Fatal error' <<<"$out"; then echo "ha-check: invalid Home Assistant config" >&2; exit 1; fi
     echo "ha-check: configuration valid"
 
+# One-time Google Health login for nutrition-sync, prints the refresh token for `just secrets`
+nutrition-google-auth *args:
+    python3 -I modules/services/nutrition/google_auth.py {{args}}
+
 # Restart Home Assistant on the server
 restart-ha:
     ssh root@{{host}} 'systemctl restart podman-home-assistant.service && systemctl is-active podman-home-assistant.service'
