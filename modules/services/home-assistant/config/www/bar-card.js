@@ -189,7 +189,8 @@ class FrogBarCard extends HTMLElement {
     const number = Number.parseFloat(bar.attribute ? stateObj?.attributes[bar.attribute] : stateObj?.state);
     const level = Number.isFinite(number) ? Math.max(0, Math.min(100, number)) : null;
     const steps = Object.entries(bar.steps || { 0: "primary" }).sort((a, b) => a[0] - b[0]);
-    const name = bar.color || steps.filter(([at]) => level >= Number(at)).pop()?.[1] || steps[0][1];
+    // Colour from the real value, so a step above 100 works for values over 100 %
+    const name = bar.color || steps.filter(([at]) => Math.max(0, number) >= Number(at)).pop()?.[1] || steps[0][1];
     const fill = root.querySelector(".fill");
     fill.style.width = `${level ?? 0}%`;
     fill.style.background = level === null ? "transparent" : cssColor(name);

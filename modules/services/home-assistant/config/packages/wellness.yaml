@@ -93,6 +93,57 @@ template:
         attributes:
           url: /local/nutrition/daily.csv
 
+  # Eaten today as % of the daily goal, for the bars and the over-goal alert. Unavailable while the goal is 0
+  - sensor:
+      - name: Nutrition calories of goal
+        unique_id: repo_nutrition_kcal_of_goal
+        default_entity_id: sensor.nutrition_kcal_of_goal
+        icon: mdi:food-apple
+        unit_of_measurement: "%"
+        availability: "{{ has_value('sensor.nutrition_today_kcal') and states('input_number.nutrition_goal_kcal') | float(0) > 0 }}"
+        state: "{{ (states('sensor.nutrition_today_kcal') | float / states('input_number.nutrition_goal_kcal') | float * 100) | round(0) }}"
+        attributes:
+          label: Calories
+          unit: kcal
+          eaten: "{{ states('sensor.nutrition_today_kcal') | float(0) | round(0) }}"
+          goal: "{{ states('input_number.nutrition_goal_kcal') | float(0) | round(0) }}"
+      - name: Nutrition fats of goal
+        unique_id: repo_nutrition_fats_of_goal
+        default_entity_id: sensor.nutrition_fats_of_goal
+        icon: mdi:oil
+        unit_of_measurement: "%"
+        availability: "{{ has_value('sensor.nutrition_today_fats') and states('input_number.nutrition_goal_fats') | float(0) > 0 }}"
+        state: "{{ (states('sensor.nutrition_today_fats') | float / states('input_number.nutrition_goal_fats') | float * 100) | round(0) }}"
+        attributes:
+          label: Fats
+          unit: g
+          eaten: "{{ states('sensor.nutrition_today_fats') | float(0) | round(0) }}"
+          goal: "{{ states('input_number.nutrition_goal_fats') | float(0) | round(0) }}"
+      - name: Nutrition proteins of goal
+        unique_id: repo_nutrition_proteins_of_goal
+        default_entity_id: sensor.nutrition_proteins_of_goal
+        icon: mdi:food-drumstick
+        unit_of_measurement: "%"
+        availability: "{{ has_value('sensor.nutrition_today_proteins') and states('input_number.nutrition_goal_proteins') | float(0) > 0 }}"
+        state: "{{ (states('sensor.nutrition_today_proteins') | float / states('input_number.nutrition_goal_proteins') | float * 100) | round(0) }}"
+        attributes:
+          label: Proteins
+          unit: g
+          eaten: "{{ states('sensor.nutrition_today_proteins') | float(0) | round(0) }}"
+          goal: "{{ states('input_number.nutrition_goal_proteins') | float(0) | round(0) }}"
+      - name: Nutrition carbohydrates of goal
+        unique_id: repo_nutrition_carbohydrates_of_goal
+        default_entity_id: sensor.nutrition_carbohydrates_of_goal
+        icon: mdi:bread-slice
+        unit_of_measurement: "%"
+        availability: "{{ has_value('sensor.nutrition_today_carbohydrates') and states('input_number.nutrition_goal_carbohydrates') | float(0) > 0 }}"
+        state: "{{ (states('sensor.nutrition_today_carbohydrates') | float / states('input_number.nutrition_goal_carbohydrates') | float * 100) | round(0) }}"
+        attributes:
+          label: Carbohydrates
+          unit: g
+          eaten: "{{ states('sensor.nutrition_today_carbohydrates') | float(0) | round(0) }}"
+          goal: "{{ states('input_number.nutrition_goal_carbohydrates') | float(0) | round(0) }}"
+
 # Today's meals and the sync health from the nutrition-sync service (modules/services/nutrition)
 rest:
   - resource: http://127.0.0.1:8131/status
@@ -158,3 +209,39 @@ sensor:
     type: time
     start: "{{ today_at() }}"
     end: "{{ now() }}"
+
+# Daily nutrition goals, set on the Wellness tab. Google Health has no API for its goals.
+# No `initial`, so HA keeps them over restarts. 0 means no goal
+input_number:
+  nutrition_goal_kcal:
+    name: Calories goal
+    icon: mdi:food-apple
+    min: 0
+    max: 6000
+    step: 10
+    mode: box
+    unit_of_measurement: kcal
+  nutrition_goal_fats:
+    name: Fats goal
+    icon: mdi:oil
+    min: 0
+    max: 600
+    step: 1
+    mode: box
+    unit_of_measurement: g
+  nutrition_goal_proteins:
+    name: Proteins goal
+    icon: mdi:food-drumstick
+    min: 0
+    max: 600
+    step: 1
+    mode: box
+    unit_of_measurement: g
+  nutrition_goal_carbohydrates:
+    name: Carbohydrates goal
+    icon: mdi:bread-slice
+    min: 0
+    max: 600
+    step: 1
+    mode: box
+    unit_of_measurement: g

@@ -251,6 +251,42 @@
         data:
           tag: nutrition-google
 
+# Once per crossing: the % drops back to 0 when the day starts at 04:00
+- id: repo_alert_nutrition_over_goal
+  alias: "Alert: over the nutrition goal"
+  description: Eaten today is over 115 % or 150 % of a daily goal from the Wellness tab
+  # A jump straight over 150 % fires both triggers; queued so the second message replaces the first
+  mode: queued
+  triggers:
+    - trigger: numeric_state
+      entity_id: &nutrition_of_goal
+        - sensor.nutrition_kcal_of_goal
+        - sensor.nutrition_fats_of_goal
+        - sensor.nutrition_proteins_of_goal
+        - sensor.nutrition_carbohydrates_of_goal
+      above: 115
+      id: over
+    - trigger: numeric_state
+      entity_id: *nutrition_of_goal
+      above: 150
+      id: wrong
+  conditions:
+    # Not after a restart or a goal change from 0
+    - condition: template
+      value_template: "{{ trigger.from_state.state not in ['unknown', 'unavailable'] }}"
+  actions:
+    - action: notify.mobile_app_pixel_7
+      data:
+        title: >-
+          {{ state_attr(trigger.entity_id, 'label') }} {{ 'way ' if trigger.id == 'wrong' }}over the goal
+        message: >-
+          {% set e = trigger.entity_id %}
+          {{ state_attr(e, 'eaten') }} of {{ state_attr(e, 'goal') }} {{ state_attr(e, 'unit') }} today ({{ states(e) }} %).
+          {% if trigger.id == 'wrong' %}Most likely something is logged wrong, check the Nutrition Log{% else %}The daily limit is over{% endif %}
+        data:
+          tag: "nutrition-goal-{{ trigger.entity_id }}"
+          clickAction: https://app.notion.com/p/Nutrition-Log-41b659e3027580e6a131fb17668e86a4
+
 - id: repo_alert_zigbee_bridge
   alias: "Alert: Zigbee bridge down"
   description: Zigbee2MQTT is disconnected for 10 minutes

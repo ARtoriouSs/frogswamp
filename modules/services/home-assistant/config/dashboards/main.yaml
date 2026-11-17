@@ -4256,15 +4256,36 @@ views:
             tap_action:
               action: url
               url_path: https://app.notion.com/p/Nutrition-Log-41b659e3027580e6a131fb17668e86a4
-          - <<: *info
-            entity: sensor.nutrition_today_kcal
-            primary: Eaten today
+          # Today against the goals below. The bar is full at 100 %, red over 115 % (the alert's limit)
+          - &nutrition_today
+            <<: *info
+            type: custom:frog-bar-card
+            bar:
+              steps: {0: green, 100: amber, 115: red}
+            entity: sensor.nutrition_kcal_of_goal
+            primary: Calories today
             secondary: >-
-              {% if has_value(entity) %}
-              {{ states(entity) | int }} kcal · F {{ states('sensor.nutrition_today_fats') }} · P {{ states('sensor.nutrition_today_proteins') }} · C {{ states('sensor.nutrition_today_carbohydrates') }} g
-              {% else %}No data from nutrition-sync{% endif %}
+              {% set key = entity.split('_')[1] %}
+              {% if not has_value('sensor.nutrition_today_' ~ key) %}No data from nutrition-sync
+              {% elif has_value(entity) %}{{ state_attr(entity, 'eaten') }} / {{ state_attr(entity, 'goal') }} {{ state_attr(entity, 'unit') }} · {{ states(entity) }} %
+              {% else %}{{ states('sensor.nutrition_today_' ~ key) | float(0) | round(0) }} {{ 'kcal' if key == 'kcal' else 'g' }} · no goal{% endif %}
             icon: mdi:food-apple
-            color: amber
+            color: "{{ 'red' if states(entity) | float(0) > 115 else ('amber' if states(entity) | float(0) > 100 else 'green') }}"
+            grid_options:
+              columns: 6
+              rows: 1
+          - <<: *nutrition_today
+            entity: sensor.nutrition_fats_of_goal
+            primary: Fats
+            icon: mdi:oil
+          - <<: *nutrition_today
+            entity: sensor.nutrition_proteins_of_goal
+            primary: Proteins
+            icon: mdi:food-drumstick
+          - <<: *nutrition_today
+            entity: sensor.nutrition_carbohydrates_of_goal
+            primary: Carbohydrates
+            icon: mdi:bread-slice
           - <<: *daily_chart
             title: Calories in vs out
             sheet: &calories_sheet
@@ -4305,6 +4326,20 @@ views:
                 name: Carbohydrates
                 unit: g
                 color: "#3b82f6"
+          # A day runs from 04:00 to 04:00. Over 115 % sends a notification, over 150 % one about a likely wrong entry
+          - type: entities
+            title: Daily goals
+            grid_options:
+              columns: full
+            entities:
+              - entity: input_number.nutrition_goal_kcal
+                name: Calories
+              - entity: input_number.nutrition_goal_fats
+                name: Fats
+              - entity: input_number.nutrition_goal_proteins
+                name: Proteins
+              - entity: input_number.nutrition_goal_carbohydrates
+                name: Carbohydrates
 
       - type: grid
         cards:
