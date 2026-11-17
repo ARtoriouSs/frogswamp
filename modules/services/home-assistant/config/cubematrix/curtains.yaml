@@ -1,0 +1,63 @@
+# Curtains for the cube (5x5): a rod on top, two curtains move from the sides to the middle,
+# so they don't look like the built-in blinds that go down
+- name: curtains_close
+  size: 5x5
+  palette: {R: '#9a9a9a', C: '#d0303a', D: '#701018'}
+  fps: 4
+  loop: false
+  frames:
+    - |
+      RRRRR
+      .....
+      .....
+      .....
+      .....
+    - |
+      RRRRR
+      C...C
+      C...C
+      C...C
+      C...C
+    - |
+      RRRRR
+      CD.DC
+      CD.DC
+      CD.DC
+      CD.DC
+    - |
+      RRRRR
+      CDCDC
+      CDCDC
+      CDCDC
+      CDCDC
+
+- name: curtains_open
+  size: 5x5
+  palette: {R: '#9a9a9a', C: '#d0303a', D: '#701018'}
+  fps: 4
+  loop: false
+  frames:
+    - |
+      RRRRR
+      CDCDC
+      CDCDC
+      CDCDC
+      CDCDC
+    - |
+      RRRRR
+      CD.DC
+      CD.DC
+      CD.DC
+      CD.DC
+    - |
+      RRRRR
+      C...C
+      C...C
+      C...C
+      C...C
+    - |
+      RRRRR
+      .....
+      .....
+      .....
+      .....

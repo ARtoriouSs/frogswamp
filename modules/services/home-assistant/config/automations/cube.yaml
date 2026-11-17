@@ -147,22 +147,29 @@
     - trigger: state
       entity_id: scene.office_desk_down
       id: arrow_down
-    # The blinds and curtains button scripts, when they start
+    # The blinds button scripts, when they start
     - trigger: state
       entity_id:
         - script.blinds_open
         - script.blinds_full_close_open
         - script.blinds_open_door
-        - script.curtains_open
       to: "on"
       id: blinds_open
     - trigger: state
       entity_id:
         - script.blinds_full_close
         - script.blinds_close_door
-        - script.curtains_close
       to: "on"
       id: blinds_close
+    # The curtains have their own animation (cubematrix/curtains.yaml)
+    - trigger: state
+      entity_id: script.curtains_open
+      to: "on"
+      id: curtains_open
+    - trigger: state
+      entity_id: script.curtains_close
+      to: "on"
+      id: curtains_close
     - trigger: state
       entity_id:
         - input_boolean.day_off
