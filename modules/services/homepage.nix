@@ -401,6 +401,13 @@ in
               };
             }
             {
+              "Frogswamp Google Cloud" = {
+                href = "https://console.cloud.google.com/welcome?authuser=1&project=frogswamp&supportedpurview=project,organizationId,folder";
+                icon = "google-cloud.png";
+                description = "Google Health API project";
+              };
+            }
+            {
               "GitHub repo" = {
                 href = "https://github.com/ARtoriouSs/frogswamp";
                 icon = "github.png";

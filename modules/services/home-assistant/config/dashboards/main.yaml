@@ -3541,6 +3541,12 @@ views:
             heading: Home
             icon: mdi:home
           - <<: *link
+            primary: Tuya Web
+            icon: mdi:cloud-outline
+            tap_action:
+              action: url
+              url_path: https://eu.device.tuya.ai/apps/2031672725390491705?id=290017779
+          - <<: *link
             primary: Specification
             icon: mdi:file-table
             tap_action:
