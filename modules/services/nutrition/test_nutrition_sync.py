@@ -252,7 +252,7 @@ def test_google_recovers_after_error(api, cfg):
     state = run(cfg)
     api.answers.clear()
     ns.sync_once(cfg, state, now=NOW + dt.timedelta(minutes=5))
-    assert state.status["google"] == {"ok": True, "last_push": (NOW + dt.timedelta(minutes=5)).isoformat(), "error": None, "pending": 0}
+    assert state.status["google"] == {"ok": True, "last_push": (NOW + dt.timedelta(minutes=5)).isoformat(), "error": None, "pending": 0, "rejected": 0}
 
 
 def test_deleted_point_already_gone_is_forgotten(api, cfg):
@@ -268,7 +268,7 @@ def test_no_google(api, cfg):
     cfg = cfg._replace(google=None)
     state = run(cfg)
     assert api.calls("/dataPoints") == []
-    assert state.status["google"] == {"ok": True, "last_push": None, "error": None, "pending": 0}
+    assert state.status["google"] == {"ok": True, "last_push": None, "error": None, "pending": 0, "rejected": 0}
 
 
 def test_status_served(api, cfg):
@@ -304,3 +304,46 @@ def test_read_config(tmp_path):
     assert cfg.notion_url == "https://api.notion.com"
     assert cfg.google.token_url == "https://oauth2.googleapis.com/token"
     assert ns.read_config(ns.parse_args([*["--credentials", str(creds), "--state-dir", str(tmp_path)], "--no-google"])).google is None
+
+
+def test_rejected_meal_does_not_block_others(api, cfg):
+    api.meals = [page("m1", eaten="2026-11-14T12:00:00+01:00"), page("m2", eaten="2026-11-14T13:00:00+01:00")]
+    api.queue("/dataPoints", (400, {"error": {"code": 400, "status": "INVALID_ARGUMENT"}}, {}), (200, {"done": True, "response": {"name": "users/1/x/2"}}, {}))
+    state = run(cfg)
+    assert set(state.synced) == {"m2"}
+    google = state.status["google"]
+    assert (google["ok"], google["error"], google["rejected"], google["pending"]) == (False, "INVALID_ARGUMENT", 1, 0)
+
+
+def test_auth_error_on_create_stops_the_loop(api, cfg):
+    api.meals = [page("m1"), page("m2", eaten="2026-11-14T13:00:00+01:00")]
+    api.queue("/dataPoints", (401, {"error": {"code": 401, "status": "UNAUTHENTICATED"}}, {}))
+    state = run(cfg)
+    assert len(api.calls("/dataPoints")) == 1
+    assert state.status["google"]["error"] == "UNAUTHENTICATED"
+    assert state.status["google"]["pending"] == 2
+
+
+def test_unfinished_operation_is_kept_not_created_again(api, cfg):
+    api.queue("/dataPoints", (200, {"done": False, "name": "operations/op1"}, {}))
+    api.queue("/v4/operations/op1", (200, {"done": False, "name": "operations/op1"}, {}))
+    state = run(cfg)
+    assert state.synced["m1"]["operation"] == "operations/op1"
+    api.queue("/v4/operations/op1", (200, {"done": True, "response": {"name": "users/1/x/7"}}, {}))
+    run(cfg, state)
+    assert len(api.calls("/dataPoints")) == 1
+    assert state.synced["m1"]["name"] == "users/1/x/7"
+    assert "operation" not in state.synced["m1"]
+
+
+def test_batch_delete_404_retries_one_by_one(api, cfg):
+    api.meals = [page(f"m{i}", eaten=f"2026-11-14T1{i}:00:00+01:00") for i in range(3)]
+    state = run(cfg)
+    api.meals = []
+    api.queue("/dataPoints:batchDelete", (404, {"error": {"code": 404}}, {}), (404, {"error": {"code": 404}}, {}), (200, {"done": True}, {}))
+    ns.sync_once(cfg, state, now=NOW)
+    bodies = [json.loads(r[2])["names"] for r in api.calls("/dataPoints:batchDelete")]
+    assert len(bodies[0]) == 3
+    assert bodies[1:] == [[name] for name in bodies[0]]
+    assert state.synced == {}
+    assert state.status["google"]["ok"] is True

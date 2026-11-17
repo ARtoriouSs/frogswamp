@@ -158,3 +158,10 @@ def test_plan_allows_small_deletes_when_empty():
 def test_meal_types():
     assert nc.MEAL_TYPES == {"Завтрак": "BREAKFAST", "Обед": "LUNCH", "Ужин": "DINNER", "Перекус": "SNACK"}
     assert nc.google_meal_type("Полдник") == "MEAL_TYPE_UNSPECIFIED"
+
+
+def test_plan_waits_for_unfinished_operation():
+    synced = {"p1": {"operation": "operations/op1", "hash": "old"}}
+    plan = nc.plan_google([meal(kcal=99.0)], synced, notion_ok=True)
+    assert plan == nc.GooglePlan(create=[], delete=[], skipped_mass_delete=False)
+    assert nc.plan_google([], synced, notion_ok=True).delete == []

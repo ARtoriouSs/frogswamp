@@ -63,6 +63,16 @@ class HttpError(Exception):
         return f"HTTP {self.status}"
 
 
+class AuthError(HttpError):
+    """The Google login itself failed, so nothing can be sent until it is renewed"""
+
+
+class OperationPending(Exception):
+    def __init__(self, name):
+        super().__init__("operation not done")
+        self.name = name
+
+
 def request_json(method, url, headers=None, body=None, form=None):
     headers = dict(headers or {})
     data = None
@@ -137,7 +147,16 @@ class GoogleClient:
     def _access_token(self):
         if self._token and time.monotonic() < self._expires:
             return self._token
-        answer = request_json(
+        try:
+            answer = self._refresh()
+        except HttpError as error:
+            raise AuthError(error.status, error.body) from None
+        self._token = answer["access_token"]
+        self._expires = time.monotonic() + float(answer.get("expires_in", 3600)) - 60
+        return self._token
+
+    def _refresh(self):
+        return request_json(
             "POST",
             self.cfg.token_url,
             form={
@@ -147,30 +166,47 @@ class GoogleClient:
                 "grant_type": "refresh_token",
             },
         )
-        self._token = answer["access_token"]
-        self._expires = time.monotonic() + float(answer.get("expires_in", 3600)) - 60
-        return self._token
 
     def _headers(self):
         return {"Authorization": f"Bearer {self._access_token()}"}
 
     def create(self, meal):
-        answer = request_json("POST", self.cfg.api_url, self._headers(), body=google_body(meal, self.tz))
-        root = self.cfg.api_url.split("/v4/")[0] + "/v4/"
+        """The new point's name; OperationPending when Google hasn't finished it yet"""
+        answer = self._call("POST", self.cfg.api_url, google_body(meal, self.tz))
         for _ in range(OPERATION_TRIES):
             if answer.get("done"):
                 return answer["response"]["name"]
             time.sleep(1)
-            answer = request_json("GET", root + answer["name"], self._headers())
-        raise HttpError(0, {"error": "operation not done"})
+            answer = self._call("GET", self._root() + answer["name"])
+        raise OperationPending(answer["name"])
+
+    def resolve(self, operation):
+        """The point's name once the operation is done, else None"""
+        answer = self._call("GET", self._root() + operation)
+        return answer["response"]["name"] if answer.get("done") else None
 
     def delete(self, names):
         """Deletes the points; a 404 means they are gone already"""
         try:
-            request_json("POST", self.cfg.api_url + ":batchDelete", self._headers(), body={"names": names})
+            self._call("POST", self.cfg.api_url + ":batchDelete", {"names": names})
         except HttpError as error:
             if error.status != 404:
                 raise
+            # One missing point may fail the whole batch, so the others are tried one by one
+            if len(names) > 1:
+                for name in names:
+                    self.delete([name])
+
+    def _root(self):
+        return self.cfg.api_url.split("/v4/")[0] + "/v4/"
+
+    def _call(self, method, url, body=None):
+        try:
+            return request_json(method, url, self._headers(), body=body)
+        except HttpError as error:
+            if error.status in (401, 403) and not isinstance(error, AuthError):
+                raise AuthError(error.status, error.body) from None
+            raise
 
 
 class State:
@@ -181,7 +217,7 @@ class State:
             "last_read": None,
             "skipped": 0,
             "today": {"kcal": 0, "fats": 0, "proteins": 0, "carbohydrates": 0},
-            "google": {"ok": True, "last_push": None, "error": None, "pending": 0},
+            "google": {"ok": True, "last_push": None, "error": None, "pending": 0, "rejected": 0},
         }
         self.google = None
 
@@ -208,12 +244,19 @@ def _push_google(cfg, state, meals, now):
         return
     if state.google is None:
         state.google = GoogleClient(cfg.google, cfg.tz)
-    plan = nc.plan_google(meals, state.synced, notion_ok=True)
-    if plan.skipped_mass_delete:
-        LOG.warning("Notion returned no meals while %d are in Google, not deleting them", len(state.synced))
-    pending = len(plan.create) + len(plan.delete)
-    by_name = {known["name"]: page_id for page_id, known in state.synced.items()}
+    pending, rejected, reject_reason = 0, 0, None
     try:
+        for page_id, known in list(state.synced.items()):
+            if "operation" in known:
+                name = state.google.resolve(known["operation"])
+                if name:
+                    state.synced[page_id] = {"name": name, "hash": known["hash"]}
+                    state.save_synced()
+        plan = nc.plan_google(meals, state.synced, notion_ok=True)
+        if plan.skipped_mass_delete:
+            LOG.warning("Notion returned no meals while %d are in Google, not deleting them", len(state.synced))
+        pending = len(plan.create) + len(plan.delete)
+        by_name = {known["name"]: page_id for page_id, known in state.synced.items() if "name" in known}
         for start in range(0, len(plan.delete), DELETE_CHUNK):
             names = plan.delete[start : start + DELETE_CHUNK]
             state.google.delete(names)
@@ -222,17 +265,37 @@ def _push_google(cfg, state, meals, now):
             state.save_synced()
             pending -= len(names)
         for meal in plan.create:
-            name = state.google.create(meal)
+            pending -= 1
+            try:
+                name = state.google.create(meal)
+            except OperationPending as waiting:
+                # Kept, so the next read picks the result up instead of sending the meal twice
+                state.synced[meal.id] = {"operation": waiting.name, "hash": nc.meal_hash(meal)}
+                state.save_synced()
+                continue
+            except AuthError:
+                pending += 1
+                raise
+            except HttpError as error:
+                if not 400 <= error.status < 500:
+                    pending += 1
+                    raise
+                # Google refuses this one meal; the others still go
+                rejected += 1
+                reject_reason = error.reason
+                LOG.warning("Google rejected meal %s: %s", meal.id, error.reason)
+                continue
             state.synced[meal.id] = {"name": name, "hash": nc.meal_hash(meal)}
             state.save_synced()
-            pending -= 1
             LOG.info("Sent meal %s to Google", meal.id)
     except (HttpError, urllib.error.URLError, OSError, KeyError) as error:
         reason = error.reason if isinstance(error, HttpError) else type(error).__name__
         LOG.warning("Google Health failed: %s, %d changes wait", reason, pending)
         state.status["google"].update(ok=False, error=str(reason), pending=pending)
         return
-    state.status["google"].update(ok=True, error=None, pending=0, last_push=now.isoformat())
+    state.status["google"].update(
+        ok=rejected == 0, error=reject_reason, pending=0, rejected=rejected, last_push=now.isoformat()
+    )
 
 
 def sync_once(cfg, state, now=None):

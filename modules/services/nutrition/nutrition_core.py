@@ -148,12 +148,15 @@ def plan_google(meals, synced, notion_ok):
     create, delete = [], []
     for meal in meals:
         known = synced.get(meal.id)
+        if known is not None and "name" not in known:
+            # Google is still making it; changing it now could leave a duplicate
+            continue
         if known is None:
             create.append(meal)
         elif known["hash"] != meal_hash(meal):
             delete.append(known["name"])
             create.append(meal)
-    gone = [known["name"] for page_id, known in synced.items() if page_id not in by_id]
+    gone = [known["name"] for page_id, known in synced.items() if page_id not in by_id and "name" in known]
     if not meals and len(gone) > MASS_DELETE_LIMIT:
         return GooglePlan(create=create, delete=delete, skipped_mass_delete=True)
     return GooglePlan(create=create, delete=delete + gone, skipped_mass_delete=False)

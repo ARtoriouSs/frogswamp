@@ -127,6 +127,11 @@ rest:
         device_class: timestamp
         icon: mdi:database-sync
         value_template: "{{ value_json.last_read }}"
+      # invalid_grant means the Google login is gone; other codes mean Google refused a meal
+      - name: Nutrition Google error
+        unique_id: repo_nutrition_google_error
+        icon: mdi:google
+        value_template: "{{ value_json.google.error or 'none' }}"
     binary_sensor:
       - name: Nutrition Google ok
         unique_id: repo_nutrition_google_ok
