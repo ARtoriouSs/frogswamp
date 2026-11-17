@@ -109,6 +109,20 @@
         "work_calendar/ical_url".restartUnits = [ "work-calendar.service" ];
         "work_calendar/email".restartUnits = [ "work-calendar.service" ];
       })
+      (lib.mkIf config.frogswamp.nutrition.enable (
+        lib.genAttrs
+          [
+            "nutrition/notion_token"
+            "nutrition/notion_meals_source"
+            "nutrition/notion_days_source"
+            "nutrition/google_client_id"
+            "nutrition/google_client_secret"
+            "nutrition/google_refresh_token"
+          ]
+          (_: {
+            restartUnits = [ "nutrition-sync.service" ];
+          })
+      ))
       # Later tasks append blocks here, one per module:
       # (lib.mkIf config.frogswamp.<module>.enable { ... })
     ];
@@ -172,6 +186,14 @@
     workCalendar = {
       urlFile = lib.mkDefault config.sops.secrets."work_calendar/ical_url".path;
       emailFile = lib.mkDefault config.sops.secrets."work_calendar/email".path;
+    };
+    nutrition = {
+      notionTokenFile = lib.mkDefault config.sops.secrets."nutrition/notion_token".path;
+      notionMealsSourceFile = lib.mkDefault config.sops.secrets."nutrition/notion_meals_source".path;
+      notionDaysSourceFile = lib.mkDefault config.sops.secrets."nutrition/notion_days_source".path;
+      googleClientIdFile = lib.mkDefault config.sops.secrets."nutrition/google_client_id".path;
+      googleClientSecretFile = lib.mkDefault config.sops.secrets."nutrition/google_client_secret".path;
+      googleRefreshTokenFile = lib.mkDefault config.sops.secrets."nutrition/google_refresh_token".path;
     };
     # Later tasks add their secret file options here.
   };

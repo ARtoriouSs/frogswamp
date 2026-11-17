@@ -102,6 +102,8 @@ in
           "${configDir}/custom-sidebar-config.yaml:/config/www/custom-sidebar-config.yaml:ro"
         ]
         ++ map (name: "${configDir}/${name}:/config/${name}:ro") repoOwned
+        # The daily nutrition CSV, served as /local/nutrition/daily.csv
+        ++ lib.optional config.frogswamp.nutrition.enable "/var/lib/nutrition-sync/www:/config/www/nutrition:ro"
         ++ lib.optional cfg.hacs "${hacs}:/config/custom_components/hacs:ro"
         # a static binary, so the file alone is enough
         ++ lib.optional cfg.speedtest "${pkgs.ookla-speedtest}/bin/speedtest:/usr/local/bin/speedtest:ro"
@@ -167,6 +169,10 @@ in
       # and podman does not start a container with a missing volume. So make it right before the start
       podman-home-assistant.preStart = lib.mkMerge [
         (lib.mkIf cfg.recoverBluetooth (lib.mkBefore "mkdir -p ${usbWatchDir}"))
+        # Same for the nutrition CSV folder; nutrition-sync writes into it, so it must own it
+        (lib.mkIf config.frogswamp.nutrition.enable (
+          lib.mkBefore "install -d -m 0755 -o nutrition-sync -g nutrition-sync /var/lib/nutrition-sync/www"
+        ))
         # Files from the Nix store are always dated 1970, so Watchman thinks they never change.
         # Without its scan cache it reads them again after each deploy. Its settings are not in this file
         "rm -f ${stateDir}/.storage/watchman_v2.db*"

@@ -20,5 +20,6 @@
     ./services/music-assistant
     ./services/ps5-mqtt
     ./services/work-calendar
+    ./services/nutrition
   ];
 }

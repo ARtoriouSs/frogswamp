@@ -64,6 +64,8 @@
     ps5Mqtt.enable = true;
     # The accepted work meetings for HA, from the calendar's secret link
     workCalendar.enable = true;
+    # Meals from Notion for the Wellness charts and Google Health, see modules/services/nutrition
+    nutrition.enable = true;
     jellyfin.enable = true;
     samba.enable = true;
     homepage.enable = true;

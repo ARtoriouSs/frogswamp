@@ -23,6 +23,7 @@ let
     "/var/lib/matter-server"
     "/var/lib/music-assistant"
     "/var/lib/ps5-mqtt"
+    "/var/lib/nutrition-sync"
   ];
   sqliteDbs = [
     "/var/lib/home-assistant/home-assistant_v2.db"

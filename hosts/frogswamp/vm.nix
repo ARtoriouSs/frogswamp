@@ -28,6 +28,7 @@
     musicAssistant.enable = lib.mkForce false; # same
     ps5Mqtt.enable = lib.mkForce false; # same
     workCalendar.enable = lib.mkForce false; # same
+    nutrition.enable = lib.mkForce false; # same
     football = {
       kodi.passwordFile = lib.mkForce "/etc/vm-dummy-secret";
       haTokenFile = lib.mkForce "/etc/vm-dummy-secret";
