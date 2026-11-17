@@ -67,21 +67,30 @@ def test_parse_naive_time_uses_given_zone():
     assert meals[1].eaten == dt.datetime(2026, 11, 14, 12, 0, tzinfo=TZ)
 
 
-def test_parse_full_days():
-    days = nc.parse_full_days([day_page("2026-11-13", True), day_page("2026-10-27", False), day_page("not a date", True)])
-    assert days == {dt.date(2026, 11, 13)}
+TODAY = dt.date(2026, 11, 20)
+
+
+def test_parse_day_flags():
+    flags = nc.parse_day_flags([day_page("2026-11-13", True), day_page("2026-10-27", False), day_page("not a date", True)])
+    assert flags == {dt.date(2026, 11, 13): True, dt.date(2026, 10, 27): False}
+
+
+def test_ended_days_are_full_unless_unticked():
+    meals, _ = nc.parse_meals([page("a", eaten="2026-10-27T12:00:00+01:00"), page("b", eaten="2026-11-18T12:00:00+01:00"), page("c", eaten="2026-11-20T12:00:00+01:00")], TZ)
+    days = nc.daily_totals(meals, {dt.date(2026, 10, 27): False}, TZ, TODAY)
+    assert [(d.day, d.full) for d in days] == [(dt.date(2026, 10, 27), False), (dt.date(2026, 11, 18), True), (dt.date(2026, 11, 20), False)]
 
 
 def test_day_uses_local_time_zone():
     meals, _ = nc.parse_meals([page("a", eaten="2026-11-17T10:30:00+01:00"), page("b", eaten="2026-11-17T09:30:00Z")], TZ)
-    days = nc.daily_totals(meals, set(), TZ)
+    days = nc.daily_totals(meals, {}, TZ, TODAY)
     assert [d.day for d in days] == [dt.date(2026, 11, 17)]
     assert days[0].kcal == 70
 
 
 def test_meals_before_four_count_for_previous_day():
     meals, _ = nc.parse_meals([page("a", eaten="2026-11-17T03:59:00+01:00"), page("b", eaten="2026-11-17T02:30:00Z"), page("c", eaten="2026-11-17T04:00:00+01:00")], TZ)
-    days = nc.daily_totals(meals, set(), TZ)
+    days = nc.daily_totals(meals, {}, TZ, TODAY)
     assert [(d.day, d.kcal) for d in days] == [(dt.date(2026, 11, 16), 70), (dt.date(2026, 11, 17), 35)]
     assert nc.meal_day(dt.datetime(2026, 11, 17, 3, 59, tzinfo=TZ), TZ) == dt.date(2026, 11, 16)
 
@@ -94,7 +103,7 @@ def test_daily_totals_matches_old_sheet():
         page("4", eaten="2026-11-14T12:31:00+01:00", kcal=1740, protein=62.6, fat=83.4, carbs=179.8),
     ]
     meals, _ = nc.parse_meals(pages, TZ)
-    days = nc.daily_totals(meals, {dt.date(2026, 11, 13), dt.date(2026, 11, 14)}, TZ)
+    days = nc.daily_totals(meals, {}, TZ, TODAY)
     assert [(d.day, d.kcal, d.full) for d in days] == [(dt.date(2026, 11, 13), 1545, True), (dt.date(2026, 11, 14), 2040, True)]
     assert (days[1].fat, days[1].protein, days[1].carbs) == (104.4, 81.6, 185.8)
 

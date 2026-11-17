@@ -4243,7 +4243,7 @@ views:
                 color: "#f59e0b"
                 axis: right
 
-      # Eaten calories and macros from the Notion log (nutrition-sync). Only the days marked full are drawn
+      # Eaten calories and macros from the Notion log (nutrition-sync). A day is drawn once it ends at 04:00, unless it is marked incomplete in Notion
       - type: grid
         column_span: 2
         cards:

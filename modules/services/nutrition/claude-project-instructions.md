@@ -8,7 +8,7 @@ Where:
 
 A program reads these databases every few minutes and sends the numbers to Home Assistant and Google Health. Keep property names, types and values exactly as described, or it skips the row.
 
-A day runs from 04:00 to 04:00: anything eaten before 04:00 belongs to the day before. Use this for "today", day totals and closing a day. `Eaten` still gets the real time.
+A day runs from 04:00 to 04:00: anything eaten before 04:00 belongs to the day before. Use this for "today" and day totals. `Eaten` still gets the real time.
 
 ## When I send food (photo or text)
 
@@ -30,6 +30,8 @@ Find the row I mean (same product today, or the last one you added) and **update
 
 Move that row to trash.
 
-## When I say the day is done ("день закончен", "всё на сегодня", "день полный")
+## Days
 
-In "Nutrition days" find the row whose `Date` is that day (`YYYY-MM-DD`), or create it, and check `Full`. Only full days are drawn on the charts.
+A day closes by itself at 04:00 and then counts as full on the charts. I don't need to tell you when a day is done.
+
+When I say a day is incomplete ("день неполный", "я не всё записал за вчера"), in "Nutrition days" find the row whose `Date` is that day (`YYYY-MM-DD`), or create it, and leave `Full` unchecked. If I later say it is complete after all, check `Full`.

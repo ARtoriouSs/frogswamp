@@ -26,7 +26,7 @@ Files:
 
 1. Make two databases on one page (now Personal → Health → Nutrition Log):
    - **Nutrition log**: `Product` (title), `Eaten` (date with time), `Meal` (select: `Завтрак`, `Обед`, `Ужин`, `Перекус`), `Amount` (text), `Kcal`, `Protein`, `Fat`, `Carbs` (numbers), `Comment` (text)
-   - **Nutrition days**: `Date` (title, `YYYY-MM-DD`), `Full` (checkbox). Only full days are drawn on the charts
+   - **Nutrition days**: `Date` (title, `YYYY-MM-DD`), `Full` (checkbox). A day counts as full once it ends at 04:00; a row with `Full` unchecked keeps an incomplete day off the charts
 2. Notion → Settings → Connections → Develop or manage integrations → **New integration**: name `frogswamp-nutrition`, type Internal, capabilities **Read content** only. Copy the token.
 3. On the page with both databases: ••• → Connections → add `frogswamp-nutrition`.
 4. Find each database's data source id: open the database → ••• → Manage data sources → ••• → Copy data source ID, or ask Claude with the Notion connector for the `collection://…` id (the part after `collection://`).
@@ -61,15 +61,15 @@ Then `just deploy`. Check on the server: `curl -s 127.0.0.1:8131/status` shows a
 
 1. claude.ai → Projects → new project, e.g. "Calories".
 2. Turn on the **Notion** connector for it (Settings → Connectors, then allow it in the project).
-3. Paste `claude-project-instructions.md` as the project instructions. It names the two data sources, the exact property values, and how to correct, remove and close a day.
+3. Paste `claude-project-instructions.md` as the project instructions. It names the two data sources, the exact property values, and how to correct, remove and mark a day incomplete.
 4. Use it from the phone app. Example prompts:
    - *(photo)* "Обед"
    - "Кофе с молоком, 250 мл, в 9:30"
    - "Пицца была 3 куска, не 2" (Claude updates the same row, never adds a second one)
    - "Удали булочку"
-   - "День закончен" (marks the day full, so it shows on the charts)
+   - "Вчера я не всё записал" (marks yesterday incomplete, so it stays off the charts)
 
-A day runs from 04:00 to 04:00, so a snack at 01:00 counts for the evening before.
+A day runs from 04:00 to 04:00, so a snack at 01:00 counts for the evening before. At 04:00 the day closes by itself and shows on the charts; there is no "day done" message.
 
 Rows can also be fixed by hand in the Notion app; the NUC picks them up within 5 minutes.
 

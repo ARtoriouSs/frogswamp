@@ -99,24 +99,25 @@ def parse_meals(pages, tz):
     return meals, skipped
 
 
-def parse_full_days(pages):
-    days = set()
+def parse_day_flags(pages):
+    """The Full checkbox of each day that has a row in Nutrition days"""
+    flags = {}
     for page in pages:
         props = page.get("properties", {})
-        if not (props.get("Full") or {}).get("checkbox"):
-            continue
         try:
-            days.add(dt.date.fromisoformat(_plain(props.get("Date")).strip()))
+            day = dt.date.fromisoformat(_plain(props.get("Date")).strip())
         except ValueError:
-            pass
-    return days
+            continue
+        flags[day] = bool((props.get("Full") or {}).get("checkbox"))
+    return flags
 
 
 def meal_day(moment, tz):
     return (moment.astimezone(tz) - DAY_START).date()
 
 
-def daily_totals(meals, full_days, tz):
+def daily_totals(meals, day_flags, tz, today):
+    """A day is full once it has ended, unless its Full box in Notion is unticked"""
     sums = {}
     for meal in meals:
         day = meal_day(meal.eaten, tz)
@@ -124,7 +125,7 @@ def daily_totals(meals, full_days, tz):
         for i, value in enumerate((meal.kcal, meal.fat, meal.protein, meal.carbs)):
             total[i] += value
     return [
-        DayTotal(day, *(round(value, 1) for value in sums[day]), full=day in full_days)
+        DayTotal(day, *(round(value, 1) for value in sums[day]), full=day_flags.get(day, day < today))
         for day in sorted(sums)
     ]
 

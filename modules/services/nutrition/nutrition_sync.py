@@ -308,9 +308,10 @@ def sync_once(cfg, state, now=None):
         LOG.warning("Couldn't read Notion: %s", error.reason if isinstance(error, HttpError) else type(error).__name__)
         return
     meals, skipped = nc.parse_meals(meal_pages, cfg.tz)
-    days = nc.daily_totals(meals, nc.parse_full_days(day_pages), cfg.tz)
+    today_date = nc.meal_day(now, cfg.tz)
+    days = nc.daily_totals(meals, nc.parse_day_flags(day_pages), cfg.tz, today_date)
     _write_atomic(cfg.state_dir / "www" / "daily.csv", nc.to_csv(days))
-    today = next((d for d in days if d.day == nc.meal_day(now, cfg.tz)), None)
+    today = next((d for d in days if d.day == today_date), None)
     state.status.update(
         last_read=now.isoformat(),
         skipped=skipped,
