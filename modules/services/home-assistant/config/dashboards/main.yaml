@@ -3566,6 +3566,17 @@ views:
       - type: grid
         cards:
           - type: heading
+            heading: Nutrition
+            icon: mdi:food-apple
+          - <<: *link
+            primary: Nutrition Log
+            icon: mdi:food-apple
+            tap_action:
+              action: url
+              url_path: https://app.notion.com/p/Nutrition-Log-41b659e3027580e6a131fb17668e86a4
+      - type: grid
+        cards:
+          - type: heading
             heading: Car
             icon: mdi:car
           - <<: *link
@@ -4239,6 +4250,12 @@ views:
           - type: heading
             heading: Nutrition
             icon: mdi:food-apple
+          - <<: *link
+            primary: Nutrition Log
+            icon: mdi:food-apple
+            tap_action:
+              action: url
+              url_path: https://app.notion.com/p/Nutrition-Log-41b659e3027580e6a131fb17668e86a4
           - <<: *info
             entity: sensor.nutrition_today_kcal
             primary: Eaten today
