@@ -56,7 +56,7 @@ in
         /* dark, mostly solid tiles with the wallpaper blurred behind them, so the light text stays readable */
         .service-card { background-color: rgb(23 23 23 / 0.82); backdrop-filter: blur(6px); }
         .service-card:hover { background-color: rgb(38 38 38 / 0.9); }
-        /* the same for the top bar (CPU, memory, disks, search) and the bookmarks at the bottom (Docs, Admin) */
+        /* the same for the top bar (CPU, memory, disks) and the bookmarks at the bottom (Docs, Admin) */
         #information-widgets { background-color: rgb(23 23 23 / 0.82); backdrop-filter: blur(6px); border-radius: 0.375rem; padding: 0.5rem 0.75rem; }
         .bookmark a { background-color: rgb(23 23 23 / 0.82); backdrop-filter: blur(6px); }
         .bookmark a:hover { background-color: rgb(38 38 38 / 0.9); }
@@ -146,12 +146,6 @@ in
             timezone = config.time.timeZone;
             units = "metric";
             cache = 15;
-          };
-        }
-        {
-          search = {
-            provider = "duckduckgo";
-            target = "_blank";
           };
         }
         {
@@ -494,6 +488,14 @@ in
                 {
                   abbr = "B2";
                   href = "https://secure.backblaze.com/b2_buckets.htm";
+                }
+              ];
+            }
+            {
+              "Google Cloud" = [
+                {
+                  abbr = "GC";
+                  href = "https://console.cloud.google.com/welcome?authuser=1&project=frogswamp&supportedpurview=project,organizationId,folder";
                 }
               ];
             }
