@@ -69,6 +69,8 @@ Then `just deploy`. Check on the server: `curl -s 127.0.0.1:8131/status` shows a
    - "Удали булочку"
    - "День закончен" (marks the day full, so it shows on the charts)
 
+A day runs from 04:00 to 04:00, so a snack at 01:00 counts for the evening before.
+
 Rows can also be fixed by hand in the Notion app; the NUC picks them up within 5 minutes.
 
 ## How Google gets the meals

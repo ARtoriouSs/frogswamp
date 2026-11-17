@@ -8,6 +8,8 @@ import zoneinfo
 MEAL_TYPES = {"Завтрак": "BREAKFAST", "Обед": "LUNCH", "Ужин": "DINNER", "Перекус": "SNACK"}
 # An empty Notion answer with more synced meals than this looks like a broken read, not a cleanup
 MASS_DELETE_LIMIT = 3
+# A late snack after midnight still belongs to the evening before
+DAY_START = dt.timedelta(hours=4)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -110,10 +112,14 @@ def parse_full_days(pages):
     return days
 
 
+def meal_day(moment, tz):
+    return (moment.astimezone(tz) - DAY_START).date()
+
+
 def daily_totals(meals, full_days, tz):
     sums = {}
     for meal in meals:
-        day = meal.eaten.astimezone(tz).date()
+        day = meal_day(meal.eaten, tz)
         total = sums.setdefault(day, [0.0, 0.0, 0.0, 0.0])
         for i, value in enumerate((meal.kcal, meal.fat, meal.protein, meal.carbs)):
             total[i] += value

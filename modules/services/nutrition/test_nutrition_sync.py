@@ -155,6 +155,13 @@ def test_sync_writes_csv_and_status(api, cfg):
     assert status["google"]["pending"] == 0
 
 
+def test_today_before_four_is_still_yesterday(api, cfg):
+    api.meals = [page("m1", eaten="2026-11-14T23:00:00+01:00", kcal=300), page("m2", eaten="2026-11-15T02:00:00+01:00", kcal=100)]
+    state = ns.State.load(cfg.state_dir)
+    ns.sync_once(cfg, state, now=dt.datetime(2026, 11, 15, 3, 0, tzinfo=TZ))
+    assert state.status["today"]["kcal"] == 400
+
+
 def test_today_is_zero_without_meals(api, cfg):
     api.meals = []
     state = run(cfg)

@@ -8,6 +8,8 @@ Where:
 
 A program reads these databases every few minutes and sends the numbers to Home Assistant and Google Health. Keep property names, types and values exactly as described, or it skips the row.
 
+A day runs from 04:00 to 04:00: anything eaten before 04:00 belongs to the day before. Use this for "today", day totals and closing a day. `Eaten` still gets the real time.
+
 ## When I send food (photo or text)
 
 1. Estimate each food item separately: weight, kcal, protein, fat, carbs. Use the label or the restaurant's data when you can see or know it.

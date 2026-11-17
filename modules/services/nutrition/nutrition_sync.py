@@ -310,7 +310,7 @@ def sync_once(cfg, state, now=None):
     meals, skipped = nc.parse_meals(meal_pages, cfg.tz)
     days = nc.daily_totals(meals, nc.parse_full_days(day_pages), cfg.tz)
     _write_atomic(cfg.state_dir / "www" / "daily.csv", nc.to_csv(days))
-    today = next((d for d in days if d.day == now.astimezone(cfg.tz).date()), None)
+    today = next((d for d in days if d.day == nc.meal_day(now, cfg.tz)), None)
     state.status.update(
         last_read=now.isoformat(),
         skipped=skipped,

@@ -73,10 +73,17 @@ def test_parse_full_days():
 
 
 def test_day_uses_local_time_zone():
-    meals, _ = nc.parse_meals([page("a", eaten="2026-11-17T00:30:00+01:00"), page("b", eaten="2026-11-16T23:30:00Z")], TZ)
+    meals, _ = nc.parse_meals([page("a", eaten="2026-11-17T10:30:00+01:00"), page("b", eaten="2026-11-17T09:30:00Z")], TZ)
     days = nc.daily_totals(meals, set(), TZ)
     assert [d.day for d in days] == [dt.date(2026, 11, 17)]
     assert days[0].kcal == 70
+
+
+def test_meals_before_four_count_for_previous_day():
+    meals, _ = nc.parse_meals([page("a", eaten="2026-11-17T03:59:00+01:00"), page("b", eaten="2026-11-17T02:30:00Z"), page("c", eaten="2026-11-17T04:00:00+01:00")], TZ)
+    days = nc.daily_totals(meals, set(), TZ)
+    assert [(d.day, d.kcal) for d in days] == [(dt.date(2026, 11, 16), 70), (dt.date(2026, 11, 17), 35)]
+    assert nc.meal_day(dt.datetime(2026, 11, 17, 3, 59, tzinfo=TZ), TZ) == dt.date(2026, 11, 16)
 
 
 def test_daily_totals_matches_old_sheet():
