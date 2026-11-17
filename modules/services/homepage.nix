@@ -116,7 +116,7 @@ in
         ];
         quicklaunch = {
           searchDescriptions = true;
-          provider = "duckduckgo";
+          provider = "google";
         };
       };
 
