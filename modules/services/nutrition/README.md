@@ -81,6 +81,10 @@ Rows can also be fixed by hand in the Notion app; the NUC picks them up within 5
 - If Notion can't be read, or returns nothing while more than 3 meals are synced, nothing in Google is deleted.
 - If Google refuses one meal, the others still go and HA alerts with Google's error code.
 
+## Daily goals and alerts
+
+Google Health has no API for its nutrition goals, so the goals live in HA: the "Daily goals" card on the Wellness tab (`input_number.nutrition_goal_*`, 0 = no goal). The cards above it show today against each goal with a bar. Over 115 % HA sends "over the goal"; over 150 % it says something is most likely logged wrong. Each fires once when the value crosses the line, and the day starts at 04:00.
+
 ## When something breaks
 
 | HA alert | Cause | Fix |
