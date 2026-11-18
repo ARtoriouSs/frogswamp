@@ -92,6 +92,110 @@ template:
         state: Published
         attributes:
           url: /local/nutrition/daily.csv
+          meals_url: /local/nutrition/meals.csv
+
+  # Running sum and count of the body measurements, so the charts can show a day as the average of what was measured
+  # on it (the day's change of the sum / of the count). A measurement is new when its Health Connect date is new.
+  # The start trigger gives the counters a 0 to start from
+  - triggers:
+      - trigger: state
+        entity_id: sensor.pixel_7_weight
+      - trigger: homeassistant
+        event: start
+    conditions: &body_measured_conditions
+      - condition: template
+        value_template: "{{ trigger.platform != 'state' or trigger.to_state.state | is_number }}"
+    sensor:
+      - name: Health weight measured sum
+        unique_id: repo_health_weight_measured_sum
+        default_entity_id: sensor.health_weight_measured_sum
+        unit_of_measurement: "kg"
+        state_class: total_increasing
+        state: &body_measured_sum >-
+          {% set new = trigger.platform == 'state'
+             and trigger.to_state.attributes.get('date', trigger.to_state.last_updated) | string != this.attributes.get('taken') %}
+          {% set scale = 1 if trigger.entity_id is defined and trigger.entity_id.endswith('_fat') else 0.001 %}
+          {{ (this.state | float(0) + (trigger.to_state.state | float * scale if new else 0)) | round(3) }}
+        attributes:
+          taken: &body_measured_taken >-
+            {{ trigger.to_state.attributes.get('date', trigger.to_state.last_updated) | string
+               if trigger.platform == 'state' else this.attributes.get('taken') }}
+      - name: Health weight measured count
+        unique_id: repo_health_weight_measured_count
+        default_entity_id: sensor.health_weight_measured_count
+        state_class: total_increasing
+        state: &body_measured_count >-
+          {% set new = trigger.platform == 'state'
+             and trigger.to_state.attributes.get('date', trigger.to_state.last_updated) | string != this.attributes.get('taken') %}
+          {{ this.state | int(0) + (1 if new else 0) }}
+        attributes:
+          taken: *body_measured_taken
+  - triggers:
+      - trigger: state
+        entity_id: sensor.pixel_7_body_water_mass
+      - trigger: homeassistant
+        event: start
+    conditions: *body_measured_conditions
+    sensor:
+      - name: Health body water measured sum
+        unique_id: repo_health_body_water_measured_sum
+        default_entity_id: sensor.health_body_water_measured_sum
+        unit_of_measurement: "kg"
+        state_class: total_increasing
+        state: *body_measured_sum
+        attributes:
+          taken: *body_measured_taken
+      - name: Health body water measured count
+        unique_id: repo_health_body_water_measured_count
+        default_entity_id: sensor.health_body_water_measured_count
+        state_class: total_increasing
+        state: *body_measured_count
+        attributes:
+          taken: *body_measured_taken
+  - triggers:
+      - trigger: state
+        entity_id: sensor.pixel_7_bone_mass
+      - trigger: homeassistant
+        event: start
+    conditions: *body_measured_conditions
+    sensor:
+      - name: Health bone mass measured sum
+        unique_id: repo_health_bone_mass_measured_sum
+        default_entity_id: sensor.health_bone_mass_measured_sum
+        unit_of_measurement: "kg"
+        state_class: total_increasing
+        state: *body_measured_sum
+        attributes:
+          taken: *body_measured_taken
+      - name: Health bone mass measured count
+        unique_id: repo_health_bone_mass_measured_count
+        default_entity_id: sensor.health_bone_mass_measured_count
+        state_class: total_increasing
+        state: *body_measured_count
+        attributes:
+          taken: *body_measured_taken
+  - triggers:
+      - trigger: state
+        entity_id: sensor.pixel_7_body_fat
+      - trigger: homeassistant
+        event: start
+    conditions: *body_measured_conditions
+    sensor:
+      - name: Health body fat measured sum
+        unique_id: repo_health_body_fat_measured_sum
+        default_entity_id: sensor.health_body_fat_measured_sum
+        unit_of_measurement: "%"
+        state_class: total_increasing
+        state: *body_measured_sum
+        attributes:
+          taken: *body_measured_taken
+      - name: Health body fat measured count
+        unique_id: repo_health_body_fat_measured_count
+        default_entity_id: sensor.health_body_fat_measured_count
+        state_class: total_increasing
+        state: *body_measured_count
+        attributes:
+          taken: *body_measured_taken
 
   # Eaten today as % of the daily goal, for the bars and the over-goal alert. Unavailable while the goal is 0
   - sensor:
@@ -192,14 +296,14 @@ rest:
 # Hours asleep and in exercise from the watch's activity state. The daily max of each goes to the
 # long-term statistics, so the graph keeps them after the 31-day history is gone
 sensor:
-  # From 18:00 to 18:00, so a night that crosses midnight counts as one, on the day it ends
+  # By calendar day: a night that crosses midnight counts on both days
   - platform: history_stats
     name: Watch sleep
     unique_id: repo_watch_sleep
     entity_id: sensor.google_pixel_watch_activity_state
     state: asleep
     type: time
-    start: "{{ today_at('18:00') - timedelta(days=1 if now() < today_at('18:00') else 0) }}"
+    start: "{{ today_at() }}"
     end: "{{ now() }}"
   - platform: history_stats
     name: Watch exercise

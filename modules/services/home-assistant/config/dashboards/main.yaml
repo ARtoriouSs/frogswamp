@@ -4141,7 +4141,7 @@ views:
           - type: heading
             heading: Range
             icon: mdi:calendar-range
-          # One row for all the graphs below. Day is today in 5-minute steps, see www/daily-chart.js
+          # One row for all the graphs below. Day is today live, the others one value per day, see www/daily-chart.js
           - type: horizontal-stack
             grid_options:
               columns: full
@@ -4240,24 +4240,49 @@ views:
             type: custom:frog-daily-chart
             range: input_select.wellness_range
             title: Body composition
+            # A day is the average of that day's measurements, Day steps at each new value
             series:
               - entity: sensor.health_weight
                 stat: mean
+                measured:
+                  sum: sensor.health_weight_measured_sum
+                  count: sensor.health_weight_measured_count
+                join: true
+                day:
+                  history: sensor.health_weight
                 name: Weight
                 unit: kg
                 color: "#14b8a6"
               - entity: sensor.health_body_water_mass
                 stat: mean
+                measured:
+                  sum: sensor.health_body_water_measured_sum
+                  count: sensor.health_body_water_measured_count
+                join: true
+                day:
+                  history: sensor.health_body_water_mass
                 name: Body water
                 unit: kg
                 color: "#3b82f6"
               - entity: sensor.health_bone_mass
                 stat: mean
+                measured:
+                  sum: sensor.health_bone_mass_measured_sum
+                  count: sensor.health_bone_mass_measured_count
+                join: true
+                day:
+                  history: sensor.health_bone_mass
                 name: Bone mass
                 unit: kg
                 color: "#a3a3a3"
               - entity: sensor.health_body_fat
                 stat: mean
+                measured:
+                  sum: sensor.health_body_fat_measured_sum
+                  count: sensor.health_body_fat_measured_count
+                join: true
+                day:
+                  history: sensor.health_body_fat
                 name: Body fat
                 unit: "%"
                 color: "#f59e0b"
@@ -4315,10 +4340,12 @@ views:
             icon: mdi:oil
           - <<: *daily_chart
             title: Calories in vs out
+            # Day adds up today's meals at their times and the burned calories every 5 minutes
             sheet: &calories_sheet
               source: sensor.calories_sheet
               date_column: 0
               keep_column: 5
+              updated: sensor.nutrition_last_read
             series:
               - column: 1
                 name: Eaten
@@ -4396,12 +4423,22 @@ views:
             icon: mdi:sleep
           - <<: *daily_chart
             title: Sleep, h
+            # Hours asleep per calendar day from the watch. Health Connect gives one night on the day it ends, not in Day
             series:
-              - entity: sensor.health_sleep
+              - entity: sensor.watch_sleep
                 stat: max
-                name: Sleep
+                name: Watch
                 unit: h
                 color: "#8b5cf6"
+                day: &day_asleep
+                  time_in: sensor.google_pixel_watch_activity_state
+                  state: asleep
+              - entity: sensor.health_sleep
+                stat: max
+                name: Health Connect
+                unit: h
+                color: "#c4b5fd"
+                day: false
 
       - type: grid
         column_span: 2
@@ -4411,19 +4448,24 @@ views:
             icon: mdi:watch
           - <<: *daily_chart
             title: Sleep and exercise, h
-            # From the watch's activity state, only since 16.11.2026. Sleep is counted from 18:00 to 18:00
+            # From the watch's activity state, only since 16.11.2026. Totals per calendar day (sleep was 18:00 to 18:00
+            # before 18.11.2026)
             series:
               - entity: sensor.watch_sleep
                 stat: max
                 name: Sleep
                 unit: h
                 color: "#8b5cf6"
+                day: *day_asleep
               - entity: sensor.watch_exercise
                 stat: max
                 name: Exercise
                 unit: h
                 color: "#f97316"
                 axis: right
+                day:
+                  time_in: sensor.google_pixel_watch_activity_state
+                  state: exercise
           # When sleep and exercise happened, from the raw states, by the range at the top. Day is the last 24 h.
           # HA keeps raw states for 31 days, so 3 months and Year show those 31 days
           - type: heading
@@ -4485,6 +4527,7 @@ views:
             icon: mdi:heart-pulse
           - <<: *daily_chart
             title: Heart rate, bpm
+            day_note: The watch doesn't report heart rate live, so there is no live data for today
             # From the watch directly. Health Connect gets no heart rate from Google Health, so no resting value:
             # the lowest of the day, usually during sleep, is the closest
             series:

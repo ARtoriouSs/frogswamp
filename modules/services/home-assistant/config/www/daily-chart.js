@@ -1,14 +1,17 @@
-// A line chart with one point per day, or one per 5 minutes for Day. A series comes from a Google Sheet published as CSV (read by the browser)
+// A line chart with one point per day, or a live line for Day. A series comes from a CSV (read by the browser)
 // or from the HA long-term statistics of an entity. Loaded by frontend.extra_module_url in configuration.yaml.
 //   type: custom:frog-daily-chart
 //   title: Calories
 //   range: input_select.wellness_range  (Day / Week / Month / 3 months / Year)
-//                                       Day is today from midnight in 5-minute statistics (HA keeps them for 10 days):
-//                                       change series add up through the day, sheet values are a flat line
+//                                       Day is today from midnight. By default it uses 5-minute statistics (HA keeps them
+//                                       for 10 days) and change series add up through the day. A series' day option changes that
+//   day_note: No live data              (optional, Day shows only this text)
 //   sheet:                              (only for column series)
-//     source: sensor.calories_sheet     (its url attribute is the CSV link, from secrets.yaml)
+//     source: sensor.calories_sheet     (its url attribute is the daily CSV, meals_url the CSV of today's meals with times:
+//                                       Day adds them up at the time of each meal)
 //     date_column: 0
 //     keep_column: 5                    (optional, only rows where it is TRUE are drawn)
+//     updated: sensor.nutrition_last_read  (optional, Day reads the meals again when it changes)
 //   series:
 //     - column: 1                       (a sheet column)
 //       name: Eaten
@@ -23,6 +26,16 @@
 //     - entity: [sensor.phone_steps, sensor.watch_steps]
 //       stat: change                    (a list of entities draws the highest value of each day)
 //       skip_today: true                (optional, today is not over yet)
+//     - entity: sensor.health_weight
+//       measured:                       (optional, a day is the average of the measurements taken on it: the day's change
+//         sum: sensor.weight_sum        of sum / the day's change of count. Days from before these sensors use stat)
+//         count: sensor.weight_count
+//       join: true                      (optional, the line goes over days without a value)
+//       day:                            (optional, how Day draws it)
+//         history: sensor.health_weight (the raw states, each held until the next one)
+//         time_in: sensor.watch_state   (or hours spent in a state since midnight, rising only while in it)
+//         state: asleep
+//                                       (day: false leaves the series out of Day)
 const DAY_MS = 24 * 60 * 60 * 1000;
 const RANGE_DAYS = { Day: 1, Week: 7, Month: 30, "3 months": 91, Year: 365 };
 const FIVE_MINUTES_MS = 5 * 60 * 1000;
@@ -30,6 +43,9 @@ const CACHE_MS = 10 * 60 * 1000;
 const HEIGHT = 200;
 const PAD = { left: 44, right: 12, top: 12, bottom: 24 };
 const RIGHT_AXIS_WIDTH = 36;
+// Day reads again when a watched entity changes, but not more often than this
+const DAY_RELOAD_MS = 20 * 1000;
+const HOUR_MS = 60 * 60 * 1000;
 
 // Shared by all cards, so a tab with several charts reads the sheet once
 const sheetCache = new Map();
@@ -99,6 +115,33 @@ const formatTime = (time) => new Date(time).toTimeString().slice(0, 5);
 
 const formatValue = (value) => (Math.abs(value) >= 100 ? Math.round(value) : Math.round(value * 10) / 10);
 
+const statTime = (stat) => (typeof stat.start === "number" ? stat.start : Date.parse(stat.start));
+
+// One stat type of an entity per day
+const byDay = (stats, type) => {
+  const days = new Map();
+  for (const stat of stats || []) {
+    const value = stat[type];
+    if (value !== null && value !== undefined) days.set(startOfDay(statTime(stat)), value);
+  }
+  return days;
+};
+
+// A line that holds each value until the next one. initial is the value at start, or null when there is none
+const steps = (initial, events, start, now) => {
+  const points = initial === null ? [] : [{ time: start, value: initial }];
+  for (const { time, value } of events) {
+    const at = Math.min(Math.max(time, start), now);
+    if (points.length) points.push({ time: at, value: points[points.length - 1].value });
+    points.push({ time: at, value, mark: true });
+  }
+  if (points.length) points.push({ time: now, value: points[points.length - 1].value });
+  return Object.assign(points, { joined: true });
+};
+
+// History entries: {s: state, lu: seconds}
+const historyTime = (entry) => (entry.lu ?? entry.lc) * 1000;
+
 class FrogDailyChart extends HTMLElement {
   setConfig(config) {
     if (!Array.isArray(config.series)) throw new Error("series is required");
@@ -108,10 +151,11 @@ class FrogDailyChart extends HTMLElement {
     if (!this.shadowRoot) this.attachShadow({ mode: "open" });
     this.rows = null;
     this.stats = null;
-    this.todayStats = null;
+    this.day = null;
     this.error = null;
     this.loaded = 0;
-    this.todayLoaded = 0;
+    this.dayLoaded = 0;
+    this.dayKey = null;
   }
 
   get isDay() {
@@ -126,16 +170,31 @@ class FrogDailyChart extends HTMLElement {
       this.range = range;
       this.render();
     }
-    if (this.isDay && Date.now() - this.todayLoaded > FIVE_MINUTES_MS) this.loadToday();
+    if (this.isDay && !this.config.day_note) {
+      const key = this.watched().map((id) => hass.states[id]?.last_updated).join();
+      const age = Date.now() - this.dayLoaded;
+      if (age > FIVE_MINUTES_MS || (key !== this.dayKey && age > DAY_RELOAD_MS)) {
+        this.dayKey = key;
+        this.loadDay();
+      }
+    }
   }
 
   connectedCallback() {
     this.resize = new ResizeObserver(() => this.render());
     this.resize.observe(this);
+    // Day lines end at now
+    this.timer = setInterval(() => this.isDay && this.render(), 60 * 1000);
   }
 
   disconnectedCallback() {
     this.resize?.disconnect();
+    clearInterval(this.timer);
+  }
+
+  watched() {
+    const { sheet = {}, series } = this.config;
+    return [sheet.updated, ...series.flatMap((line) => [line.day?.history, line.day?.time_in])].filter(Boolean);
   }
 
   getCardSize() {
@@ -152,7 +211,8 @@ class FrogDailyChart extends HTMLElement {
     const { sheet, series } = this.config;
     const url = sheet ? this._hass.states[sheet.source]?.attributes.url : null;
     const entities = series.filter((line) => line.entity);
-    const ids = entities.flatMap((line) => [line.entity].flat());
+    const ids = entities.flatMap((line) => [line.entity, line.measured?.sum, line.measured?.count].flat().filter(Boolean));
+    const types = entities.flatMap((line) => [line.stat || "mean", ...(line.measured ? ["change"] : [])]);
     const rows = url ? fetchSheet(url) : Promise.resolve([]);
     const stats = entities.length
       ? this._hass.callWS({
@@ -160,7 +220,7 @@ class FrogDailyChart extends HTMLElement {
           start_time: new Date(startOfDay(Date.now()) - RANGE_DAYS.Year * DAY_MS).toISOString(),
           statistic_ids: [...new Set(ids)],
           period: "day",
-          types: [...new Set(entities.map((line) => line.stat || "mean"))],
+          types: [...new Set(types)],
         })
       : Promise.resolve({});
     Promise.all([rows, stats]).then(
@@ -169,51 +229,116 @@ class FrogDailyChart extends HTMLElement {
     );
   }
 
-  // Today in 5-minute statistics, read again every 5 minutes while Day is picked
-  loadToday() {
-    this.todayLoaded = Date.now();
-    const entities = this.config.series.filter((line) => line.entity);
-    if (!entities.length) return ((this.todayStats = {}), this.render());
-    this._hass
-      .callWS({
-        type: "recorder/statistics_during_period",
-        start_time: new Date(startOfDay(Date.now())).toISOString(),
-        statistic_ids: [...new Set(entities.flatMap((line) => [line.entity].flat()))],
-        period: "5minute",
-        types: [...new Set(entities.map((line) => line.stat || "mean"))],
-      })
-      .then(
-        (stats) => ((this.todayStats = stats), this.render()),
-        (error) => ((this.error = error.message || String(error)), this.render())
-      );
+  // Today: 5-minute statistics, raw states and the meals CSV
+  loadDay() {
+    this.dayLoaded = Date.now();
+    const { sheet, series } = this.config;
+    const start = new Date(startOfDay(Date.now())).toISOString();
+    const statLines = series.filter((line) => line.entity && !line.day);
+    const historyIds = [...new Set(series.flatMap((line) => [line.day?.history, line.day?.time_in]).filter(Boolean))];
+    const mealsUrl =
+      sheet && series.some((line) => line.column !== undefined && line.day !== false)
+        ? this._hass.states[sheet.source]?.attributes.meals_url
+        : null;
+    const stats = statLines.length
+      ? this._hass.callWS({
+          type: "recorder/statistics_during_period",
+          start_time: start,
+          statistic_ids: [...new Set(statLines.flatMap((line) => [line.entity].flat()))],
+          period: "5minute",
+          types: [...new Set(statLines.map((line) => line.stat || "mean"))],
+        })
+      : Promise.resolve({});
+    const history = historyIds.length
+      ? this._hass.callWS({
+          type: "history/history_during_period",
+          start_time: start,
+          entity_ids: historyIds,
+          minimal_response: true,
+          no_attributes: true,
+          significant_changes_only: false,
+        })
+      : Promise.resolve({});
+    const meals = mealsUrl
+      ? fetch(mealsUrl, { cache: "no-store" }).then((response) => {
+          if (!response.ok) throw new Error(`Meals answered ${response.status}`);
+          return response.text().then(parseCsv);
+        })
+      : Promise.resolve(null);
+    Promise.all([stats, history, meals]).then(
+      ([stats, history, meals]) => ((this.day = { stats, history, meals }), (this.error = null), this.render()),
+      (error) => ((this.error = error.message || String(error)), this.render())
+    );
   }
 
-  // Today: a change series is a running total from midnight, a list of entities takes the highest total at each time
-  todayPoints() {
+  dayPoints() {
     const start = startOfDay(Date.now());
-    const end = start + DAY_MS;
-    const lines = this.config.series.map((line) => {
-      const scale = line.scale ?? 1;
-      if (line.column !== undefined) {
-        const today = this.points(1).lines[this.config.series.indexOf(line)];
-        const value = today.find((point) => point.time === start)?.value;
-        const flat = value === undefined ? [] : [{ time: start, value }, { time: Date.now(), value }];
-        return Object.assign(flat, { flat: true });
-      }
-      const highest = new Map();
-      for (const entity of [line.entity].flat()) {
-        let total = 0;
-        for (const stat of this.todayStats[entity] || []) {
-          const value = stat[line.stat || "mean"];
-          if (value === null || value === undefined) continue;
-          const time = (typeof stat.start === "number" ? stat.start : Date.parse(stat.start)) + FIVE_MINUTES_MS;
-          const point = line.stat === "change" ? (total += value) : value;
-          highest.set(time, Math.max(highest.get(time) ?? -Infinity, point * scale));
-        }
-      }
-      return [...highest].map(([time, value]) => ({ time, value })).sort((a, b) => a.time - b.time);
+    const now = Date.now();
+    const lines = this.config.series.map((line, index) => {
+      if (line.day === false) return [];
+      if (line.column !== undefined) return this.mealLine(line, index, start, now);
+      if (line.day?.history) return this.historyLine(line, start, now);
+      if (line.day?.time_in) return this.timeInLine(line, start, now);
+      return this.fiveMinuteLine(line);
     });
-    return { start, end, lines, step: FIVE_MINUTES_MS };
+    return { start, end: start + DAY_MS, lines, step: FIVE_MINUTES_MS };
+  }
+
+  // The running total of today's meals, a step at each meal. Without the meals CSV, the day's total as a flat line
+  mealLine(line, index, start, now) {
+    const scale = line.scale ?? 1;
+    if (!this.day.meals) {
+      const value = this.points(1).lines[index].find((point) => point.time === start)?.value;
+      return steps(value ?? null, [], start, now);
+    }
+    let total = 0;
+    const events = this.day.meals
+      .map((row) => ({ time: Date.parse(row[0]), value: parseNumber(row[line.column]) }))
+      .filter((meal) => Number.isFinite(meal.time) && meal.value !== null)
+      .sort((a, b) => a.time - b.time)
+      .map((meal) => ({ time: meal.time, value: (total += meal.value) * scale }));
+    return steps(0, events, start, now);
+  }
+
+  historyLine(line, start, now) {
+    const scale = line.scale ?? 1;
+    const values = (this.day.history[line.day.history] || [])
+      .map((entry) => ({ time: historyTime(entry), value: parseFloat(entry.s) * scale }))
+      .filter((entry) => Number.isFinite(entry.value));
+    const initial = values.length && values[0].time <= start ? values.shift().value : null;
+    return steps(initial, values, start, now);
+  }
+
+  // Hours in the state since midnight: rises while in it, flat otherwise
+  timeInLine(line, start, now) {
+    const entries = this.day.history[line.day.time_in] || [];
+    const points = [{ time: start, value: 0 }];
+    let total = 0;
+    entries.forEach((entry, i) => {
+      const from = Math.max(historyTime(entry), start);
+      const to = i + 1 < entries.length ? Math.min(historyTime(entries[i + 1]), now) : now;
+      if (to <= from) return;
+      if (entry.s === line.day.state) total += (to - from) / HOUR_MS;
+      points.push({ time: to, value: total });
+    });
+    return Object.assign(points, { joined: true });
+  }
+
+  // A change series is a running total from midnight, a list of entities takes the highest total at each time
+  fiveMinuteLine(line) {
+    const scale = line.scale ?? 1;
+    const highest = new Map();
+    for (const entity of [line.entity].flat()) {
+      let total = 0;
+      for (const stat of this.day.stats[entity] || []) {
+        const value = stat[line.stat || "mean"];
+        if (value === null || value === undefined) continue;
+        const time = statTime(stat) + FIVE_MINUTES_MS;
+        const point = line.stat === "change" ? (total += value) : value;
+        highest.set(time, Math.max(highest.get(time) ?? -Infinity, point * scale));
+      }
+    }
+    return [...highest].map(([time, value]) => ({ time, value })).sort((a, b) => a.time - b.time);
   }
 
   points(daysOverride) {
@@ -235,18 +360,25 @@ class FrogDailyChart extends HTMLElement {
           if (sheet.keep_column !== undefined && (row[sheet.keep_column] || "").trim().toUpperCase() !== "TRUE") continue;
           add(date.getTime(), parseNumber(row[line.column]));
         }
+      } else if (line.measured) {
+        // A day with the counter but no new measurement gets no point
+        const means = byDay(this.stats[line.entity], line.stat || "mean");
+        const sums = byDay(this.stats[line.measured.sum], "change");
+        const counts = byDay(this.stats[line.measured.count], "change");
+        for (const time of new Set([...means.keys(), ...counts.keys()])) {
+          if (!counts.has(time)) add(time, means.get(time));
+          else if (counts.get(time) > 0) add(time, (sums.get(time) ?? 0) / counts.get(time));
+        }
       } else {
         const highest = new Map();
         for (const entity of [line.entity].flat()) {
-          for (const stat of this.stats[entity] || []) {
-            const time = startOfDay(typeof stat.start === "number" ? stat.start : Date.parse(stat.start));
-            const value = stat[line.stat || "mean"];
-            if (value !== null && value !== undefined) highest.set(time, Math.max(highest.get(time) ?? -Infinity, value));
-          }
+          byDay(this.stats[entity], line.stat || "mean").forEach((value, time) =>
+            highest.set(time, Math.max(highest.get(time) ?? -Infinity, value))
+          );
         }
         highest.forEach((value, time) => add(time, value));
       }
-      return points.sort((a, b) => a.time - b.time);
+      return Object.assign(points.sort((a, b) => a.time - b.time), { joined: line.join });
     });
     return { start, end, lines, step: DAY_MS };
   }
@@ -256,18 +388,20 @@ class FrogDailyChart extends HTMLElement {
     if (!root || !this.config) return;
     const width = Math.max(this.clientWidth - 32, 200);
     let body;
-    if (this.error) body = `<div class="note">${this.error}</div>`;
-    else if (!this.rows || !this.stats || (this.isDay && !this.todayStats)) body = `<div class="note">Loading…</div>`;
+    if (this.isDay && this.config.day_note) body = `<div class="note">${this.config.day_note}</div>`;
+    else if (this.error) body = `<div class="note">${this.error}</div>`;
+    else if (!this.rows || !this.stats || (this.isDay && !this.day)) body = `<div class="note">Loading…</div>`;
     else {
-      const { start, end, lines, step } = this.isDay ? this.todayPoints() : this.points();
+      const { start, end, lines, step } = this.isDay ? this.dayPoints() : this.points();
       body = lines.some((line) => line.length)
         ? this.chart(width, start, end, lines, step)
         : `<div class="note">No data in this range yet</div>`;
     }
     const { title, series } = this.config;
+    const shown = series.filter((line) => !(this.isDay && (line.day === false || this.config.day_note)));
     const legend =
-      series.length > 1
-        ? `<div class="legend">${series
+      shown.length > 1
+        ? `<div class="legend">${shown
             .map((line) => `<span><i style="background:${line.color}"></i>${line.name}${line.unit ? `, ${line.unit}` : ""}</span>`)
             .join("")}</div>`
         : "";
@@ -329,14 +463,16 @@ class FrogDailyChart extends HTMLElement {
 
     lines.forEach((line, index) => {
       const { color, name, unit = "", axis = "left" } = this.config.series[index];
-      // A missing day (or 5 minutes for Day) breaks the line. Dots only when there are few points
+      // A missing day (or 5 minutes for Day) breaks the line, unless it is joined. Dots only when there are few points,
+      // and on a joined Day line only where a value came in
       let path = "";
       line.forEach((point, i) => {
-        const joined = i > 0 && (line.flat || point.time - line[i - 1].time <= step * 1.5);
+        const joined = i > 0 && (line.joined || point.time - line[i - 1].time <= step * 1.5);
         path += `${joined ? "L" : "M"}${x(point.time)},${y(point.value, axis)}`;
       });
       svg += `<path d="${path}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round"/>`;
-      for (const point of line.length > 60 ? [] : line) {
+      const dots = this.isDay && line.joined ? line.filter((point) => point.mark) : line;
+      for (const point of dots.length > 60 ? [] : dots) {
         svg += `<circle cx="${x(point.time)}" cy="${y(point.value, axis)}" r="3" fill="${color}">
           <title>${(this.isDay ? formatTime : formatDay)(point.time)} · ${name} ${formatValue(point.value)} ${unit}</title></circle>`;
       }
