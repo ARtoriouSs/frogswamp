@@ -293,18 +293,10 @@ rest:
         icon: mdi:google
         value_template: "{{ value_json.google.ok }}"
 
-# Hours asleep and in exercise from the watch's activity state. The daily max of each goes to the
-# long-term statistics, so the graph keeps them after the 31-day history is gone
+# Hours in exercise per calendar day from the watch's activity state. The daily max goes to the long-term
+# statistics, so the graph keeps it after the 31-day history is gone. Sleep is read from the raw states, see
+# www/daily-chart.js
 sensor:
-  # By calendar day: a night that crosses midnight counts on both days
-  - platform: history_stats
-    name: Watch sleep
-    unique_id: repo_watch_sleep
-    entity_id: sensor.google_pixel_watch_activity_state
-    state: asleep
-    type: time
-    start: "{{ today_at() }}"
-    end: "{{ now() }}"
   - platform: history_stats
     name: Watch exercise
     unique_id: repo_watch_exercise

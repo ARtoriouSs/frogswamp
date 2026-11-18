@@ -4403,6 +4403,7 @@ views:
             primary: Fats goal
 
       - type: grid
+        column_span: 2
         cards:
           - type: heading
             heading: Activity
@@ -4415,40 +4416,11 @@ views:
                 stat: change
                 name: Steps
                 color: "#22c55e"
-
-      - type: grid
-        cards:
-          - type: heading
-            heading: Sleep
-            icon: mdi:sleep
-          - <<: *daily_chart
-            title: Sleep, h
-            # Hours asleep per calendar day from the watch. Health Connect gives one night on the day it ends, not in Day
-            series:
-              - entity: sensor.watch_sleep
-                stat: max
-                name: Watch
-                unit: h
-                color: "#8b5cf6"
-                day:
-                  time_in: sensor.google_pixel_watch_activity_state
-                  state: asleep
-              - entity: sensor.health_sleep
-                stat: max
-                name: Health Connect
-                unit: h
-                color: "#c4b5fd"
-                day: false
-
-      - type: grid
-        column_span: 2
-        cards:
-          - type: heading
-            heading: Watch activity
-            icon: mdi:watch
+            grid_options:
+              columns: 12
           - <<: *daily_chart
             title: Exercise, h
-            # From the watch's activity state, only since 16.11.2026. Hours per calendar day, sleep is under Sleep
+            # From the watch's activity state, only since 16.11.2026. Hours per calendar day
             series:
               - entity: sensor.watch_exercise
                 stat: max
@@ -4458,58 +4430,35 @@ views:
                 day:
                   time_in: sensor.google_pixel_watch_activity_state
                   state: exercise
-          # When sleep and exercise happened, from the raw states, by the range at the top. Day is the last 24 h.
-          # HA keeps raw states for 31 days, so 3 months and Year show those 31 days
-          - type: heading
-            heading: Sleep and exercise timeline
-            heading_style: subtitle
-          - &activity_timeline
-            type: conditional
-            conditions:
-              - condition: state
-                entity: input_select.wellness_range
-                state: Day
-            card:
-              type: history-graph
-              hours_to_show: 24
-              entities:
-                - entity: sensor.google_pixel_watch_activity_state
-                  name: Activity
             grid_options:
-              columns: full
-          - <<: *activity_timeline
-            conditions:
-              - condition: state
-                entity: input_select.wellness_range
-                state: Week
-            card:
-              type: history-graph
-              hours_to_show: 168
-              entities:
-                - entity: sensor.google_pixel_watch_activity_state
-                  name: Activity
-          - <<: *activity_timeline
-            conditions:
-              - condition: state
-                entity: input_select.wellness_range
-                state: Month
-            card:
-              type: history-graph
-              hours_to_show: 720
-              entities:
-                - entity: sensor.google_pixel_watch_activity_state
-                  name: Activity
-          - <<: *activity_timeline
-            conditions:
-              - condition: state
-                entity: input_select.wellness_range
-                state: [3 months, Year]
-            card:
-              type: history-graph
-              hours_to_show: 744
-              entities:
-                - entity: sensor.google_pixel_watch_activity_state
-                  name: Activity
+              columns: 12
+          # When sleep and exercise happened, by the range at the top. Day is the last 24 h, the others at most
+          # the 31 days of raw states HA keeps
+          - type: custom:frog-activity-timeline
+            title: Sleep & Exercise timeline (watch state)
+            range: input_select.wellness_range
+            activity: &activity
+              watch: sensor.google_pixel_watch_activity_state
+              sleep: sensor.pixel_7_sleep_segment
+
+      - type: grid
+        column_span: 2
+        cards:
+          - type: heading
+            heading: Sleep
+            icon: mdi:sleep
+          - <<: *daily_chart
+            title: Sleep, h
+            # Hours asleep per calendar day: from the watch on days it reported sleep, otherwise from the Health Connect
+            # segments. Days older than 31 days are the Health Connect night on the day it ended
+            activity: *activity
+            series:
+              - sleep: true
+                entity: sensor.health_sleep
+                stat: max
+                name: Sleep
+                unit: h
+                color: "#8b5cf6"
 
       - type: grid
         column_span: 2

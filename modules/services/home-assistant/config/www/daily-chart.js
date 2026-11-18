@@ -36,6 +36,17 @@
 //         time_in: sensor.watch_state   (or hours spent in a state since midnight, rising only while in it)
 //         state: asleep
 //                                       (day: false leaves the series out of Day)
+//     - sleep: true                     (hours asleep per calendar day from the activity below, Day rises while asleep.
+//       entity: sensor.health_sleep     Days older than the 31 days of raw history use this entity's stat)
+//       stat: max
+//   activity:                           (needed for a sleep series)
+//     watch: sensor.watch_activity      (its asleep and exercise states)
+//     sleep: sensor.pixel_7_sleep_segment  (Health Connect segments, start and end attributes in ms)
+//
+// custom:frog-activity-timeline draws the sleep and exercise intervals of the same activity config:
+//   type: custom:frog-activity-timeline
+//   range: input_select.wellness_range  (Day is the last 24 h, the others at most the last 31 days)
+//   activity: (as above)
 const DAY_MS = 24 * 60 * 60 * 1000;
 const RANGE_DAYS = { Day: 1, Week: 7, Month: 30, "3 months": 91, Year: 365 };
 const FIVE_MINUTES_MS = 5 * 60 * 1000;
@@ -139,8 +150,67 @@ const steps = (initial, events, start, now) => {
   return Object.assign(points, { joined: true });
 };
 
-// History entries: {s: state, lu: seconds}
+// History entries: {s: state, a: attributes, lu: seconds}
 const historyTime = (entry) => (entry.lu ?? entry.lc) * 1000;
+
+// HA keeps raw states (recorder purge_keep_days) for this long
+const RAW_DAYS = 31;
+
+// The next midnight, also on a day with a clock change
+const nextDay = (day) => startOfDay(day + DAY_MS + 2 * HOUR_MS);
+
+const clip = (intervals, from, to) =>
+  intervals
+    .filter((interval) => interval.to > from && interval.from < to)
+    .map((interval) => ({ ...interval, from: Math.max(interval.from, from), to: Math.min(interval.to, to) }));
+
+const loadActivity = (hass, activity) =>
+  hass
+    .callWS({
+      type: "history/history_during_period",
+      start_time: new Date(startOfDay(Date.now()) - RAW_DAYS * DAY_MS).toISOString(),
+      entity_ids: [activity.watch, activity.sleep],
+      minimal_response: false,
+      no_attributes: false,
+      significant_changes_only: false,
+    })
+    .then((history) => activityIntervals(history, activity));
+
+// Sleep and exercise as time intervals. The watch is more exact, so a calendar day takes its sleep from the watch
+// when the watch reported any sleep on it, otherwise from the Health Connect segments. Exercise is only on the watch
+const activityIntervals = (history, activity) => {
+  const now = Date.now();
+  const watch = { sleep: [], exercise: [] };
+  const states = history[activity.watch] || [];
+  states.forEach((entry, i) => {
+    const kind = { asleep: "sleep", exercise: "exercise" }[entry.s];
+    const from = historyTime(entry);
+    const to = i + 1 < states.length ? historyTime(states[i + 1]) : now;
+    if (kind && to > from) watch[kind].push({ from, to, source: "watch" });
+  });
+  const seen = new Set();
+  const health = [];
+  for (const entry of history[activity.sleep] || []) {
+    const { start, end } = entry.a || {};
+    if (!(start < end) || seen.has(`${start}-${end}`)) continue;
+    seen.add(`${start}-${end}`);
+    health.push({ from: start, to: Math.min(end, now), source: "Health Connect" });
+  }
+  const sleep = [];
+  const all = [...watch.sleep, ...health];
+  if (all.length) {
+    for (let day = startOfDay(Math.min(...all.map((interval) => interval.from))); day <= now; day = nextDay(day)) {
+      const fromWatch = clip(watch.sleep, day, nextDay(day));
+      sleep.push(...(fromWatch.length ? fromWatch : clip(health, day, nextDay(day))));
+    }
+  }
+  return { sleep, exercise: watch.exercise };
+};
+
+const formatTimeRange = (interval) =>
+  `${formatDay(interval.from)} ${formatTime(interval.from)}–${formatTime(interval.to)}, ${formatValue(
+    (interval.to - interval.from) / HOUR_MS
+  )} h (${interval.source})`;
 
 class FrogDailyChart extends HTMLElement {
   setConfig(config) {
@@ -152,6 +222,7 @@ class FrogDailyChart extends HTMLElement {
     this.rows = null;
     this.stats = null;
     this.day = null;
+    this.activity = null;
     this.error = null;
     this.loaded = 0;
     this.dayLoaded = 0;
@@ -192,9 +263,18 @@ class FrogDailyChart extends HTMLElement {
     clearInterval(this.timer);
   }
 
+  get hasSleep() {
+    return this.config.series.some((line) => line.sleep);
+  }
+
   watched() {
-    const { sheet = {}, series } = this.config;
-    return [sheet.updated, ...series.flatMap((line) => [line.day?.history, line.day?.time_in])].filter(Boolean);
+    const { sheet = {}, series, activity = {} } = this.config;
+    const sleep = this.hasSleep ? [activity.watch, activity.sleep] : [];
+    return [sheet.updated, ...sleep, ...series.flatMap((line) => [line.day?.history, line.day?.time_in])].filter(Boolean);
+  }
+
+  loadSleep() {
+    return this.hasSleep ? loadActivity(this._hass, this.config.activity) : Promise.resolve({ sleep: [], exercise: [] });
   }
 
   getCardSize() {
@@ -223,8 +303,9 @@ class FrogDailyChart extends HTMLElement {
           types: [...new Set(types)],
         })
       : Promise.resolve({});
-    Promise.all([rows, stats]).then(
-      ([rows, stats]) => ((this.rows = rows), (this.stats = stats), (this.error = null), this.render()),
+    Promise.all([rows, stats, this.loadSleep()]).then(
+      ([rows, stats, activity]) =>
+        ((this.rows = rows), (this.stats = stats), (this.activity = activity), (this.error = null), this.render()),
       (error) => ((this.error = error.message || String(error)), this.render())
     );
   }
@@ -265,8 +346,9 @@ class FrogDailyChart extends HTMLElement {
           return response.text().then(parseCsv);
         })
       : Promise.resolve(null);
-    Promise.all([stats, history, meals]).then(
-      ([stats, history, meals]) => ((this.day = { stats, history, meals }), (this.error = null), this.render()),
+    Promise.all([stats, history, meals, this.loadSleep()]).then(
+      ([stats, history, meals, activity]) =>
+        ((this.day = { stats, history, meals }), (this.activity = activity), (this.error = null), this.render()),
       (error) => ((this.error = error.message || String(error)), this.render())
     );
   }
@@ -277,6 +359,7 @@ class FrogDailyChart extends HTMLElement {
     const lines = this.config.series.map((line, index) => {
       if (line.day === false) return [];
       if (line.column !== undefined) return this.mealLine(line, index, start, now);
+      if (line.sleep) return this.sleepLine(start, now);
       if (line.day?.history) return this.historyLine(line, start, now);
       if (line.day?.time_in) return this.timeInLine(line, start, now);
       return this.fiveMinuteLine(line);
@@ -324,6 +407,19 @@ class FrogDailyChart extends HTMLElement {
     return Object.assign(points, { joined: true });
   }
 
+  // Hours asleep since midnight, rising through each sleep interval
+  sleepLine(start, now) {
+    const points = [{ time: start, value: 0 }];
+    let total = 0;
+    for (const interval of clip(this.activity.sleep, start, now).sort((a, b) => a.from - b.from)) {
+      points.push({ time: interval.from, value: total });
+      total += (interval.to - interval.from) / HOUR_MS;
+      points.push({ time: interval.to, value: total, mark: true });
+    }
+    points.push({ time: now, value: total });
+    return Object.assign(points, { joined: true });
+  }
+
   // A change series is a running total from midnight, a list of entities takes the highest total at each time
   fiveMinuteLine(line) {
     const scale = line.scale ?? 1;
@@ -360,6 +456,16 @@ class FrogDailyChart extends HTMLElement {
           if (sheet.keep_column !== undefined && (row[sheet.keep_column] || "").trim().toUpperCase() !== "TRUE") continue;
           add(date.getTime(), parseNumber(row[line.column]));
         }
+      } else if (line.sleep) {
+        // Raw history covers the last 31 days, older days use the entity's daily stat
+        const rawStart = startOfDay(Date.now()) - RAW_DAYS * DAY_MS;
+        const hours = new Map();
+        for (const interval of this.activity.sleep) {
+          const day = startOfDay(interval.from);
+          hours.set(day, (hours.get(day) ?? 0) + (interval.to - interval.from) / HOUR_MS);
+        }
+        byDay(this.stats[line.entity], line.stat || "max").forEach((value, time) => time < rawStart && add(time, value));
+        hours.forEach((value, time) => time >= rawStart && add(time, value));
       } else if (line.measured) {
         // A day with the counter but no new measurement gets no point
         const means = byDay(this.stats[line.entity], line.stat || "mean");
@@ -390,7 +496,7 @@ class FrogDailyChart extends HTMLElement {
     let body;
     if (this.isDay && this.config.day_note) body = `<div class="note">${this.config.day_note}</div>`;
     else if (this.error) body = `<div class="note">${this.error}</div>`;
-    else if (!this.rows || !this.stats || (this.isDay && !this.day)) body = `<div class="note">Loading…</div>`;
+    else if (!this.rows || !this.stats || !this.activity || (this.isDay && !this.day)) body = `<div class="note">Loading…</div>`;
     else {
       const { start, end, lines, step } = this.isDay ? this.dayPoints() : this.points();
       body = lines.some((line) => line.length)
@@ -481,6 +587,117 @@ class FrogDailyChart extends HTMLElement {
   }
 }
 
+// Sleep and exercise intervals as bars, sleep from Health Connect lighter than from the watch
+class FrogActivityTimeline extends HTMLElement {
+  setConfig(config) {
+    if (!config.activity?.watch || !config.activity?.sleep) throw new Error("activity.watch and activity.sleep are required");
+    this.config = config;
+    if (!this.shadowRoot) this.attachShadow({ mode: "open" });
+    this.data = null;
+    this.error = null;
+    this.loaded = 0;
+    this.key = null;
+  }
+
+  set hass(hass) {
+    this._hass = hass;
+    const { watch, sleep } = this.config.activity;
+    const key = [hass.states[watch]?.last_updated, hass.states[sleep]?.last_updated].join();
+    const age = Date.now() - this.loaded;
+    if (age > FIVE_MINUTES_MS || (key !== this.key && age > DAY_RELOAD_MS)) {
+      this.key = key;
+      this.load();
+    }
+    const range = this.config.range ? hass.states[this.config.range]?.state : null;
+    if (range !== this.range) {
+      this.range = range;
+      this.render();
+    }
+  }
+
+  connectedCallback() {
+    this.resize = new ResizeObserver(() => this.render());
+    this.resize.observe(this);
+    this.timer = setInterval(() => this.render(), 60 * 1000);
+  }
+
+  disconnectedCallback() {
+    this.resize?.disconnect();
+    clearInterval(this.timer);
+  }
+
+  getCardSize() {
+    return 2;
+  }
+
+  getGridOptions() {
+    return { columns: "full", rows: "auto" };
+  }
+
+  load() {
+    this.loaded = Date.now();
+    loadActivity(this._hass, this.config.activity).then(
+      (data) => ((this.data = data), (this.error = null), this.render()),
+      (error) => ((this.error = error.message || String(error)), this.render())
+    );
+  }
+
+  render() {
+    const root = this.shadowRoot;
+    if (!root || !this.config) return;
+    const width = Math.max(this.clientWidth - 32, 200);
+    const now = Date.now();
+    const isDay = this.range === "Day";
+    const days = Math.min(RANGE_DAYS[this.range] || RANGE_DAYS.Month, RAW_DAYS);
+    const start = isDay ? now - DAY_MS : startOfDay(now) - (days - 1) * DAY_MS;
+    const label = 64;
+    const rowHeight = 22;
+    const plotWidth = width - label - 8;
+    const x = (time) => label + ((time - start) / (now - start)) * plotWidth;
+    let body;
+    if (this.error) body = `<div class="note">${this.error}</div>`;
+    else if (!this.data) body = `<div class="note">Loading…</div>`;
+    else {
+      const rows = [
+        ["Sleep", this.data.sleep, "#8b5cf6"],
+        ["Exercise", this.data.exercise, "#f97316"],
+      ];
+      let svg = "";
+      rows.forEach(([name, intervals, color], row) => {
+        const top = row * (rowHeight + 6);
+        svg += `<text x="0" y="${top + 15}">${name}</text>`;
+        svg += `<rect class="track" x="${label}" y="${top}" width="${plotWidth}" height="${rowHeight}" rx="3"/>`;
+        for (const interval of clip(intervals, start, now)) {
+          const left = x(interval.from);
+          svg += `<rect x="${left}" y="${top}" width="${Math.max(x(interval.to) - left, 1)}" height="${rowHeight}"
+            fill="${color}" opacity="${interval.source === "watch" ? 1 : 0.5}"><title>${formatTimeRange(interval)}</title></rect>`;
+        }
+      });
+      const axis = 2 * (rowHeight + 6) + 12;
+      const ticks = Math.min(6, Math.floor(plotWidth / 70));
+      for (let i = 0; i <= ticks; i++) {
+        const time = start + ((now - start) * i) / ticks;
+        svg += `<text x="${x(time)}" y="${axis}" text-anchor="middle">${(isDay ? formatTime : formatDay)(time)}</text>`;
+      }
+      body = `<svg width="${width}" height="${axis + 4}" viewBox="0 0 ${width} ${axis + 4}">${svg}</svg>`;
+    }
+    const note = RANGE_DAYS[this.range] > RAW_DAYS ? `<div class="hint">The last ${RAW_DAYS} days: HA keeps raw states that long</div>` : "";
+    root.innerHTML = `<style>
+      :host { display: block; }
+      ha-card { padding: 12px 16px; }
+      .title { font-size: 16px; font-weight: 500; margin-bottom: 8px; }
+      .legend, .hint { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--secondary-text-color); margin-bottom: 4px; }
+      .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; }
+      .note { height: 60px; display: flex; align-items: center; justify-content: center; color: var(--secondary-text-color); }
+      svg { display: block; overflow: visible; }
+      text { fill: var(--secondary-text-color); font-size: 11px; }
+      .track { fill: var(--divider-color); opacity: 0.4; }
+    </style><ha-card>${this.config.title ? `<div class="title">${this.config.title}</div>` : ""}
+      <div class="legend"><span><i style="background:#8b5cf6"></i>Watch</span><span><i style="background:#8b5cf6;opacity:.5"></i>Health Connect</span></div>
+      ${body}${note}</ha-card>`;
+  }
+}
+
 // HA puts its own registry in place of window.customElements while it starts, and it doesn't see an element
 // defined in the browser's registry before that: the card stays "Custom element doesn't exist" until a reload.
 // So define it once HA has started (5 s at most)
@@ -490,3 +707,4 @@ const defineWhenReady = (name, element) =>
   );
 
 defineWhenReady("frog-daily-chart", FrogDailyChart);
+defineWhenReady("frog-activity-timeline", FrogActivityTimeline);
