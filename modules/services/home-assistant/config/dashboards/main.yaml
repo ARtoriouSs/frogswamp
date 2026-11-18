@@ -4430,7 +4430,7 @@ views:
                 name: Watch
                 unit: h
                 color: "#8b5cf6"
-                day: &day_asleep
+                day:
                   time_in: sensor.google_pixel_watch_activity_state
                   state: asleep
               - entity: sensor.health_sleep
@@ -4447,22 +4447,14 @@ views:
             heading: Watch activity
             icon: mdi:watch
           - <<: *daily_chart
-            title: Sleep and exercise, h
-            # From the watch's activity state, only since 16.11.2026. Totals per calendar day (sleep was 18:00 to 18:00
-            # before 18.11.2026)
+            title: Exercise, h
+            # From the watch's activity state, only since 16.11.2026. Hours per calendar day, sleep is under Sleep
             series:
-              - entity: sensor.watch_sleep
-                stat: max
-                name: Sleep
-                unit: h
-                color: "#8b5cf6"
-                day: *day_asleep
               - entity: sensor.watch_exercise
                 stat: max
                 name: Exercise
                 unit: h
                 color: "#f97316"
-                axis: right
                 day:
                   time_in: sensor.google_pixel_watch_activity_state
                   state: exercise
