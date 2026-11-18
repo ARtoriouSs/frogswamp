@@ -316,7 +316,7 @@ const STYLE = `
   .title { font-size: 16px; font-weight: 500; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
   .info { cursor: pointer; color: var(--secondary-text-color); font-size: 14px; }
   .info-text { font-size: 12px; color: var(--secondary-text-color); margin: -4px 0 8px; display: none; }
-  .info-text.open { display: block; }
+  .info-text.open, .title:hover + .info-text { display: block; }
   .legend, .hint { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--secondary-text-color); margin-bottom: 4px; }
   .legend i, .tip i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; }
   .note { height: ${HEIGHT}px; display: flex; align-items: center; justify-content: center; text-align: center; color: var(--secondary-text-color); }
@@ -409,14 +409,19 @@ class WellnessCard extends HTMLElement {
   header() {
     const { title, info } = this.config;
     if (!title) return "";
-    const icon = info ? `<span class="info" title="${info}">ⓘ</span>` : "";
-    return `<div class="title">${title}${icon}</div>${info ? `<div class="info-text">${info}</div>` : ""}`;
+    // Open on hover, or on a tap that stays open over the re-renders
+    const icon = info ? `<span class="info">ⓘ</span>` : "";
+    const text = info ? `<div class="info-text${this.infoOpen ? " open" : ""}">${info}</div>` : "";
+    return `<div class="title">${title}${icon}</div>${text}`;
   }
 
   // Mouse hover clears on leave, a touch stays until the next one
   wire() {
     const root = this.shadowRoot;
-    root.querySelector(".info")?.addEventListener("click", () => root.querySelector(".info-text").classList.toggle("open"));
+    root.querySelector(".info")?.addEventListener("click", () => {
+      this.infoOpen = !this.infoOpen;
+      root.querySelector(".info-text").classList.toggle("open", this.infoOpen);
+    });
     const svg = root.querySelector("svg.chart");
     if (!svg || !this.plot) return;
     const move = (event) => {

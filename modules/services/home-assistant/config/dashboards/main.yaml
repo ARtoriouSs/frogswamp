@@ -4360,7 +4360,11 @@ views:
             primary: Fats goal
           - <<: *daily_chart
             title: Calories in vs out
-            # Day adds up today's meals at their times and the burned calories every 5 minutes
+            info: >-
+              Burned is what each source shows at the end of the day. Health Connect gets it from Fitbit, which counts the
+              whole day's resting burn from midnight, so its line starts the day at about 1,800 kcal. The watch adds it up as
+              the day goes and stays flat while it is off the wrist
+            # Day adds up the meals at their times and shows the burned totals every 5 minutes
             sheet: &calories_sheet
               source: sensor.calories_sheet
               date_column: 0
@@ -4374,14 +4378,14 @@ views:
                 bar: true
               # Two sources while we compare them: the watch's own count and the Health Connect total
               - entity: sensor.google_pixel_watch_daily_calories
-                stat: change
+                stat: state
                 name: Burned (watch)
                 unit: kcal
                 color: "#ef4444"
                 bar: true
                 skip_today: true
               - entity: sensor.pixel_7_total_calories_burned
-                stat: change
+                stat: state
                 name: Burned (Health Connect)
                 unit: kcal
                 color: "#a855f7"
