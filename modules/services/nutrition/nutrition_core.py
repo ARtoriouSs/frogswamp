@@ -142,12 +142,12 @@ def to_csv(days):
     return "\n".join(lines) + "\n"
 
 
-def meals_csv(meals, day, tz):
-    """The meals of one day with their times, for the live Day charts. Same columns as daily.csv"""
-    lines = ["time,calories,fats,proteins,carbohydrates"]
-    for meal in sorted((m for m in meals if meal_day(m.eaten, tz) == day), key=lambda m: m.eaten):
+def meals_csv(meals, tz):
+    """Every meal with its time and its day (after the 04:00 rule), for the Day charts. Same numbers as daily.csv"""
+    lines = ["time,calories,fats,proteins,carbohydrates,day"]
+    for meal in sorted(meals, key=lambda m: m.eaten):
         numbers = ",".join(_number_text(v) for v in (meal.kcal, meal.fat, meal.protein, meal.carbs))
-        lines.append(f"{meal.eaten.astimezone(tz).isoformat()},{numbers}")
+        lines.append(f"{meal.eaten.astimezone(tz).isoformat()},{numbers},{meal_day(meal.eaten, tz).isoformat()}")
     return "\n".join(lines) + "\n"
 
 

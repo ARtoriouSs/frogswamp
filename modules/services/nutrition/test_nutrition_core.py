@@ -117,7 +117,7 @@ def test_csv_format():
     )
 
 
-def test_meals_csv_has_one_day_in_time_order():
+def test_meals_csv_in_time_order_with_their_day():
     pages = [
         page("1", eaten="2026-11-15T02:00:00+01:00", kcal=100),
         page("2", eaten="2026-11-14T08:00:00+01:00", kcal=200, protein=10, fat=5, carbs=20),
@@ -125,11 +125,12 @@ def test_meals_csv_has_one_day_in_time_order():
         page("4", eaten="2026-11-15T12:00:00+01:00", kcal=400),
     ]
     meals, _ = nc.parse_meals(pages, TZ)
-    assert nc.meals_csv(meals, dt.date(2026, 11, 14), TZ).splitlines() == [
-        "time,calories,fats,proteins,carbohydrates",
-        "2026-11-14T08:00:00+01:00,200,5,10,20",
-        "2026-11-14T13:00:00+01:00,300,1.6,1.8,2.4",
-        "2026-11-15T02:00:00+01:00,100,1.6,1.8,2.4",
+    assert nc.meals_csv(meals, TZ).splitlines() == [
+        "time,calories,fats,proteins,carbohydrates,day",
+        "2026-11-14T08:00:00+01:00,200,5,10,20,2026-11-14",
+        "2026-11-14T13:00:00+01:00,300,1.6,1.8,2.4,2026-11-14",
+        "2026-11-15T02:00:00+01:00,100,1.6,1.8,2.4,2026-11-14",
+        "2026-11-15T12:00:00+01:00,400,1.6,1.8,2.4,2026-11-15",
     ]
 
 

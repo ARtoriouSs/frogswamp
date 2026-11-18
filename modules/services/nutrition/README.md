@@ -8,7 +8,7 @@ phone → Claude project → Notion "Nutrition log" ─┐
                                                   ▼
                                     nutrition-sync (NUC, outbound only)
                                      ├─ /local/nutrition/daily.csv → Wellness charts
-                                     ├─ /local/nutrition/meals.csv → Wellness Day charts (today's meals with times)
+                                     ├─ /local/nutrition/meals.csv → Wellness Day charts (every meal with its time)
                                      ├─ 127.0.0.1:8131/status      → HA sensors and alerts
                                      └─ Google Health nutrition log
 ```

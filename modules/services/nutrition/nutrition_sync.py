@@ -311,7 +311,7 @@ def sync_once(cfg, state, now=None):
     today_date = nc.meal_day(now, cfg.tz)
     days = nc.daily_totals(meals, nc.parse_day_flags(day_pages), cfg.tz)
     _write_atomic(cfg.state_dir / "www" / "daily.csv", nc.to_csv(days))
-    _write_atomic(cfg.state_dir / "www" / "meals.csv", nc.meals_csv(meals, today_date, cfg.tz))
+    _write_atomic(cfg.state_dir / "www" / "meals.csv", nc.meals_csv(meals, cfg.tz))
     today = next((d for d in days if d.day == today_date), None)
     state.status.update(
         last_read=now.isoformat(),

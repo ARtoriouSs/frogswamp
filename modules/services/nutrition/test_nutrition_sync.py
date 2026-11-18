@@ -154,7 +154,7 @@ def test_sync_writes_csv_and_status(api, cfg):
     assert status["google"]["ok"] is True
     assert status["google"]["pending"] == 0
     meals = (cfg.state_dir / "www" / "meals.csv").read_text().splitlines()
-    assert meals == ["time,calories,fats,proteins,carbohydrates", "2026-11-14T12:00:00+01:00,300,1.6,1.8,2.4"]
+    assert meals == ["time,calories,fats,proteins,carbohydrates,day", "2026-11-14T12:00:00+01:00,300,1.6,1.8,2.4,2026-11-14"]
 
 
 def test_today_before_four_is_still_yesterday(api, cfg):
