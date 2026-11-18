@@ -142,6 +142,15 @@ def to_csv(days):
     return "\n".join(lines) + "\n"
 
 
+def meals_csv(meals, day, tz):
+    """The meals of one day with their times, for the live Day charts. Same columns as daily.csv"""
+    lines = ["time,calories,fats,proteins,carbohydrates"]
+    for meal in sorted((m for m in meals if meal_day(m.eaten, tz) == day), key=lambda m: m.eaten):
+        numbers = ",".join(_number_text(v) for v in (meal.kcal, meal.fat, meal.protein, meal.carbs))
+        lines.append(f"{meal.eaten.astimezone(tz).isoformat()},{numbers}")
+    return "\n".join(lines) + "\n"
+
+
 def meal_hash(meal):
     fields = [meal.product, meal.eaten.isoformat(), meal.meal, meal.kcal, meal.protein, meal.fat, meal.carbs]
     return hashlib.sha256(json.dumps(fields, ensure_ascii=False).encode()).hexdigest()

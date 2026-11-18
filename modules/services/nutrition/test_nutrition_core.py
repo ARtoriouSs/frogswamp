@@ -117,6 +117,22 @@ def test_csv_format():
     )
 
 
+def test_meals_csv_has_one_day_in_time_order():
+    pages = [
+        page("1", eaten="2026-11-15T02:00:00+01:00", kcal=100),
+        page("2", eaten="2026-11-14T08:00:00+01:00", kcal=200, protein=10, fat=5, carbs=20),
+        page("3", eaten="2026-11-14T13:00:00+01:00", kcal=300),
+        page("4", eaten="2026-11-15T12:00:00+01:00", kcal=400),
+    ]
+    meals, _ = nc.parse_meals(pages, TZ)
+    assert nc.meals_csv(meals, dt.date(2026, 11, 14), TZ).splitlines() == [
+        "time,calories,fats,proteins,carbohydrates",
+        "2026-11-14T08:00:00+01:00,200,5,10,20",
+        "2026-11-14T13:00:00+01:00,300,1.6,1.8,2.4",
+        "2026-11-15T02:00:00+01:00,100,1.6,1.8,2.4",
+    ]
+
+
 def test_csv_rounds_float_noise():
     days = [nc.DayTotal(day=dt.date(2026, 11, 13), kcal=0.1 + 0.2, fat=1.25, protein=0, carbs=2.04, full=False)]
     assert nc.to_csv(days).splitlines()[1] == "2026-11-13,0.3,1.2,0,2,FALSE"
