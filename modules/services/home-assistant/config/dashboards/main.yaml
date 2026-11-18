@@ -4208,14 +4208,34 @@ views:
           - type: heading
             heading: Body
             icon: mdi:human
-          - <<: *info
+          # Last value of each measure and the day it was taken, from the Health Connect sensor's date
+          - &body_measure
+            <<: *info
             entity: sensor.health_weight
-            primary: Last weighing
+            primary: Weight
             secondary: >-
-              {% set fat = states('sensor.health_body_fat') %}
-              {{ (states(entity) ~ ' kg' ~ (' · ' ~ fat ~ ' % fat' if has_value('sensor.health_body_fat') else '')) if has_value(entity) else 'No data from Health Connect' }}
+              {% set date = state_attr('sensor.pixel_7_' ~ entity.split('health_')[1], 'date') %}
+              {% if has_value(entity) %}{{ states(entity) }} {{ state_attr(entity, 'unit_of_measurement') }}{{ ' · ' ~ as_local(as_datetime(date)).strftime('%d.%m') if date }}{% else %}No data{% endif %}
             icon: mdi:scale-bathroom
             color: teal
+            grid_options:
+              columns: 3
+              rows: 1
+          - <<: *body_measure
+            entity: sensor.health_body_water_mass
+            primary: Body water
+            icon: mdi:water
+            color: blue
+          - <<: *body_measure
+            entity: sensor.health_bone_mass
+            primary: Bone mass
+            icon: mdi:bone
+            color: grey
+          - <<: *body_measure
+            entity: sensor.health_body_fat
+            primary: Body fat
+            icon: mdi:water-percent
+            color: amber
           - &daily_chart
             type: custom:frog-daily-chart
             range: input_select.wellness_range
@@ -4243,19 +4263,13 @@ views:
                 color: "#f59e0b"
                 axis: right
 
-      # Eaten calories and macros from the Notion log (nutrition-sync). A day is drawn once it ends at 04:00, unless it is marked incomplete in Notion
+      # Eaten calories and macros from the Notion log (nutrition-sync). Every day is drawn, today too, unless it is marked incomplete in Notion
       - type: grid
         column_span: 2
         cards:
           - type: heading
             heading: Nutrition
             icon: mdi:food-apple
-          - <<: *link
-            primary: Nutrition Log
-            icon: mdi:food-apple
-            tap_action:
-              action: url
-              url_path: https://app.notion.com/p/Nutrition-Log-41b659e3027580e6a131fb17668e86a4
           # Today against the goals below. The bar is full at 100 %, red over 115 % (the alert's limit)
           - &nutrition_today
             <<: *info
@@ -4274,18 +4288,31 @@ views:
             grid_options:
               columns: 6
               rows: 1
-          - <<: *nutrition_today
-            entity: sensor.nutrition_fats_of_goal
-            primary: Fats
-            icon: mdi:oil
-          - <<: *nutrition_today
+          - <<: *link
+            primary: Nutrition Log
+            icon: mdi:food-apple
+            grid_options:
+              columns: 6
+              rows: 1
+            tap_action:
+              action: url
+              url_path: https://app.notion.com/p/Nutrition-Log-41b659e3027580e6a131fb17668e86a4
+          - &nutrition_macro
+            <<: *nutrition_today
             entity: sensor.nutrition_proteins_of_goal
             primary: Proteins
             icon: mdi:food-drumstick
-          - <<: *nutrition_today
+            grid_options:
+              columns: 4
+              rows: 1
+          - <<: *nutrition_macro
             entity: sensor.nutrition_carbohydrates_of_goal
             primary: Carbohydrates
             icon: mdi:bread-slice
+          - <<: *nutrition_macro
+            entity: sensor.nutrition_fats_of_goal
+            primary: Fats
+            icon: mdi:oil
           - <<: *daily_chart
             title: Calories in vs out
             sheet: &calories_sheet
@@ -4327,19 +4354,26 @@ views:
                 unit: g
                 color: "#3b82f6"
           # A day runs from 04:00 to 04:00. Over 115 % sends a notification, over 150 % one about a likely wrong entry
-          - type: entities
-            title: Daily goals
+          # One line; tap a goal to change it
+          - &nutrition_goal
+            <<: *info
+            entity: input_number.nutrition_goal_kcal
+            primary: Calories goal
+            secondary: "{{ states(entity) | int }} {{ state_attr(entity, 'unit_of_measurement') }}"
+            icon: mdi:target
+            color: grey
             grid_options:
-              columns: full
-            entities:
-              - entity: input_number.nutrition_goal_kcal
-                name: Calories
-              - entity: input_number.nutrition_goal_fats
-                name: Fats
-              - entity: input_number.nutrition_goal_proteins
-                name: Proteins
-              - entity: input_number.nutrition_goal_carbohydrates
-                name: Carbohydrates
+              columns: 3
+              rows: 1
+          - <<: *nutrition_goal
+            entity: input_number.nutrition_goal_proteins
+            primary: Proteins goal
+          - <<: *nutrition_goal
+            entity: input_number.nutrition_goal_carbohydrates
+            primary: Carbs goal
+          - <<: *nutrition_goal
+            entity: input_number.nutrition_goal_fats
+            primary: Fats goal
 
       - type: grid
         cards:
