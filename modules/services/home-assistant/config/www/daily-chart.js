@@ -378,7 +378,7 @@ class WellnessCard extends HTMLElement {
 
   // A new period loads at once. The current one reads again now and then, and today also when a watched entity changes
   sync() {
-    if (!this._hass || !this.config) return;
+    if (!this._hass || !this.config || !this.ready()) return;
     const p = period(view.range, view.offset);
     if (p.key !== this.period?.key) {
       this.period = p;
@@ -395,6 +395,10 @@ class WellnessCard extends HTMLElement {
 
   idle() {
     return false;
+  }
+
+  ready() {
+    return true;
   }
 
   load(p) {
@@ -477,6 +481,12 @@ class FrogDailyChart extends WellnessCard {
 
   idle(p) {
     return p.isDay && this.config.day_note;
+  }
+
+  // Right after an HA restart the CSV sensor isn't there yet, and loading without it would cache an empty chart
+  ready() {
+    const { sheet } = this.config;
+    return !sheet || Boolean(this._hass.states[sheet.source]?.attributes.url);
   }
 
   watched(p) {
