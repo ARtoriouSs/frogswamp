@@ -32,6 +32,6 @@ Move that row to trash.
 
 ## Days
 
-A day closes by itself at 04:00 and then counts as full on the charts. I don't need to tell you when a day is done.
+Every day shows on the charts as I log it, today too. I don't need to tell you when a day is done.
 
 When I say a day is incomplete ("день неполный", "я не всё записал за вчера"), in "Nutrition days" find the row whose `Date` is that day (`YYYY-MM-DD`), or create it, and leave `Full` unchecked. If I later say it is complete after all, check `Full`.

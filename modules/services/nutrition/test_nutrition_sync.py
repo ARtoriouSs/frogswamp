@@ -162,12 +162,12 @@ def test_today_before_four_is_still_yesterday(api, cfg):
     assert state.status["today"]["kcal"] == 400
 
 
-def test_ended_day_is_full_without_a_notion_row(api, cfg):
+def test_days_are_drawn_without_a_notion_row(api, cfg):
     api.days = []
     api.meals = [page("m1", eaten="2026-11-13T12:00:00+01:00", kcal=100), page("m2", eaten="2026-11-14T12:00:00+01:00", kcal=200)]
     run(cfg)
     lines = (cfg.state_dir / "www" / "daily.csv").read_text().splitlines()
-    assert lines[1:] == ["2026-11-13,100,1.6,1.8,2.4,TRUE", "2026-11-14,200,1.6,1.8,2.4,FALSE"]
+    assert lines[1:] == ["2026-11-13,100,1.6,1.8,2.4,TRUE", "2026-11-14,200,1.6,1.8,2.4,TRUE"]
 
 
 def test_today_is_zero_without_meals(api, cfg):

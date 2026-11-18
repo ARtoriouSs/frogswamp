@@ -26,7 +26,7 @@ Files:
 
 1. Make two databases on one page (now Personal → Health → Nutrition Log):
    - **Nutrition log**: `Product` (title), `Eaten` (date with time), `Meal` (select: `Завтрак`, `Обед`, `Ужин`, `Перекус`), `Amount` (text), `Kcal`, `Protein`, `Fat`, `Carbs` (numbers), `Comment` (text)
-   - **Nutrition days**: `Date` (title, `YYYY-MM-DD`), `Full` (checkbox). A day counts as full once it ends at 04:00; a row with `Full` unchecked keeps an incomplete day off the charts
+   - **Nutrition days**: `Date` (title, `YYYY-MM-DD`), `Full` (checkbox). Every day is drawn on the charts, today too; a row with `Full` unchecked keeps an incomplete day off them
 2. Notion → Settings → Connections → Develop or manage integrations → **New integration**: name `frogswamp-nutrition`, type Internal, capabilities **Read content** only. Copy the token.
 3. On the page with both databases: ••• → Connections → add `frogswamp-nutrition`.
 4. Find each database's data source id: open the database → ••• → Manage data sources → ••• → Copy data source ID, or ask Claude with the Notion connector for the `collection://…` id (the part after `collection://`).
@@ -69,7 +69,7 @@ Then `just deploy`. Check on the server: `curl -s 127.0.0.1:8131/status` shows a
    - "Удали булочку"
    - "Вчера я не всё записал" (marks yesterday incomplete, so it stays off the charts)
 
-A day runs from 04:00 to 04:00, so a snack at 01:00 counts for the evening before. At 04:00 the day closes by itself and shows on the charts; there is no "day done" message.
+A day runs from 04:00 to 04:00, so a snack at 01:00 counts for the evening before. Today shows on the charts as you log it; there is no "day done" message.
 
 Rows can also be fixed by hand in the Notion app; the NUC picks them up within 5 minutes.
 

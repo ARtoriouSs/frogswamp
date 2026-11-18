@@ -116,8 +116,8 @@ def meal_day(moment, tz):
     return (moment.astimezone(tz) - DAY_START).date()
 
 
-def daily_totals(meals, day_flags, tz, today):
-    """A day is full once it has ended, unless its Full box in Notion is unticked"""
+def daily_totals(meals, day_flags, tz):
+    """Every day is drawn on the charts, today too, unless its Full box in Notion is unticked"""
     sums = {}
     for meal in meals:
         day = meal_day(meal.eaten, tz)
@@ -125,7 +125,7 @@ def daily_totals(meals, day_flags, tz, today):
         for i, value in enumerate((meal.kcal, meal.fat, meal.protein, meal.carbs)):
             total[i] += value
     return [
-        DayTotal(day, *(round(value, 1) for value in sums[day]), full=day_flags.get(day, day < today))
+        DayTotal(day, *(round(value, 1) for value in sums[day]), full=day_flags.get(day, True))
         for day in sorted(sums)
     ]
 
