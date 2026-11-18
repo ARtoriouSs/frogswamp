@@ -4141,7 +4141,7 @@ views:
           - type: heading
             heading: Range
             icon: mdi:calendar-range
-          # One row for all the graphs below. Day is today live, the others one value per day, see www/daily-chart.js
+          # One row for all the graphs below. Day is a day live, the others one value per day, see www/daily-chart.js
           - type: horizontal-stack
             grid_options:
               columns: full
@@ -4200,6 +4200,9 @@ views:
                     entity_id: input_select.wellness_range
                   data:
                     option: Year
+          # Back and forward by the picked range, kept in this browser
+          - type: custom:frog-wellness-nav
+            range: input_select.wellness_range
 
       # Daily graphs from www/daily-chart.js. Health values come from Health Connect through the Pixel 7 app
       - type: grid
@@ -4247,7 +4250,6 @@ views:
                 measured:
                   sum: sensor.health_weight_measured_sum
                   count: sensor.health_weight_measured_count
-                join: true
                 day:
                   history: sensor.health_weight
                 name: Weight
@@ -4258,7 +4260,6 @@ views:
                 measured:
                   sum: sensor.health_body_water_measured_sum
                   count: sensor.health_body_water_measured_count
-                join: true
                 day:
                   history: sensor.health_body_water_mass
                 name: Body water
@@ -4269,7 +4270,6 @@ views:
                 measured:
                   sum: sensor.health_bone_mass_measured_sum
                   count: sensor.health_bone_mass_measured_count
-                join: true
                 day:
                   history: sensor.health_bone_mass
                 name: Bone mass
@@ -4280,7 +4280,6 @@ views:
                 measured:
                   sum: sensor.health_body_fat_measured_sum
                   count: sensor.health_body_fat_measured_count
-                join: true
                 day:
                   history: sensor.health_body_fat
                 name: Body fat
@@ -4338,48 +4337,6 @@ views:
             entity: sensor.nutrition_fats_of_goal
             primary: Fats
             icon: mdi:oil
-          - <<: *daily_chart
-            title: Calories in vs out
-            # Day adds up today's meals at their times and the burned calories every 5 minutes
-            sheet: &calories_sheet
-              source: sensor.calories_sheet
-              date_column: 0
-              keep_column: 5
-              updated: sensor.nutrition_last_read
-            series:
-              - column: 1
-                name: Eaten
-                unit: kcal
-                color: "#f59e0b"
-              # Two sources while we compare them: the watch's own count and the Health Connect total
-              - entity: sensor.google_pixel_watch_daily_calories
-                stat: change
-                name: Burned (watch)
-                unit: kcal
-                color: "#ef4444"
-                skip_today: true
-              - entity: sensor.pixel_7_total_calories_burned
-                stat: change
-                name: Burned (Health Connect)
-                unit: kcal
-                color: "#a855f7"
-                skip_today: true
-          - <<: *daily_chart
-            title: Macros
-            sheet: *calories_sheet
-            series:
-              - column: 2
-                name: Fats
-                unit: g
-                color: "#eab308"
-              - column: 3
-                name: Proteins
-                unit: g
-                color: "#ef4444"
-              - column: 4
-                name: Carbohydrates
-                unit: g
-                color: "#3b82f6"
           # A day runs from 04:00 to 04:00. Over 115 % sends a notification, over 150 % one about a likely wrong entry
           # One line; tap a goal to change it
           - &nutrition_goal
@@ -4401,6 +4358,55 @@ views:
           - <<: *nutrition_goal
             entity: input_number.nutrition_goal_fats
             primary: Fats goal
+          - <<: *daily_chart
+            title: Calories in vs out
+            # Day adds up today's meals at their times and the burned calories every 5 minutes
+            sheet: &calories_sheet
+              source: sensor.calories_sheet
+              date_column: 0
+              keep_column: 5
+              updated: sensor.nutrition_last_read
+            series:
+              - column: 1
+                name: Eaten
+                unit: kcal
+                color: "#f59e0b"
+                bar: true
+              # Two sources while we compare them: the watch's own count and the Health Connect total
+              - entity: sensor.google_pixel_watch_daily_calories
+                stat: change
+                name: Burned (watch)
+                unit: kcal
+                color: "#ef4444"
+                bar: true
+                skip_today: true
+              - entity: sensor.pixel_7_total_calories_burned
+                stat: change
+                name: Burned (Health Connect)
+                unit: kcal
+                color: "#a855f7"
+                bar: true
+                skip_today: true
+          - <<: *daily_chart
+            title: Macros
+            sheet: *calories_sheet
+            stack: true
+            series:
+              - column: 2
+                bar: true
+                name: Fats
+                unit: g
+                color: "#eab308"
+              - column: 3
+                bar: true
+                name: Proteins
+                unit: g
+                color: "#ef4444"
+              - column: 4
+                bar: true
+                name: Carbohydrates
+                unit: g
+                color: "#3b82f6"
 
       - type: grid
         column_span: 2
@@ -4416,6 +4422,7 @@ views:
                 stat: change
                 name: Steps
                 color: "#22c55e"
+                bar: true
             grid_options:
               columns: 12
           - <<: *daily_chart
@@ -4427,15 +4434,17 @@ views:
                 name: Exercise
                 unit: h
                 color: "#f97316"
+                bar: true
                 day:
                   time_in: sensor.google_pixel_watch_activity_state
                   state: exercise
             grid_options:
               columns: 12
-          # When sleep and exercise happened, by the range at the top. Day is the last 24 h, the others at most
-          # the 31 days of raw states HA keeps
+          # When sleep and exercise happened, on one line, for the same period as the charts. At most the 31 days of
+          # raw states HA keeps
           - type: custom:frog-activity-timeline
             title: Sleep & Exercise timeline (watch state)
+            info: Uses the watch's sleep. On days the watch reported no sleep, it falls back to Health Connect. Exercise comes only from the watch
             range: input_select.wellness_range
             activity: &activity
               watch: sensor.google_pixel_watch_activity_state
@@ -4449,6 +4458,7 @@ views:
             icon: mdi:sleep
           - <<: *daily_chart
             title: Sleep, h
+            info: Uses the watch's sleep. On days the watch reported no sleep, it falls back to Health Connect
             # Hours asleep per calendar day: from the watch on days it reported sleep, otherwise from the Health Connect
             # segments. Days older than 31 days are the Health Connect night on the day it ended
             activity: *activity
@@ -4459,6 +4469,7 @@ views:
                 name: Sleep
                 unit: h
                 color: "#8b5cf6"
+                bar: true
 
       - type: grid
         column_span: 2
