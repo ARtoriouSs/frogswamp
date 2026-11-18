@@ -4219,7 +4219,7 @@ views:
             icon: mdi:scale-bathroom
             color: teal
             grid_options:
-              columns: 3
+              columns: 6
               rows: 1
           - <<: *body_measure
             entity: sensor.health_body_water_mass
@@ -4286,13 +4286,13 @@ views:
             icon: mdi:food-apple
             color: "{{ 'red' if states(entity) | float(0) > 115 else ('amber' if states(entity) | float(0) > 100 else 'green') }}"
             grid_options:
-              columns: 6
+              columns: 12
               rows: 1
           - <<: *link
             primary: Nutrition Log
             icon: mdi:food-apple
             grid_options:
-              columns: 6
+              columns: 12
               rows: 1
             tap_action:
               action: url
@@ -4303,7 +4303,7 @@ views:
             primary: Proteins
             icon: mdi:food-drumstick
             grid_options:
-              columns: 4
+              columns: 8
               rows: 1
           - <<: *nutrition_macro
             entity: sensor.nutrition_carbohydrates_of_goal
@@ -4363,7 +4363,7 @@ views:
             icon: mdi:target
             color: grey
             grid_options:
-              columns: 3
+              columns: 6
               rows: 1
           - <<: *nutrition_goal
             entity: input_number.nutrition_goal_proteins
