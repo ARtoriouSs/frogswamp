@@ -4343,7 +4343,7 @@ views:
             <<: *info
             entity: input_number.nutrition_goal_kcal
             primary: Calories goal
-            secondary: "{{ states(entity) | int }} {{ state_attr(entity, 'unit_of_measurement') }}"
+            secondary: "{{ states(entity) | int(0) }} {{ state_attr(entity, 'unit_of_measurement') }}"
             icon: mdi:target
             color: grey
             grid_options:
