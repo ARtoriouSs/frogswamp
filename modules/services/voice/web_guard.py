@@ -25,8 +25,9 @@ HA_INTEGRATIONS = {
 HA_READ_TOOLS = {
     "homeassistant__GetLiveContext", "llm__GetDateTime", "calendar__get_events", "todo__get_items",
     "media_player__search_media", "intent_script__FrogRoomTemperature",
-    # scripts that only return data (packages/voice_info.yaml, packages/voice_food.yaml)
+    # scripts that only return data (packages/voice_info.yaml, voice_food.yaml, voice_jobs.yaml)
     "script__maintenance_status", "script__energy_history", "script__wellness_data", "script__food_recent",
+    "script__voice_jobs",
 }
 WEB_TOOLS = {"WebSearch", "WebFetch"}
 # Music Assistant's own URIs (spotify://, library://) are fine, these go out to the network

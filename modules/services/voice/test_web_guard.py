@@ -135,3 +135,10 @@ def test_wellness_and_food_reads_allowed_after_web(tmp_path):
         assert home(tmp_path, entries, tool, {})[0] == 0, tool
     for tool in ("script__food_log", "script__food_update", "script__food_delete"):
         assert home(tmp_path, entries, tool, {"id": "x"})[0] == 2, tool
+
+
+def test_voice_jobs_list_is_a_read(tmp_path):
+    entries = user_turn("what's the weather, and what jobs do you have") + search_turn("u1", ["https://w.example"])
+    assert home(tmp_path, entries, "script__voice_jobs", {})[0] == 0
+    for tool in ("script__voice_job_add", "script__voice_job_cancel"):
+        assert home(tmp_path, entries, tool, {"job": "{}"})[0] == 2, tool

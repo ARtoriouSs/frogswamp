@@ -1,0 +1,60 @@
+# Voice jobs: one-shot "do X when Y", timers and reminders the voice assistant schedules. The engine is in
+# the claude_bridge integration (modules/services/voice/claude_bridge/jobs.py); these scripts are what Claude
+# sees. Exposed to Assist with Russian aliases
+script:
+  voice_job_add:
+    alias: Add voice job
+    description: >-
+      Schedules one job: a timer, a reminder, something turned on for a while, or something done when a
+      condition comes true ("когда вернусь", "через час", "если станет холоднее"). The job is JSON with title,
+      optional arm_when, run_when, do and optional expires_in_min, as the instructions describe. Returns the id
+      and a summary to read back, or an error to fix
+    icon: mdi:clipboard-plus-outline
+    mode: parallel
+    fields:
+      job:
+        description: The job as JSON text
+        required: true
+        selector:
+          text:
+            multiline: true
+    sequence:
+      - action: claude_bridge.add_job
+        data:
+          job: "{{ job }}"
+        response_variable: result
+      - stop: Done
+        response_variable: result
+
+  voice_jobs:
+    alias: Voice jobs
+    description: >-
+      Read only. The jobs waiting to run (id, title, what each waits for, when it expires), the ones finished
+      in the last day, and the devices that will turn off by themselves, with the time
+    icon: mdi:clipboard-list-outline
+    mode: parallel
+    sequence:
+      - action: claude_bridge.list_jobs
+        response_variable: result
+      - stop: Done
+        response_variable: result
+
+  voice_job_cancel:
+    alias: Cancel voice job
+    description: >-
+      Cancels a waiting job by its id from Voice jobs, or all of them with "all". Only when the owner asks
+    icon: mdi:clipboard-remove-outline
+    mode: parallel
+    fields:
+      job_id:
+        description: The job's id, or "all"
+        required: true
+        selector:
+          text:
+    sequence:
+      - action: claude_bridge.cancel_job
+        data:
+          job_id: "{{ job_id }}"
+        response_variable: result
+      - stop: Done
+        response_variable: result

@@ -30,7 +30,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         return await scheduler.cancel(call.data["job_id"])
 
     hass.services.async_register(
-        DOMAIN, "add_job", add_job, vol.Schema({vol.Required("job"): cv.string}), SupportsResponse.ONLY
+        DOMAIN,
+        "add_job",
+        add_job,
+        # a script's "{{ job }}" template turns the JSON text into a dict
+        vol.Schema({vol.Required("job"): vol.Any(dict, cv.string)}),
+        SupportsResponse.ONLY,
     )
     hass.services.async_register(DOMAIN, "list_jobs", list_jobs, vol.Schema({}), SupportsResponse.ONLY)
     hass.services.async_register(

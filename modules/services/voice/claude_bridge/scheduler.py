@@ -125,7 +125,7 @@ class JobScheduler:
 
     # --- services
 
-    async def add(self, raw: str) -> dict:
+    async def add(self, raw: str | dict) -> dict:
         if not self.started:
             return {"error": "Home Assistant is still starting, try again in a minute"}
         active = sum(1 for job in self.jobs if J.is_active(job))
