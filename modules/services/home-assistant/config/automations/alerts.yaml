@@ -234,20 +234,24 @@
 # The Google login can expire, or Google can refuse a meal; meals still reach HA, only Google misses them
 - id: repo_alert_nutrition_google
   alias: "Alert: Google Health sync"
-  description: nutrition-sync can't write to Google Health for 1 hour
+  description: nutrition-sync can't write meals to Google Health for 1 hour, or can't read wellness data for 30 min
   triggers:
     - trigger: state
       entity_id: binary_sensor.nutrition_google_ok
       to: "off"
       for: "01:00:00"
+    - trigger: state
+      entity_id: binary_sensor.nutrition_health_ok
+      to: "off"
+      for: "00:30:00"
   actions:
     - action: notify.mobile_app_pixel_7
       data:
         title: Google Health sync
         message: >-
-          {% set error = states('sensor.nutrition_google_error') %}
-          {% if error in ['invalid_grant', 'UNAUTHENTICATED', 'PERMISSION_DENIED'] %}The Google login is gone ({{ error }}). Run: just nutrition-google-auth, then just secrets and just deploy
-          {% else %}Google Health refused a meal ({{ error }}). Check: just ssh journalctl -u nutrition-sync{% endif %}
+          {% set error = states('sensor.nutrition_google_error') if is_state('binary_sensor.nutrition_google_ok', 'off') else states('sensor.nutrition_health_error') %}
+          {% if error in ['invalid_grant', 'UNAUTHENTICATED', 'PERMISSION_DENIED'] or error.endswith(': 401') or error.endswith(': 403') %}The Google login is gone ({{ error }}). Run: just nutrition-google-auth, then just secrets and just deploy
+          {% else %}Google Health failed ({{ error }}). Check: just ssh journalctl -u nutrition-sync{% endif %}
         data:
           tag: nutrition-google
 

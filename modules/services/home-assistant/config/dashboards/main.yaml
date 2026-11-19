@@ -4204,7 +4204,8 @@ views:
           - type: custom:frog-wellness-nav
             range: input_select.wellness_range
 
-      # Daily graphs from www/daily-chart.js. Health values come from Health Connect through the Pixel 7 app
+      # Daily graphs from www/daily-chart.js. Body values come from Health Connect through the Pixel 7 app, sleep stages,
+      # workouts and the heart values from Google Health through nutrition-sync
       - type: grid
         column_span: 2
         cards:
@@ -4306,7 +4307,7 @@ views:
               {% set key = entity.split('_')[1] %}
               {% if not has_value('sensor.nutrition_today_' ~ key) %}No data from nutrition-sync
               {% elif has_value(entity) %}{{ state_attr(entity, 'eaten') }} / {{ state_attr(entity, 'goal') }} {{ state_attr(entity, 'unit') }} · {{ states(entity) }} %
-              {% else %}{{ states('sensor.nutrition_today_' ~ key) | float(0) | round(0) }} {{ 'kcal' if key == 'kcal' else 'g' }} · no goal{% endif %}
+              {% else %}{{ states('sensor.nutrition_today_' ~ key) | float(0) | round(0) }} {{ {'kcal': 'kcal', 'water': 'ml'}.get(key, 'g') }} · no goal{% endif %}
             icon: mdi:food-apple
             color: "{{ 'red' if states(entity) | float(0) > 115 else ('amber' if states(entity) | float(0) > 100 else 'green') }}"
             grid_options:
@@ -4327,7 +4328,7 @@ views:
             primary: Proteins
             icon: mdi:food-drumstick
             grid_options:
-              columns: 8
+              columns: 6
               rows: 1
           - <<: *nutrition_macro
             entity: sensor.nutrition_carbohydrates_of_goal
@@ -4337,6 +4338,14 @@ views:
             entity: sensor.nutrition_fats_of_goal
             primary: Fats
             icon: mdi:oil
+          # Logged in Notion with the meals. Drinking more than the goal is fine, so no red
+          - <<: *nutrition_macro
+            entity: sensor.nutrition_water_of_goal
+            primary: Water
+            icon: mdi:cup-water
+            bar:
+              steps: {0: blue, 100: green}
+            color: "{{ 'green' if states(entity) | float(0) >= 100 else 'blue' }}"
           # A day runs from 04:00 to 04:00. Over 115 % sends a notification, over 150 % one about a likely wrong entry
           # One line; tap a goal to change it
           - &nutrition_goal
@@ -4347,23 +4356,32 @@ views:
             icon: mdi:target
             color: grey
             grid_options:
-              columns: 6
+              columns: 4
               rows: 1
-          - <<: *nutrition_goal
+          - &nutrition_goal_small
+            <<: *nutrition_goal
             entity: input_number.nutrition_goal_proteins
             primary: Proteins goal
-          - <<: *nutrition_goal
+            grid_options:
+              columns: 5
+              rows: 1
+          - <<: *nutrition_goal_small
             entity: input_number.nutrition_goal_carbohydrates
             primary: Carbs goal
-          - <<: *nutrition_goal
+          - <<: *nutrition_goal_small
             entity: input_number.nutrition_goal_fats
             primary: Fats goal
+          - <<: *nutrition_goal_small
+            entity: input_number.nutrition_goal_water
+            primary: Water goal
           - <<: *daily_chart
             title: Calories in vs out
             info: >-
               Burned is what each source shows at the end of the day. Health Connect gets it from Fitbit, which counts the
               whole day's resting burn from midnight, so its line starts the day at about 1,800 kcal. The watch adds it up as
-              the day goes and stays flat while it is off the wrist
+              the day goes and stays flat while it is off the wrist. Google is Google Health's own daily total, on Day
+              added up hour by hour
+            updated: sensor.nutrition_last_read
             # Day adds up the meals at their times and shows the burned totals every 5 minutes
             sheet: &calories_sheet
               source: sensor.calories_sheet
@@ -4389,6 +4407,14 @@ views:
                 name: Burned (Health Connect)
                 unit: kcal
                 color: "#a855f7"
+                bar: true
+                skip_today: true
+              - health: burned_kcal
+                day:
+                  health: burned
+                name: Burned (Google)
+                unit: kcal
+                color: "#14b8a6"
                 bar: true
                 skip_today: true
           - <<: *daily_chart
@@ -4429,30 +4455,63 @@ views:
                 bar: true
             grid_options:
               columns: 12
+          # From Google Health through nutrition-sync
           - <<: *daily_chart
-            title: Exercise, h
-            # From the watch's activity state, only since 16.11.2026. Hours per calendar day
+            title: Exercise, min
+            info: >-
+              Exercise is the active minutes of the workouts. Active zone minutes count a minute in the fat burn zone once
+              and in the cardio or peak zone twice. The bars are the minutes in each heart rate zone, all day, on the right
+              scale
+            health_note: No Google data yet, nutrition-sync reads it every 5 minutes
+            updated: sensor.nutrition_last_read
+            stack: true
             series:
-              - entity: sensor.watch_exercise
-                stat: max
-                name: Exercise
-                unit: h
-                color: "#f97316"
-                bar: true
+              - health: exercise_min
                 day:
-                  time_in: sensor.google_pixel_watch_activity_state
-                  state: exercise
+                  health: exercise
+                name: Exercise
+                unit: min
+                color: "#f97316"
+              - health: azm.total
+                day: false
+                name: Active zone minutes
+                unit: min
+                color: "#ec4899"
+              - &zone_series
+                health: hr_zone_min.light
+                day: false
+                name: Light zone
+                unit: min
+                color: "#fde68a"
+                bar: true
+                axis: right
+              - <<: *zone_series
+                health: hr_zone_min.moderate
+                name: Moderate zone
+                color: "#fb923c"
+              - <<: *zone_series
+                health: hr_zone_min.vigorous
+                name: Vigorous zone
+                color: "#ef4444"
+              - <<: *zone_series
+                health: hr_zone_min.peak
+                name: Peak zone
+                color: "#7f1d1d"
             grid_options:
               columns: 12
-          # When sleep and exercise happened, on one line, for the same period as the charts. At most the 31 days of
-          # raw states HA keeps
+          # When sleep and workouts happened, on one line, for the same period as the charts. At most 31 days
           - type: custom:frog-activity-timeline
-            title: Sleep & Exercise timeline (watch state)
-            info: Uses the watch's sleep. On days the watch reported no sleep, it falls back to Health Connect. Exercise comes only from the watch
+            title: Sleep & Exercise timeline
+            info: >-
+              Sleep comes from Google Health first: it has sleep stages, but only for nights you wear the watch. Then from
+              the watch state, then from Health Connect (the phone's sleep detection). Workouts come from Google Health,
+              hover one for its details
             range: input_select.wellness_range
+            updated: sensor.nutrition_last_read
             activity: &activity
               watch: sensor.google_pixel_watch_activity_state
               sleep: sensor.pixel_7_sleep_segment
+              health: true
 
       - type: grid
         column_span: 2
@@ -4462,15 +4521,35 @@ views:
             icon: mdi:sleep
           - <<: *daily_chart
             title: Sleep, h
-            info: Uses the watch's sleep. On days the watch reported no sleep, it falls back to Health Connect
-            # Hours asleep per calendar day: from the watch on days it reported sleep, otherwise from the Health Connect
-            # segments. Days older than 31 days are the Health Connect night on the day it ended
+            info: >-
+              Nights with the watch on have stages from Google Health: Deep, REM and Light. Other nights are one block,
+              from the watch state or Health Connect (the phone's sleep detection). Awake time is not counted
+            # Hours asleep per calendar day. Days older than 31 days are the Health Connect night on the day it ended
             activity: *activity
+            updated: sensor.nutrition_last_read
+            stack: true
             series:
+              - &stage_series
+                health: sleep.deep_min
+                scale: 0.0166667
+                day: false
+                name: Deep
+                unit: h
+                color: "#4c1d95"
+                bar: true
+              - <<: *stage_series
+                health: sleep.rem_min
+                name: REM
+                color: "#7c3aed"
+              - <<: *stage_series
+                health: sleep.light_min
+                name: Light
+                color: "#a78bfa"
               - sleep: true
+                unstaged: true
                 entity: sensor.health_sleep
                 stat: max
-                name: Sleep
+                name: Asleep (no stages)
                 unit: h
                 color: "#8b5cf6"
                 bar: true
@@ -4483,25 +4562,45 @@ views:
             icon: mdi:heart-pulse
           - <<: *daily_chart
             title: Heart rate, bpm
-            day_note: The watch doesn't report heart rate live, so there is no live data for today
-            # From the watch directly. Health Connect gets no heart rate from Google Health, so no resting value:
-            # the lowest of the day, usually during sleep, is the closest
+            # Daily values from the watch sensor. Day is Google Health's average per minute, it comes some minutes late
+            updated: sensor.nutrition_last_read
             series:
               - entity: sensor.google_pixel_watch_heart_rate
                 stat: max
+                day: false
                 name: Max
                 unit: bpm
                 color: "#f87171"
               - entity: sensor.google_pixel_watch_heart_rate
                 stat: mean
+                day:
+                  health: heart_rate
                 name: Average
                 unit: bpm
                 color: "#ef4444"
               - entity: sensor.google_pixel_watch_heart_rate
                 stat: min
+                day: false
                 name: Lowest
                 unit: bpm
                 color: "#991b1b"
+          - <<: *daily_chart
+            title: Resting heart rate & HRV
+            info: >-
+              Google Health's daily values. HRV (heart rate variability) is measured only during sleep with the watch on,
+              so it is empty on other days
+            day_note: Daily values, see Week or longer
+            health_note: No Google data yet, nutrition-sync reads it every 5 minutes
+            series:
+              - health: resting_hr
+                name: Resting
+                unit: bpm
+                color: "#dc2626"
+              - health: hrv_ms
+                name: HRV
+                unit: ms
+                color: "#0ea5e9"
+                axis: right
 
   # Guests see only this view (custom-sidebar-config.yaml hides the rest of the sidebar for them).
   # It hides things, it doesn't block them: a guest can still reach any entity through the API

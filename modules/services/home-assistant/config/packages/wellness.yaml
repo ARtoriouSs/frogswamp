@@ -247,6 +247,18 @@ template:
           unit: g
           eaten: "{{ states('sensor.nutrition_today_carbohydrates') | float(0) | round(0) }}"
           goal: "{{ states('input_number.nutrition_goal_carbohydrates') | float(0) | round(0) }}"
+      - name: Nutrition water of goal
+        unique_id: repo_nutrition_water_of_goal
+        default_entity_id: sensor.nutrition_water_of_goal
+        icon: mdi:cup-water
+        unit_of_measurement: "%"
+        availability: "{{ has_value('sensor.nutrition_today_water') and states('input_number.nutrition_goal_water') | float(0) > 0 }}"
+        state: "{{ (states('sensor.nutrition_today_water') | float / states('input_number.nutrition_goal_water') | float * 100) | round(0) }}"
+        attributes:
+          label: Water
+          unit: ml
+          eaten: "{{ states('sensor.nutrition_today_water') | float(0) | round(0) }}"
+          goal: "{{ states('input_number.nutrition_goal_water') | float(0) | round(0) }}"
 
 # Today's meals and the sync health from the nutrition-sync service (modules/services/nutrition)
 rest:
@@ -277,6 +289,14 @@ rest:
         unit_of_measurement: g
         state_class: measurement
         value_template: "{{ value_json.today.carbohydrates }}"
+      # Logged in Notion with the meals, see the Water column
+      - name: Nutrition today water
+        unique_id: repo_nutrition_today_water
+        icon: mdi:cup-water
+        unit_of_measurement: mL
+        device_class: volume
+        state_class: measurement
+        value_template: "{{ value_json.today.water | default(0) }}"
       - name: Nutrition last read
         unique_id: repo_nutrition_last_read
         device_class: timestamp
@@ -287,24 +307,21 @@ rest:
         unique_id: repo_nutrition_google_error
         icon: mdi:google
         value_template: "{{ value_json.google.error or 'none' }}"
+      # Reading sleep, heart rate and workouts from Google, e.g. "sleep: 403"
+      - name: Nutrition health error
+        unique_id: repo_nutrition_health_error
+        icon: mdi:heart-pulse
+        value_template: "{{ (value_json.health | default({})).error or 'none' }}"
     binary_sensor:
       - name: Nutrition Google ok
         unique_id: repo_nutrition_google_ok
         icon: mdi:google
         value_template: "{{ value_json.google.ok }}"
+      - name: Nutrition health ok
+        unique_id: repo_nutrition_health_ok
+        icon: mdi:heart-pulse
+        value_template: "{{ (value_json.health | default({})).ok is not false }}"
 
-# Hours in exercise per calendar day from the watch's activity state. The daily max goes to the long-term
-# statistics, so the graph keeps it after the 31-day history is gone. Sleep is read from the raw states, see
-# www/daily-chart.js
-sensor:
-  - platform: history_stats
-    name: Watch exercise
-    unique_id: repo_watch_exercise
-    entity_id: sensor.google_pixel_watch_activity_state
-    state: exercise
-    type: time
-    start: "{{ today_at() }}"
-    end: "{{ now() }}"
 
 # Daily nutrition goals, set on the Wellness tab. Google Health has no API for its goals.
 # No `initial`, so HA keeps them over restarts. 0 means no goal
@@ -341,3 +358,11 @@ input_number:
     step: 1
     mode: box
     unit_of_measurement: g
+  nutrition_goal_water:
+    name: Water goal
+    icon: mdi:cup-water
+    min: 0
+    max: 6000
+    step: 50
+    mode: box
+    unit_of_measurement: ml

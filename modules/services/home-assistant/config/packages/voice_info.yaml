@@ -1,6 +1,70 @@
 # Read-only scripts for the voice assistant: they only return data. Exposed to Assist, so Claude can
 # answer "when is the next service" or "how much did the floor heating cost last month"
 script:
+  wellness_data:
+    alias: Wellness data
+    description: >-
+      Read only. Food, calories, macros, water, burned calories, sleep (with stages on nights with the watch),
+      workouts and training, active zone minutes, heart rate zones, resting heart rate, HRV and weight, one entry
+      per day, plus today's live values and the goals. Call it for any question about sleep, calories, food,
+      macros, water, workouts, training, steps, heart rate, HRV, weight, body fat or wellness in general
+    icon: mdi:heart-pulse
+    mode: parallel
+    fields:
+      days:
+        description: How many days back, today included (1 to 90). Take enough for the question, e.g. 8 for "last week"
+        example: 14
+        selector:
+          number:
+            min: 1
+            max: 90
+    sequence:
+      - action: rest_command.wellness_data
+        data:
+          days: "{{ days | default(14) }}"
+        response_variable: wellness
+        continue_on_error: true
+      - variables:
+          result: >-
+            {% set ok = wellness is defined and wellness.status == 200 %}
+            {{ {
+              'days': wellness.content.days if ok else 'nutrition-sync did not answer',
+              'google_data_updated': wellness.content.updated if ok else none,
+              'today_live': {
+                'eaten_kcal': states('sensor.nutrition_today_kcal'),
+                'proteins_g': states('sensor.nutrition_today_proteins'),
+                'fats_g': states('sensor.nutrition_today_fats'),
+                'carbohydrates_g': states('sensor.nutrition_today_carbohydrates'),
+                'water_ml': states('sensor.nutrition_today_water'),
+                'steps_phone': states('sensor.pixel_7_daily_steps'),
+                'steps_watch': states('sensor.google_pixel_watch_daily_steps'),
+                'burned_kcal_watch': states('sensor.google_pixel_watch_daily_calories'),
+                'burned_kcal_health_connect': states('sensor.pixel_7_total_calories_burned'),
+                'heart_rate_now': states('sensor.google_pixel_watch_heart_rate'),
+                'weight_kg_latest': states('sensor.health_weight'),
+                'body_fat_pct_latest': states('sensor.health_body_fat'),
+              },
+              'goals': {
+                'kcal': states('input_number.nutrition_goal_kcal'),
+                'proteins_g': states('input_number.nutrition_goal_proteins'),
+                'fats_g': states('input_number.nutrition_goal_fats'),
+                'carbohydrates_g': states('input_number.nutrition_goal_carbohydrates'),
+                'water_ml': states('input_number.nutrition_goal_water'),
+              },
+              'notes': [
+                'A food day (eaten) runs from 04:00 to 04:00: food after midnight counts for the day before. Everything else is per calendar day',
+                'eaten.full false means the owner marked that day as not fully logged, so its totals are too low',
+                'Goals of 0 mean no goal',
+                'sleep is per calendar day, a night is split at midnight. It comes from Google Health; nights without the watch have no sleep there, then today_live and the Wellness tab use the phone sleep from Health Connect, which is not in days',
+                'Sleep stages (deep, rem, light), HRV, blood oxygen and breathing rate need the watch worn at night. The owner usually charges it at night, so these are mostly missing',
+                'burned_kcal is Google Health total for the day (resting plus active), active_kcal only the active part. Today is not over yet',
+                'azm is active zone minutes: a minute in fat_burn counts once, in cardio or peak twice. hr_zone_min is all minutes of the day per heart rate zone',
+                'workouts times are local, active_min is time actually moving, distance_m in meters',
+              ],
+            } }}
+      - stop: Done
+        response_variable: result
+
   maintenance_status:
     alias: Maintenance status
     description: >-
@@ -191,3 +255,10 @@ template:
         state: "{{ now().isoformat(timespec='minutes') }}"
         attributes:
           tables: "{{ tables }}"
+
+# The wellness summary from nutrition-sync, for the script above
+rest_command:
+  wellness_data:
+    url: "http://127.0.0.1:8131/wellness?days={{ days | int(14) }}"
+    method: get
+    timeout: 20

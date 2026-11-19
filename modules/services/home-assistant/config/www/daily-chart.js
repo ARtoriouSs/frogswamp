@@ -20,9 +20,12 @@
 //     date_column: 0
 //     keep_column: 5                      (optional, only rows where it is TRUE are drawn)
 //     updated: sensor.nutrition_last_read (optional, today's Day reads the meals again when it changes)
+//   health_note: text                     (optional, shown when the Google data from nutrition-sync is missing)
+//   updated: sensor.nutrition_last_read   (optional, today's Day reads the Google file again when it changes)
 //   activity:                             (needed for a sleep series)
 //     watch: sensor.watch_activity        (its asleep and exercise states)
 //     sleep: sensor.pixel_7_sleep_segment (Health Connect segments, start and end attributes in ms)
+//     health: true                        (optional, Google sleep stages first and Google workouts as exercise)
 //   series:
 //     - column: 1                         (a sheet column)
 //       name: Eaten
@@ -48,8 +51,12 @@
 //     - sleep: true                       (hours asleep per calendar day from the activity, Day rises while asleep.
 //       entity: sensor.health_sleep       Days older than the 31 days of raw history use this entity's stat)
 //       stat: max
+//       unstaged: true                    (optional, only nights without Google sleep stages)
+//     - health: sleep.deep_min            (a value of days.json from nutrition-sync, e.g. resting_hr, azm.total)
+//       day:
+//         health: heart_rate              (or burned, a running total, or exercise, minutes rising through workouts)
 //
-//   type: custom:frog-activity-timeline   sleep and exercise on one line, from the activity config above
+//   type: custom:frog-activity-timeline   sleep stages and workouts on one line, from the activity config above
 //   title, info, range, activity
 const DAY_MS = 24 * 60 * 60 * 1000;
 const HOUR_MS = 60 * 60 * 1000;
@@ -64,6 +71,16 @@ const HEIGHT = 200;
 const PAD = { left: 44, right: 12, top: 12, bottom: 24 };
 const RIGHT_AXIS_WIDTH = 36;
 const SLEEP_COLOR = "#8b5cf6";
+const STAGES = [
+  ["deep", "Deep", "#4c1d95"],
+  ["rem", "REM", "#7c3aed"],
+  ["light", "Light", "#a78bfa"],
+  ["asleep", "Asleep", SLEEP_COLOR],
+  ["awake", "Awake", "#ddd6fe"],
+];
+const STAGE_COLOR = Object.fromEntries(STAGES.map(([stage, , color]) => [stage, color]));
+const STAGE_NAME = Object.fromEntries(STAGES.map(([stage, name]) => [stage, name]));
+const HEALTH_URL = "/local/nutrition/health/";
 const EXERCISE_COLOR = "#f97316";
 
 const VIEW_EVENT = "frog-wellness-view";
@@ -150,19 +167,70 @@ const periodLabel = (p) => {
   return `${formatMonth(p.start, "long")} ${new Date(p.start).getFullYear()}`;
 };
 
-// Shared by all cards, so a tab with several charts reads a CSV once
-const csvCache = new Map();
+// Shared by all cards, so a tab with several charts reads a file once
+const fileCache = new Map();
 
-const fetchCsv = (url, maxAge = CACHE_MS) => {
-  const hit = csvCache.get(url);
+const fetchFile = (url, maxAge, parse) => {
+  const hit = fileCache.get(url);
   if (hit && Date.now() - hit.time < maxAge) return hit.promise;
   const promise = fetch(url, { cache: "no-store" }).then((response) => {
     if (!response.ok) throw new Error(`${url} answered ${response.status}`);
-    return response.text().then(parseCsv);
+    return response.text().then(parse);
   });
-  promise.catch(() => csvCache.delete(url));
-  csvCache.set(url, { promise, time: Date.now() });
+  promise.catch(() => fileCache.delete(url));
+  fileCache.set(url, { promise, time: Date.now() });
   return promise;
+};
+
+const fetchCsv = (url, maxAge = CACHE_MS) => fetchFile(url, maxAge, (text) => parseCsv(text));
+
+// The Google data from nutrition-sync: days.json has a summary per day, day/<date>.json the details of the last 31 days.
+// A missing file gives null
+const loadHealthDays = (maxAge = CACHE_MS) => fetchFile(`${HEALTH_URL}days.json`, maxAge, JSON.parse).then((file) => file.days, () => null);
+
+const loadHealthDay = (time) =>
+  fetchFile(`${HEALTH_URL}day/${isoDate(time)}.json`, time >= startOfDay(Date.now()) ? 0 : CACHE_MS, JSON.parse).catch(() => null);
+
+// {date: day file} for the days of the period that have one
+const loadHealthDetails = (p) => {
+  const first = Math.max(p.start, addDays(startOfDay(Date.now()), -(RAW_DAYS - 1)));
+  const list = days({ start: first, end: Math.min(p.end, addDays(startOfDay(Date.now()), 1)) });
+  return Promise.all(list.map(loadHealthDay)).then((files) => Object.fromEntries(list.map((day, i) => [isoDate(day), files[i]]).filter(([, file]) => file)));
+};
+
+// A value of a days.json day by its path, e.g. "sleep.deep_min"
+const healthValue = (healthDays, date, path) => {
+  let value = healthDays?.[date];
+  for (const key of path.split(".")) value = value?.[key];
+  return typeof value === "number" ? value : null;
+};
+
+const heartLine = (detail) => (detail?.heart_rate || []).map(([time, value]) => ({ time, value }));
+
+// Hourly kcal from Google as a running total, each hour counted at its end
+const burnedLine = (detail, start, until) => {
+  const points = [{ time: start, value: 0 }];
+  let total = 0;
+  for (const [time, kcal] of detail?.burned || []) {
+    if (time < start || time >= until) continue;
+    points.push({ time: Math.min(time + HOUR_MS, until), value: (total += kcal), mark: true });
+  }
+  return points;
+};
+
+// Minutes in workouts since midnight: rises during a workout, flat otherwise
+const exerciseLine = (detail, start, until) => {
+  const points = [{ time: start, value: 0 }];
+  let total = 0;
+  for (const workout of [...(detail?.workouts || [])].sort((a, b) => a.start - b.start)) {
+    const from = Math.max(workout.start, start);
+    const to = Math.min(workout.end, until);
+    if (to <= from) continue;
+    points.push({ time: from, value: total });
+    points.push({ time: to, value: (total += (to - from) / 60000), mark: true });
+  }
+  points.push({ time: until, value: total });
+  return points;
 };
 
 const parseCsv = (text) => {
@@ -250,7 +318,8 @@ const loadActivity = (hass, activity, p) => {
   const rawStart = startOfDay(Date.now()) - RAW_DAYS * DAY_MS;
   const from = Math.max(p.start, rawStart);
   if (from >= p.end) return Promise.resolve({ sleep: [], exercise: [] });
-  return hass
+  const google = activity.health ? loadHealthDetails({ start: addDays(from, -1), end: p.end }) : Promise.resolve({});
+  const history = hass
     .callWS({
       type: "history/history_during_period",
       start_time: new Date(from).toISOString(),
@@ -259,13 +328,14 @@ const loadActivity = (hass, activity, p) => {
       minimal_response: false,
       no_attributes: false,
       significant_changes_only: false,
-    })
-    .then((history) => activityIntervals(history, activity));
+    });
+  return Promise.all([history, google]).then(([history, google]) => activityIntervals(history, activity, google));
 };
 
-// Sleep and exercise as time intervals. The watch is more exact, so a calendar day takes its sleep from the watch
-// when the watch reported any sleep on it, otherwise from the Health Connect segments. Exercise is only on the watch
-const activityIntervals = (history, activity) => {
+// Sleep and exercise as time intervals. A calendar day takes its sleep from the first source that has some on it:
+// Google (with stages, needs the watch worn at night), the watch state, then the Health Connect segments.
+// Exercise is the Google workouts with activity.health, otherwise the watch state
+const activityIntervals = (history, activity, google = {}) => {
   const now = Date.now();
   const watch = { sleep: [], exercise: [] };
   const states = history[activity.watch] || [];
@@ -273,7 +343,7 @@ const activityIntervals = (history, activity) => {
     const kind = { asleep: "sleep", exercise: "exercise" }[entry.s];
     const from = historyTime(entry);
     const to = i + 1 < states.length ? historyTime(states[i + 1]) : now;
-    if (kind && to > from) watch[kind].push({ from, to, source: "watch" });
+    if (kind && to > from) watch[kind].push({ from, to, source: "watch", stage: "asleep" });
   });
   const seen = new Set();
   const health = [];
@@ -281,18 +351,24 @@ const activityIntervals = (history, activity) => {
     const { start, end } = entry.a || {};
     if (!(start < end) || seen.has(`${start}-${end}`)) continue;
     seen.add(`${start}-${end}`);
-    health.push({ from: start, to: Math.min(end, now), source: "Health Connect" });
+    health.push({ from: start, to: Math.min(end, now), source: "Health Connect", stage: "asleep" });
   }
+  const files = Object.values(google);
+  const stages = files.flatMap((file) => file.sleep || []).map((stage) => ({ ...stage, source: "Google" }));
   const sleep = [];
-  const all = [...watch.sleep, ...health];
+  const all = [...stages, ...watch.sleep, ...health];
   if (all.length) {
     for (let day = startOfDay(Math.min(...all.map((interval) => interval.from))); day <= now; day = addDays(day, 1)) {
-      const fromWatch = clip(watch.sleep, day, addDays(day, 1));
-      sleep.push(...(fromWatch.length ? fromWatch : clip(health, day, addDays(day, 1))));
+      const next = addDays(day, 1);
+      const first = [stages, watch.sleep, health].map((list) => clip(list, day, next)).find((list) => list.length);
+      sleep.push(...(first || []));
     }
   }
-  return { sleep, exercise: watch.exercise };
+  const workouts = files.flatMap((file) => file.workouts || []).map((workout) => ({ from: workout.start, to: workout.end, workout }));
+  return { sleep, exercise: activity.health ? workouts : watch.exercise };
 };
+
+const asleep = (intervals) => intervals.filter((interval) => interval.stage !== "awake");
 
 const xAxis = (p, left, width) => (time) => left + ((time - p.start) / (p.end - p.start)) * width;
 
@@ -479,6 +555,11 @@ class FrogDailyChart extends WellnessCard {
     return this.config.series.some((line) => line.sleep);
   }
 
+  // Series that read days.json in the daily ranges
+  get hasHealth() {
+    return this.config.series.some((line) => line.health || line.unstaged);
+  }
+
   idle(p) {
     return p.isDay && this.config.day_note;
   }
@@ -493,7 +574,7 @@ class FrogDailyChart extends WellnessCard {
     if (!p.isDay) return [];
     const { sheet = {}, series, activity = {} } = this.config;
     const sleep = this.hasSleep ? [activity.watch, activity.sleep] : [];
-    return [sheet.updated, ...sleep, ...series.flatMap((line) => [line.day?.history, line.day?.time_in])].filter(Boolean);
+    return [sheet.updated, this.config.updated, ...sleep, ...series.flatMap((line) => [line.day?.history, line.day?.time_in])].filter(Boolean);
   }
 
   loadSleep(p) {
@@ -523,13 +604,14 @@ class FrogDailyChart extends WellnessCard {
         })
       : Promise.resolve({});
     const rows = url ? fetchCsv(url) : Promise.resolve([]);
-    return Promise.all([rows, stats, this.loadSleep(p)]).then(([rows, stats, activity]) => ({ rows, stats, activity }));
+    const health = this.hasHealth ? loadHealthDays() : Promise.resolve(undefined);
+    return Promise.all([rows, stats, this.loadSleep(p), health]).then(([rows, stats, activity, health]) => ({ rows, stats, activity, health }));
   }
 
   // 5-minute statistics (hourly after 10 days), raw states, the meals and the sleep intervals of one day
   fetchDay(p) {
     const { sheet, series } = this.config;
-    const statLines = series.filter((line) => line.entity && !line.day && !line.sleep);
+    const statLines = series.filter((line) => line.entity && !line.day && !line.sleep && !line.health);
     const historyIds = [...new Set(series.flatMap((line) => [line.day?.history, line.day?.time_in]).filter(Boolean))];
     const fine = p.start >= addDays(startOfDay(Date.now()), -(FIVE_MINUTE_DAYS - 1));
     const mealsUrl =
@@ -559,11 +641,13 @@ class FrogDailyChart extends WellnessCard {
       : Promise.resolve({});
     // Today's meals change all the time, older ones come from the shared cache
     const meals = mealsUrl ? fetchCsv(mealsUrl, view.offset === 0 ? 0 : CACHE_MS) : Promise.resolve(null);
-    return Promise.all([stats, history, meals, this.loadSleep(p)]).then(([stats, history, meals, activity]) => ({
+    const detail = series.some((line) => line.day?.health) ? loadHealthDay(p.start) : Promise.resolve(null);
+    return Promise.all([stats, history, meals, this.loadSleep(p), detail]).then(([stats, history, meals, activity, detail]) => ({
       stats,
       history,
       meals,
       activity,
+      detail,
       step: fine ? FIVE_MINUTES_MS : HOUR_MS,
     }));
   }
@@ -574,6 +658,10 @@ class FrogDailyChart extends WellnessCard {
       if (line.day === false) return [];
       if (line.column !== undefined) return this.mealLine(line, p, until);
       if (line.sleep) return this.sleepLine(p.start, until);
+      if (line.day?.health === "heart_rate") return heartLine(this.data.detail);
+      if (line.day?.health === "burned") return burnedLine(this.data.detail, p.start, until);
+      if (line.day?.health === "exercise") return exerciseLine(this.data.detail, p.start, until);
+      if (line.health) return [];
       if (line.day?.history) return this.historyLine(line, p.start, until);
       if (line.day?.time_in) return this.timeInLine(line, p.start, until);
       return this.statLine(line);
@@ -622,7 +710,7 @@ class FrogDailyChart extends WellnessCard {
   sleepLine(start, until) {
     const points = [{ time: start, value: 0 }];
     let total = 0;
-    for (const interval of clip(this.data.activity.sleep, start, until).sort((a, b) => a.from - b.from)) {
+    for (const interval of asleep(clip(this.data.activity.sleep, start, until)).sort((a, b) => a.from - b.from)) {
       points.push({ time: interval.from, value: total });
       total += (interval.to - interval.from) / HOUR_MS;
       points.push({ time: interval.to, value: total, mark: true });
@@ -666,11 +754,15 @@ class FrogDailyChart extends WellnessCard {
           if (sheet.keep_column !== undefined && (row[sheet.keep_column] || "").trim().toUpperCase() !== "TRUE") continue;
           add(date.getTime(), parseNumber(row[line.column]));
         }
+      } else if (line.health) {
+        for (const day of days(p)) add(day, healthValue(this.data.health, isoDate(day), line.health));
       } else if (line.sleep) {
         // Raw history covers the last 31 days, older days use the entity's daily stat
         const rawStart = today - RAW_DAYS * DAY_MS;
         const hours = new Map();
-        for (const interval of this.data.activity.sleep) {
+        const staged = (time) => line.unstaged && this.data.health?.[isoDate(time)]?.sleep?.staged;
+        for (const interval of asleep(this.data.activity.sleep)) {
+          if (staged(interval.from)) continue;
           const day = startOfDay(interval.from);
           hours.set(day, (hours.get(day) ?? 0) + (interval.to - interval.from) / HOUR_MS);
         }
@@ -717,6 +809,9 @@ class FrogDailyChart extends WellnessCard {
     if (p.isDay && this.config.day_note) body = `<div class="note">${this.config.day_note}</div>`;
     else if (this.error) body = `<div class="note">${this.error}</div>`;
     else if (!this.data) body = `<div class="note">Loading…</div>`;
+    // Only when Google is all the chart has, a chart with other sources draws those
+    else if (!p.isDay && this.data.health === null && this.config.series.every((line) => line.health))
+      body = `<div class="note">${this.config.health_note || "No Google data yet"}</div>`;
     else {
       this.lines = p.isDay ? this.dayLines(p) : this.dailyLines(p);
       body = this.lines.some((line) => line.length)
@@ -833,7 +928,20 @@ class FrogDailyChart extends WellnessCard {
   }
 }
 
-// Sleep and exercise as blocks on one line
+// The hover rows of a workout
+const workoutText = (workout) => {
+  const parts = [`${workout.active_min} min`];
+  if (workout.kcal !== null && workout.kcal !== undefined) parts.push(`${Math.round(workout.kcal)} kcal`);
+  if (workout.distance_m) parts.push(`${(workout.distance_m / 1000).toFixed(2)} km`);
+  if (workout.avg_hr) parts.push(`${Math.round(workout.avg_hr)} bpm`);
+  const zones = Object.entries(workout.zone_min || {})
+    .filter(([, minutes]) => minutes > 0)
+    .map(([zone, minutes]) => `${zone} ${Math.round(minutes)}`)
+    .join(", ");
+  return `${workout.name || workout.type}: ${parts.join(", ")}${zones ? `<br>Heart rate zones, min: ${zones}` : ""}`;
+};
+
+// Sleep stages and exercise as blocks on one line
 class FrogActivityTimeline extends WellnessCard {
   setConfig(config) {
     if (!config.activity?.watch || !config.activity?.sleep) throw new Error("activity.watch and activity.sleep are required");
@@ -845,7 +953,7 @@ class FrogActivityTimeline extends WellnessCard {
   }
 
   watched() {
-    return [this.config.activity.watch, this.config.activity.sleep];
+    return [this.config.activity.watch, this.config.activity.sleep, this.config.updated].filter(Boolean);
   }
 
   fetch(p) {
@@ -871,10 +979,14 @@ class FrogActivityTimeline extends WellnessCard {
       const x = xAxis(p, PAD.left, plotWidth);
       this.plot = { p, left: PAD.left, width: plotWidth, top: 0, bottom: height, svgWidth: width, x };
       let svg = `<rect class="track" x="${PAD.left}" y="0" width="${plotWidth}" height="${height}" rx="3"/>`;
-      for (const [intervals, color] of [[this.data.sleep, SLEEP_COLOR], [this.data.exercise, EXERCISE_COLOR]])
-        for (const interval of clip(intervals, p.start, until)) {
-          const left = x(interval.from);
-          svg += `<rect x="${left}" y="0" width="${Math.max(x(interval.to) - left, 1)}" height="${height}" fill="${color}"/>`;
+      const blocks = [
+        ...this.data.sleep.map((interval) => [interval, STAGE_COLOR[interval.stage] || SLEEP_COLOR]),
+        ...this.data.exercise.map((interval) => [interval, EXERCISE_COLOR]),
+      ];
+      for (const [interval, color] of blocks)
+        for (const part of clip([interval], p.start, until)) {
+          const left = x(part.from);
+          svg += `<rect x="${left}" y="0" width="${Math.max(x(part.to) - left, 1)}" height="${height}" fill="${color}"/>`;
         }
       for (const tick of ticks(p, plotWidth))
         svg += `<text x="${x(tick.time)}" y="${height + 16}" text-anchor="${tick.left ? "start" : "middle"}">${tick.label}</text>`;
@@ -883,27 +995,40 @@ class FrogActivityTimeline extends WellnessCard {
     }
     const hint = p.start < rawStart && p.end > rawStart ? `<div class="hint">Only the last ${RAW_DAYS} days: HA keeps raw states that long</div>` : "";
     root.innerHTML = `<style>${STYLE}</style><ha-card>${this.header()}
-      <div class="legend"><span><i style="background:${SLEEP_COLOR}"></i>Sleep</span><span><i style="background:${EXERCISE_COLOR}"></i>Exercise</span></div>
+      <div class="legend">${this.legend()}</div>
       ${body}${hint}</ha-card>`;
     this.wire();
   }
 
+  // Only the sleep stages that are in the data, so a night without the watch shows just Sleep
+  legend() {
+    const seen = new Set((this.data?.sleep || []).map((interval) => interval.stage));
+    const stages = STAGES.filter(([stage]) => seen.has(stage) && stage !== "asleep");
+    const sleep = stages.length ? stages.map(([, name, color]) => [name, color]) : [];
+    if (!stages.length || seen.has("asleep")) sleep.push([stages.length ? "Asleep" : "Sleep", SLEEP_COLOR]);
+    return [...sleep, ["Exercise", EXERCISE_COLOR]].map(([name, color]) => `<span><i style="background:${color}"></i>${name}</span>`).join("");
+  }
+
   hoverAt(time) {
     const { x } = this.plot;
-    const found = [["Sleep", this.data.sleep, SLEEP_COLOR], ["Exercise", this.data.exercise, EXERCISE_COLOR]]
-      .map(([name, intervals, color]) => [name, intervals.find((interval) => interval.from <= time && time < interval.to), color])
-      .filter(([, interval]) => interval);
-    const rows = found.length
-      ? found
-          .map(
-            ([name, interval, color]) =>
-              `<div><i style="background:${color}"></i>${name} ${formatTime(interval.from)}–${formatTime(interval.to)}, ${formatValue(
-                (interval.to - interval.from) / HOUR_MS
-              )} h</div>`
-          )
-          .join("")
-      : "<div>No sleep or exercise</div>";
-    return { x: x(time), html: `<b>${this.period.isDay ? formatTime(time) : `${formatDay(time)} ${formatTime(time)}`}</b>${rows}` };
+    const inside = (interval) => interval.from <= time && time < interval.to;
+    const span = (interval) => `${formatTime(interval.from)}–${formatTime(interval.to)}`;
+    const rows = [];
+    const sleep = this.data.sleep.find(inside);
+    if (sleep) {
+      const name = sleep.stage === "asleep" ? "Sleep" : `Sleep, ${STAGE_NAME[sleep.stage]}`;
+      const color = STAGE_COLOR[sleep.stage] || SLEEP_COLOR;
+      rows.push(`<div><i style="background:${color}"></i>${name} ${span(sleep)}, ${formatValue((sleep.to - sleep.from) / HOUR_MS)} h (${sleep.source})</div>`);
+    }
+    const exercise = this.data.exercise.find(inside);
+    if (exercise)
+      rows.push(
+        `<div><i style="background:${EXERCISE_COLOR}"></i>${exercise.workout ? workoutText(exercise.workout) : "Exercise"} ${span(exercise)}${
+          exercise.workout ? "" : `, ${formatValue((exercise.to - exercise.from) / HOUR_MS)} h`
+        }</div>`
+      );
+    if (!rows.length) rows.push("<div>No sleep or exercise</div>");
+    return { x: x(time), html: `<b>${this.period.isDay ? formatTime(time) : `${formatDay(time)} ${formatTime(time)}`}</b>${rows.join("")}` };
   }
 }
 
