@@ -251,6 +251,8 @@ class State:
         self.logged = []
         self.deletes = []
         self.updates = []
+        self.trashed = {}
+        self.logged_at = {}
         self.lock = threading.Lock()
         # Set after a voice write, so the next read comes at once
         self.wake = threading.Event()
@@ -354,8 +356,13 @@ def sync_once(cfg, state, now=None):
         return
     meals, skipped = nc.parse_meals(meal_pages, cfg.tz)
     with state.lock:
-        state.meal_rows = {meal.id: meal for meal in meals}
-        state.logged = []
+        # A read that started before a voice write doesn't have it yet: removed rows stay hidden and new rows stay
+        # listed until a read agrees, for 10 minutes at most
+        fresh = now - dt.timedelta(minutes=10)
+        state.trashed = {page_id: moment for page_id, moment in state.trashed.items() if moment > fresh}
+        state.meal_rows = {meal.id: meal for meal in meals if meal.id not in state.trashed}
+        state.logged = [meal for meal in state.logged if meal.id not in state.meal_rows and state.logged_at.get(meal.id, now) > fresh]
+        state.logged_at = {meal.id: state.logged_at[meal.id] for meal in state.logged if meal.id in state.logged_at}
     today_date = nc.meal_day(now, cfg.tz)
     days = nc.daily_totals(meals, nc.parse_day_flags(day_pages), cfg.tz)
     _write_atomic(cfg.state_dir / "www" / "daily.csv", nc.to_csv(days))
@@ -408,6 +415,7 @@ def food_log(state, writer, body, now, tz):
         page_id = writer.create(nc.notion_properties(entry, tz))
         fields = {k: getattr(entry, k) for k in ("product", "kcal", "protein", "fat", "carbs", "water")}
         state.logged.append(nc.Meal(id=page_id, eaten=entry.eaten, meal=entry.meal, **fields))
+        state.logged_at[page_id] = now
         LOG.info("Voice added row %s", page_id)
         return {"id": page_id, "day_total": _day_total(state, day, tz)}
 
@@ -453,6 +461,7 @@ def food_delete(state, writer, body, now):
         writer.trash(ids[0])
         state.meal_rows.pop(ids[0], None)
         state.logged = [meal for meal in state.logged if meal.id != ids[0]]
+        state.trashed[ids[0]] = now
     LOG.info("Voice removed row %s", ids[0])
     return {"id": ids[0]}
 

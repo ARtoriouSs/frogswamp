@@ -187,3 +187,13 @@ def test_bad_notion_answer_is_502(api, service):
 def test_corrupt_delete_file_does_not_stop_the_service(cfg):  # noqa: F811
     (cfg.state_dir / "voice_deletes.json").write_text("{broken")
     assert ns.State.load(cfg.state_dir).deletes == []
+
+
+def test_read_that_started_before_a_write_does_not_undo_it(api, service, cfg):  # noqa: F811
+    state, call, _ = service
+    new_id = call("POST", "/log", {"product": "Вода", "water": 250})[1]["id"]
+    call("POST", "/log/delete", {"id": "phone-row"})
+    # A Notion read from before both writes: still has phone-row, not the new row yet
+    ns.sync_once(cfg.__class__(**{**cfg._asdict(), "google": None}), state, now=NOW)
+    ids = [entry["id"] for entry in call("GET", "/log/recent")[1]["entries"]]
+    assert new_id in ids and "phone-row" not in ids
