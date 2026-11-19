@@ -12,10 +12,12 @@ pkgs.runCommand "test-voice-integration"
   ''
     cp -r ${src} claude_bridge
     chmod -R u+w claude_bridge
-    # history.py has no HA imports; outside the package pytest doesn't load __init__.py
+    # these have no HA imports; outside the package pytest doesn't load __init__.py
     mkdir unit
-    cp claude_bridge/history.py claude_bridge/test_history.py claude_bridge/const.py claude_bridge/test_const.py unit/
-    (cd unit && python -m pytest -q -p no:cacheprovider test_history.py test_const.py)
+    for f in history const jobs test_history test_const test_jobs; do
+      cp claude_bridge/$f.py unit/
+    done
+    (cd unit && python -m pytest -q -p no:cacheprovider test_history.py test_const.py test_jobs.py)
     cd claude_bridge
     python -m py_compile *.py
     for f in manifest.json strings.json translations/en.json; do jq empty "$f"; done
