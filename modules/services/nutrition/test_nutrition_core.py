@@ -219,3 +219,97 @@ def test_water_only_rows_are_not_sent_to_google():
 
 def test_water_does_not_change_the_meal_hash():
     assert nc.meal_hash(meal(water=300.0)) == nc.meal_hash(meal())
+
+
+NOW_LOG = dt.datetime(2026, 11, 19, 13, 5, tzinfo=TZ)
+
+
+def test_log_request_defaults():
+    entry = nc.parse_log_request({"product": "Банан", "kcal": 105}, NOW_LOG, TZ)
+    assert (entry.product, entry.kcal, entry.protein, entry.fat, entry.carbs, entry.water) == ("Банан", 105.0, 0.0, 0.0, 0.0, 0.0)
+    assert entry.eaten == NOW_LOG and entry.meal == ""
+
+
+def test_log_request_limits():
+    bad = [
+        {"product": "x", "kcal": 3001},
+        {"product": "x", "water": 2001},
+        {"product": "x", "kcal": 10, "protein": 301},
+        {"product": "", "kcal": 10},
+        {"product": "x" * 101, "kcal": 10},
+        {"product": "x", "kcal": 10, "eaten": (NOW_LOG - dt.timedelta(hours=25)).isoformat()},
+        {"product": "x", "kcal": 10, "eaten": (NOW_LOG + dt.timedelta(minutes=10)).isoformat()},
+        {"product": "x", "kcal": 10, "meal": "Полдник"},
+        {"product": "x", "kcal": 0, "water": 0},
+        {"product": "x", "kcal": "много"},
+        {"product": "x", "kcal": -1},
+    ]
+    for body in bad:
+        try:
+            nc.parse_log_request(body, NOW_LOG, TZ)
+        except nc.LogError:
+            continue
+        raise AssertionError(f"accepted {body}")
+
+
+def test_water_row():
+    entry = nc.parse_log_request({"product": "Вода", "water": 250}, NOW_LOG, TZ)
+    props = nc.notion_properties(entry, TZ)
+    assert entry.kcal == 0
+    assert props["Water"] == {"number": 250.0} and props["Kcal"] == {"number": 0.0}
+    assert "Meal" not in props
+
+
+def test_notion_properties_format():
+    entry = nc.parse_log_request({"product": "Борщ", "kcal": 350.04, "protein": 12, "meal": "Обед", "amount": "400 г", "note": "тарелка"}, NOW_LOG, TZ)
+    props = nc.notion_properties(entry, TZ)
+    assert props["Eaten"] == {"date": {"start": "2026-11-19T13:05:00+01:00"}}
+    assert props["Product"] == {"title": [{"text": {"content": "Борщ"}}]}
+    assert props["Meal"] == {"select": {"name": "Обед"}}
+    assert props["Kcal"] == {"number": 350.0}
+    assert props["Amount"] == {"rich_text": [{"text": {"content": "400 г"}}]}
+    assert props["Comment"]["rich_text"][0]["text"]["content"].startswith("голосом, оценка")
+    # The read side gives back the same meal
+    meals, skipped = nc.parse_meals([{"id": "x", "properties": {k: _as_read(v) for k, v in props.items()}}], TZ)
+    assert skipped == 0 and meals[0].kcal == 350.0 and meals[0].eaten == NOW_LOG
+
+
+def _as_read(value):
+    """A written property as Notion returns it on read"""
+    for kind in ("title", "rich_text"):
+        if kind in value:
+            return {"type": kind, kind: [{"type": "text", "plain_text": part["text"]["content"]} for part in value[kind]]}
+    if "date" in value:
+        return {"type": "date", "date": {"start": value["date"]["start"], "end": None, "time_zone": None}}
+    return value
+
+
+def test_after_midnight_keeps_real_time():
+    night = dt.datetime(2026, 11, 20, 1, 30, tzinfo=TZ)
+    entry = nc.parse_log_request({"product": "Бутерброд", "kcal": 250}, night, TZ)
+    assert nc.notion_properties(entry, TZ)["Eaten"]["date"]["start"] == "2026-11-20T01:30:00+01:00"
+    assert nc.meal_day(entry.eaten, TZ) == dt.date(2026, 11, 19)
+
+
+def test_delete_refusals():
+    known = {"a", "b"}
+    assert nc.delete_refusal(["a"], known, [], NOW_LOG) is None
+    assert nc.delete_refusal(["a", "b"], known, [], NOW_LOG) == "one entry per call"
+    assert nc.delete_refusal([], known, [], NOW_LOG) == "one entry per call"
+    assert nc.delete_refusal(["z"], known, [], NOW_LOG) == "unknown entry"
+    five = [NOW_LOG - dt.timedelta(minutes=m) for m in (1, 10, 20, 30, 59)]
+    assert nc.delete_refusal(["a"], known, five, NOW_LOG) == "too many removals, at most 5 per hour"
+    older = [NOW_LOG - dt.timedelta(minutes=m) for m in (1, 10, 20, 30, 61)]
+    assert nc.delete_refusal(["a"], known, older, NOW_LOG) is None
+
+
+def test_update_properties_only_given_fields():
+    assert nc.log_update_properties({"kcal": 200}, NOW_LOG, TZ) == {"Kcal": {"number": 200.0}}
+    props = nc.log_update_properties({"product": "Два банана", "water": 0, "meal": ""}, NOW_LOG, TZ)
+    assert set(props) == {"Product", "Water", "Meal"} and props["Meal"] == {"select": None}
+    for body in ({"kcal": 5000}, {}, {"product": ""}):
+        try:
+            nc.log_update_properties(body, NOW_LOG, TZ)
+        except nc.LogError:
+            continue
+        raise AssertionError(f"accepted {body}")

@@ -1,0 +1,188 @@
+# Food and water logging by voice. The scripts are exposed to Assist; nutrition-sync checks every value and
+# writes to the Notion "Nutrition log" (modules/services/nutrition). Removals: one row per call, at most 5 an hour
+script:
+  food_log:
+    alias: Log food
+    description: >-
+      Writes one food or drink item to the nutrition log. Call it only when the owner says they ate or drank
+      something, never for a question about food. One call per item. Plain water: product "Вода", water_ml, kcal 0
+    icon: mdi:food-apple
+    mode: parallel
+    fields:
+      product:
+        description: Short name in Russian, brand if known, "×2" for several pieces
+        required: true
+        selector:
+          text:
+      kcal:
+        description: Kilocalories of this item
+        selector: &number_selector
+          number:
+            min: 0
+            max: 3000
+            mode: box
+      protein:
+        description: Protein, grams
+        selector: *number_selector
+      fat:
+        description: Fat, grams
+        selector: *number_selector
+      carbs:
+        description: Carbohydrates, grams
+        selector: *number_selector
+      water_ml:
+        description: Millilitres drunk, for any drink (coffee, tea, juice, milk too)
+        selector: *number_selector
+      meal:
+        description: One of Завтрак, Обед, Ужин, Перекус, or empty
+        selector:
+          text:
+      amount:
+        description: Grams, with ml in brackets for drinks, e.g. "500 (500 ml)"
+        selector:
+          text:
+      eaten:
+        description: Only when the owner names another time; ISO time, e.g. 2026-11-19T13:30:00+01:00
+        selector:
+          text:
+      note:
+        description: How the numbers were estimated, a few words
+        selector:
+          text:
+    sequence:
+      - action: rest_command.food_log
+        data:
+          body: >-
+            {{ {'product': product | default(none), 'kcal': kcal | default(none), 'protein': protein | default(none),
+                'fat': fat | default(none), 'carbs': carbs | default(none), 'water': water_ml | default(none),
+                'meal': meal | default(none), 'amount': amount | default(none), 'eaten': eaten | default(none),
+                'note': note | default(none)} }}
+        response_variable: answer
+        continue_on_error: true
+      - variables: &food_result
+          result: >-
+            {{ answer.content if answer is defined and answer.content is mapping
+               else {'ok': false, 'error': 'nutrition-sync did not answer'} }}
+      - stop: Done
+        response_variable: result
+
+  food_update:
+    alias: Correct food
+    description: >-
+      Changes one entry of the nutrition log: give its id from "Recent food entries" and only the fields that
+      change. Call it when the owner corrects something they logged
+    icon: mdi:food-apple-outline
+    mode: parallel
+    fields:
+      id:
+        description: The entry id from "Recent food entries"
+        required: true
+        selector:
+          text:
+      product:
+        description: Short name in Russian
+        selector:
+          text:
+      kcal:
+        description: Kilocalories
+        selector: *number_selector
+      protein:
+        description: Protein, grams
+        selector: *number_selector
+      fat:
+        description: Fat, grams
+        selector: *number_selector
+      carbs:
+        description: Carbohydrates, grams
+        selector: *number_selector
+      water_ml:
+        description: Millilitres drunk
+        selector: *number_selector
+      meal:
+        description: One of Завтрак, Обед, Ужин, Перекус
+        selector:
+          text:
+      amount:
+        description: Grams, with ml in brackets for drinks
+        selector:
+          text:
+      eaten:
+        description: New ISO time, only when the owner corrects the time
+        selector:
+          text:
+    sequence:
+      - action: rest_command.food_update
+        data:
+          body: >-
+            {{ {'id': id, 'product': product | default(none), 'kcal': kcal | default(none),
+                'protein': protein | default(none), 'fat': fat | default(none), 'carbs': carbs | default(none),
+                'water': water_ml | default(none), 'meal': meal | default(none), 'amount': amount | default(none),
+                'eaten': eaten | default(none)} }}
+        response_variable: answer
+        continue_on_error: true
+      - variables: *food_result
+      - stop: Done
+        response_variable: result
+
+  food_delete:
+    alias: Remove food
+    description: >-
+      Removes ONE entry of the nutrition log by its id from "Recent food entries". Only when the owner asks to
+      remove that entry. Never remove several entries for one request without naming each back and getting a yes;
+      at most 5 removals an hour
+    icon: mdi:food-off
+    mode: parallel
+    fields:
+      id:
+        description: The entry id from "Recent food entries"
+        required: true
+        selector:
+          text:
+    sequence:
+      - action: rest_command.food_delete
+        data:
+          body: "{{ {'id': id} }}"
+        response_variable: answer
+        continue_on_error: true
+      - variables: *food_result
+      - stop: Done
+        response_variable: result
+
+  food_recent:
+    alias: Recent food entries
+    description: >-
+      Read only. Today's and yesterday's nutrition log entries (a food day runs from 04:00), newest first, with
+      their ids. Call it before correcting or removing an entry, or to check what was already logged
+    icon: mdi:format-list-bulleted
+    mode: parallel
+    sequence:
+      - action: rest_command.food_recent
+        response_variable: answer
+        continue_on_error: true
+      - variables: *food_result
+      - stop: Done
+        response_variable: result
+
+rest_command:
+  food_log:
+    url: http://127.0.0.1:8131/log
+    method: post
+    content_type: application/json
+    payload: "{{ body | to_json }}"
+    timeout: 30
+  food_update:
+    url: http://127.0.0.1:8131/log/update
+    method: post
+    content_type: application/json
+    payload: "{{ body | to_json }}"
+    timeout: 30
+  food_delete:
+    url: http://127.0.0.1:8131/log/delete
+    method: post
+    content_type: application/json
+    payload: "{{ body | to_json }}"
+    timeout: 30
+  food_recent:
+    url: http://127.0.0.1:8131/log/recent
+    method: get
+    timeout: 30

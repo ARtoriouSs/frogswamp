@@ -74,7 +74,7 @@ class OperationPending(Exception):
         self.name = name
 
 
-def request_json(method, url, headers=None, body=None, form=None):
+def request_json(method, url, headers=None, body=None, form=None, timeout=30):
     headers = dict(headers or {})
     data = None
     if body is not None:
@@ -84,7 +84,7 @@ def request_json(method, url, headers=None, body=None, form=None):
         data = urllib.parse.urlencode(form).encode()
     request = urllib.request.Request(url, data=data, headers=headers, method=method)
     try:
-        with urllib.request.urlopen(request, timeout=30) as response:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
             return json.load(response)
     except urllib.error.HTTPError as error:
         try:
@@ -114,6 +114,29 @@ def notion_query(base, token, source_id):
         if not answer.get("has_more"):
             return results
         cursor = answer.get("next_cursor")
+
+
+class NotionWriter:
+    """Writes only to the Nutrition log data source; the voice assistant's way in"""
+
+    def __init__(self, base, token, source_id):
+        self.base = base
+        self.headers = {"Authorization": f"Bearer {token}", "Notion-Version": NOTION_VERSION}
+        self.source_id = source_id
+
+    # Short and no retry, so HA's 30 s timeout never cuts off a write that still goes through
+    def _send(self, method, path, body):
+        return request_json(method, self.base + path, self.headers, body=body, timeout=10)
+
+    def create(self, properties):
+        body = {"parent": {"type": "data_source_id", "data_source_id": self.source_id}, "properties": properties}
+        return self._send("POST", "/v1/pages", body)["id"]
+
+    def update(self, page_id, properties):
+        self._send("PATCH", f"/v1/pages/{urllib.parse.quote(page_id)}", {"properties": properties})
+
+    def trash(self, page_id):
+        self._send("PATCH", f"/v1/pages/{urllib.parse.quote(page_id)}", {"in_trash": True})
 
 
 def _z(moment):
@@ -223,12 +246,31 @@ class State:
         }
         self.google = None
         self.eaten = {}
+        # The rows of the last Notion read, so the voice assistant can only change rows that exist
+        self.meal_rows = {}
+        self.logged = []
+        self.deletes = []
+        self.updates = []
+        self.lock = threading.Lock()
+        # Set after a voice write, so the next read comes at once
+        self.wake = threading.Event()
 
     @classmethod
     def load(cls, state_dir):
         path = pathlib.Path(state_dir) / "google.json"
         synced = json.loads(path.read_text()) if path.exists() else {}
-        return cls(state_dir, synced)
+        state = cls(state_dir, synced)
+        deletes = pathlib.Path(state_dir) / "voice_deletes.json"
+        try:
+            state.deletes = [dt.datetime.fromisoformat(moment) for moment in json.loads(deletes.read_text())]
+        except (OSError, ValueError, TypeError):
+            # Missing or broken: start counting again rather than not starting
+            state.deletes = []
+        return state
+
+    def save_deletes(self, now):
+        self.deletes = [moment for moment in self.deletes if now - moment < nc.DELETE_WINDOW]
+        _write_atomic(self.state_dir / "voice_deletes.json", json.dumps([moment.isoformat() for moment in self.deletes]))
 
     def save_synced(self):
         _write_atomic(self.state_dir / "google.json", json.dumps(self.synced, indent=1))
@@ -311,6 +353,9 @@ def sync_once(cfg, state, now=None):
         LOG.warning("Couldn't read Notion: %s", error.reason if isinstance(error, HttpError) else type(error).__name__)
         return
     meals, skipped = nc.parse_meals(meal_pages, cfg.tz)
+    with state.lock:
+        state.meal_rows = {meal.id: meal for meal in meals}
+        state.logged = []
     today_date = nc.meal_day(now, cfg.tz)
     days = nc.daily_totals(meals, nc.parse_day_flags(day_pages), cfg.tz)
     _write_atomic(cfg.state_dir / "www" / "daily.csv", nc.to_csv(days))
@@ -343,10 +388,149 @@ def sync_once(cfg, state, now=None):
             state.status["health"] = {**state.status["health"], "ok": False, "error": type(error).__name__}
 
 
-def serve(state, port, cfg=None):
+class Refused(Exception):
+    pass
+
+
+def _day_total(state, day, tz):
+    rows = list(state.meal_rows.values()) + state.logged
+    mine = [meal for meal in rows if nc.meal_day(meal.eaten, tz) == day]
+    return {"kcal": round(sum(m.kcal for m in mine), 1), "water_ml": round(sum(m.water for m in mine), 1)}
+
+
+def food_log(state, writer, body, now, tz):
+    entry = nc.parse_log_request(body, now, tz)
+    day = nc.meal_day(entry.eaten, tz)
+    with state.lock:
+        count = sum(1 for meal in list(state.meal_rows.values()) + state.logged if nc.meal_day(meal.eaten, tz) == day)
+        if count >= nc.DAY_LIMIT:
+            raise Refused(f"at most {nc.DAY_LIMIT} entries a day")
+        page_id = writer.create(nc.notion_properties(entry, tz))
+        fields = {k: getattr(entry, k) for k in ("product", "kcal", "protein", "fat", "carbs", "water")}
+        state.logged.append(nc.Meal(id=page_id, eaten=entry.eaten, meal=entry.meal, **fields))
+        LOG.info("Voice added row %s", page_id)
+        return {"id": page_id, "day_total": _day_total(state, day, tz)}
+
+
+def _known(state):
+    """Rows of the last read and the ones logged since, by id"""
+    return {**state.meal_rows, **{meal.id: meal for meal in state.logged}}
+
+
+def food_update(state, writer, body, now, tz):
+    page_id = body.get("id")
+    # HA sends the fields the assistant left out as null
+    changes = {k: v for k, v in body.items() if k != "id" and v is not None}
+    props = nc.log_update_properties(changes, now, tz)
+    with state.lock:
+        row = _known(state).get(page_id) if isinstance(page_id, str) else None
+        if row is None:
+            raise Refused("unknown entry")
+        kcal = props.get("Kcal", {}).get("number", row.kcal)
+        water = props.get("Water", {}).get("number", row.water)
+        # Zeroing rows would be a removal that skips the removal limit
+        if not kcal and not water:
+            raise Refused("kcal or water is required, remove the entry instead")
+        state.updates = [moment for moment in state.updates if now - moment < nc.DELETE_WINDOW]
+        if len(state.updates) >= nc.UPDATE_LIMIT:
+            raise Refused(f"too many changes, at most {nc.UPDATE_LIMIT} per hour")
+        state.updates.append(now)
+        writer.update(page_id, props)
+    LOG.info("Voice changed row %s", page_id)
+    return {"id": page_id}
+
+
+def food_delete(state, writer, body, now):
+    ids = body.get("id")
+    ids = ids if isinstance(ids, list) else [ids] if ids else []
+    with state.lock:
+        reason = nc.delete_refusal(ids, set(_known(state)), state.deletes, now)
+        if reason:
+            raise Refused(reason)
+        # Counted before the call, so a timeout after Notion did it still counts
+        state.deletes.append(now)
+        state.save_deletes(now)
+        writer.trash(ids[0])
+        state.meal_rows.pop(ids[0], None)
+        state.logged = [meal for meal in state.logged if meal.id != ids[0]]
+    LOG.info("Voice removed row %s", ids[0])
+    return {"id": ids[0]}
+
+
+def food_recent(state, now, tz):
+    today = nc.meal_day(now, tz)
+    days = {today, today - dt.timedelta(days=1)}
+    with state.lock:
+        rows = [meal for meal in list(state.meal_rows.values()) + state.logged if nc.meal_day(meal.eaten, tz) in days]
+    rows.sort(key=lambda meal: meal.eaten, reverse=True)
+    return {
+        "entries": [
+            {"id": m.id, "product": m.product, "kcal": m.kcal, "water": m.water, "eaten": m.eaten.astimezone(tz).isoformat(timespec="minutes"), "day": nc.meal_day(m.eaten, tz).isoformat()}
+            for m in rows
+        ]
+    }
+
+
+def serve(state, port, cfg=None, clock=None):
+    clock = clock or (lambda: dt.datetime.now(cfg.tz))
+    writer = NotionWriter(cfg.notion_url, cfg.notion_token, cfg.meals_source) if cfg else None
+    writes = {"/log": food_log, "/log/update": food_update}
+
     class Handler(http.server.BaseHTTPRequestHandler):
+        def _answer(self, status, answer):
+            data = json.dumps(answer, ensure_ascii=False).encode()
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+
+        def do_POST(self):
+            path = urllib.parse.urlparse(self.path).path
+            if writer is None or path not in (*writes, "/log/delete"):
+                self.send_error(404)
+                return
+            try:
+                length = int(self.headers.get("Content-Length") or 0)
+            except ValueError:
+                length = -1
+            if not 0 <= length <= 4096:
+                self._answer(400, {"ok": False, "error": "request too big"})
+                return
+            try:
+                body = json.loads(self.rfile.read(length) or b"{}")
+                if not isinstance(body, dict):
+                    raise ValueError
+            except ValueError:
+                self._answer(400, {"ok": False, "error": "body must be a JSON object"})
+                return
+            now = clock()
+            try:
+                if path == "/log/delete":
+                    result = food_delete(state, writer, body, now)
+                else:
+                    result = writes[path](state, writer, body, now, cfg.tz)
+            except (nc.LogError, Refused) as error:
+                self._answer(400, {"ok": False, "error": str(error)})
+                return
+            except HttpError as error:
+                LOG.warning("Notion refused a voice write: HTTP %d", error.status)
+                self._answer(502, {"ok": False, "error": f"notion {error.status}"})
+                return
+            except (urllib.error.URLError, OSError) as error:
+                self._answer(502, {"ok": False, "error": f"notion unreachable ({type(error).__name__}), check Recent food entries"})
+                return
+            except (ValueError, KeyError):
+                self._answer(502, {"ok": False, "error": "notion gave an odd answer, check Recent food entries"})
+                return
+            state.wake.set()
+            self._answer(200, {"ok": True, **result})
+
         def do_GET(self):
             url = urllib.parse.urlparse(self.path)
+            if url.path == "/log/recent" and cfg is not None:
+                self._answer(200, {"ok": True, **food_recent(state, clock(), cfg.tz)})
+                return
             if url.path == "/status":
                 answer = state.status
             elif url.path == "/wellness" and cfg is not None:
@@ -425,7 +609,8 @@ def main():
             sync_once(cfg, state)
         except Exception:
             LOG.exception("Sync failed")
-        time.sleep(args.interval)
+        state.wake.wait(args.interval)
+        state.wake.clear()
 
 
 if __name__ == "__main__":

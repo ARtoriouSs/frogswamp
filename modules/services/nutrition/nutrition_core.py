@@ -185,3 +185,136 @@ def plan_google(meals, synced, notion_ok):
     if not meals and len(gone) > MASS_DELETE_LIMIT:
         return GooglePlan(create=create, delete=delete, skipped_mass_delete=True)
     return GooglePlan(create=create, delete=delete + gone, skipped_mass_delete=False)
+
+
+# Rows the voice assistant writes (nutrition_sync.py /log). The limits catch a misheard or made-up number
+DAY_LIMIT = 40
+DELETE_LIMIT = 5
+DELETE_WINDOW = dt.timedelta(hours=1)
+UPDATE_LIMIT = 20
+LIMITS = {"kcal": 3000, "protein": 300, "fat": 300, "carbs": 300, "water": 2000}
+NUMBER_PROPS = {"kcal": "Kcal", "protein": "Protein", "fat": "Fat", "carbs": "Carbs", "water": "Water"}
+
+
+class LogError(ValueError):
+    """A reason the assistant can say back"""
+
+
+@dataclasses.dataclass(frozen=True)
+class LogEntry:
+    product: str
+    kcal: float
+    protein: float
+    fat: float
+    carbs: float
+    water: float
+    meal: str
+    amount: str
+    eaten: dt.datetime
+    note: str
+
+
+def _log_number(body, key):
+    value = body.get(key)
+    if value in (None, ""):
+        return 0.0
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        raise LogError(f"{key} must be a number") from None
+    if not 0 <= number <= LIMITS[key]:
+        raise LogError(f"{key} must be 0 to {LIMITS[key]}")
+    return number
+
+
+def _log_text(body, key, longest, required=False):
+    text = str(body.get(key) or "").strip()
+    if required and not text:
+        raise LogError(f"{key} is required")
+    if len(text) > longest:
+        raise LogError(f"{key} is longer than {longest} characters")
+    return text
+
+
+def _log_meal(body):
+    meal = _log_text(body, "meal", 20)
+    if meal and meal not in MEAL_TYPES:
+        raise LogError(f"meal must be one of {', '.join(MEAL_TYPES)} or empty")
+    return meal
+
+
+def _log_eaten(body, now, tz):
+    if not body.get("eaten"):
+        return now
+    try:
+        eaten = dt.datetime.fromisoformat(str(body["eaten"]))
+    except ValueError:
+        raise LogError("eaten must be an ISO time") from None
+    if eaten.tzinfo is None:
+        eaten = eaten.replace(tzinfo=tz)
+    if not now - dt.timedelta(hours=24) <= eaten <= now + dt.timedelta(minutes=5):
+        raise LogError("eaten must be within the last 24 hours")
+    return eaten
+
+
+def parse_log_request(body, now, tz):
+    numbers = {key: _log_number(body, key) for key in NUMBER_PROPS}
+    if numbers["kcal"] == 0 and numbers["water"] == 0:
+        raise LogError("kcal or water is required")
+    return LogEntry(
+        product=_log_text(body, "product", 100, required=True),
+        meal=_log_meal(body),
+        amount=_log_text(body, "amount", 50),
+        eaten=_log_eaten(body, now, tz),
+        note=_log_text(body, "note", 200),
+        **numbers,
+    )
+
+
+def _rich(text):
+    return [{"text": {"content": text}}] if text else []
+
+
+def notion_properties(entry, tz):
+    props = {
+        "Product": {"title": _rich(entry.product)},
+        "Eaten": {"date": {"start": entry.eaten.astimezone(tz).isoformat()}},
+        "Amount": {"rich_text": _rich(entry.amount)},
+        "Comment": {"rich_text": _rich("голосом, оценка" + (f"; {entry.note}" if entry.note else ""))},
+    }
+    for key, name in NUMBER_PROPS.items():
+        props[name] = {"number": round(getattr(entry, key), 1)}
+    if entry.meal:
+        props["Meal"] = {"select": {"name": entry.meal}}
+    return props
+
+
+def log_update_properties(body, now, tz):
+    """Only the fields given, with the same limits as a new row"""
+    props = {}
+    for key, name in NUMBER_PROPS.items():
+        if key in body:
+            props[name] = {"number": round(_log_number(body, key), 1)}
+    if "product" in body:
+        props["Product"] = {"title": _rich(_log_text(body, "product", 100, required=True))}
+    if "amount" in body:
+        props["Amount"] = {"rich_text": _rich(_log_text(body, "amount", 50))}
+    if "meal" in body:
+        meal = _log_meal(body)
+        props["Meal"] = {"select": {"name": meal} if meal else None}
+    if body.get("eaten"):
+        props["Eaten"] = {"date": {"start": _log_eaten(body, now, tz).astimezone(tz).isoformat()}}
+    if not props:
+        raise LogError("nothing to change")
+    return props
+
+
+def delete_refusal(ids, known_ids, recent_deletes, now):
+    """Why a removal is refused, or None. One row per call and a few per hour, so "remove everything" can't happen"""
+    if len(ids) != 1:
+        return "one entry per call"
+    if ids[0] not in known_ids:
+        return "unknown entry"
+    if sum(1 for moment in recent_deletes if now - moment < DELETE_WINDOW) >= DELETE_LIMIT:
+        return f"too many removals, at most {DELETE_LIMIT} per hour"
+    return None

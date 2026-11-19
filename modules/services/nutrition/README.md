@@ -23,6 +23,7 @@ Files:
 - `nutrition_core.py`: pure logic (Notion rows → meals → daily totals, CSV, what to change in Google)
 - `nutrition_sync.py`: the service (Notion and Google calls, `/status`, state in `/var/lib/nutrition-sync/google.json`)
 - `health_core.py`, `health_sync.py`: the Google Health read (sleep with stages, workouts, heart rate per minute, resting heart rate, HRV, active zone minutes, time in heart rate zones, weight, burned calories). The first run reads a year of daily values and 31 days of details; later runs read the last 3 days again, because the watch and sleep data arrive late. A failure only sets `/status.health`, the meals go on
+- Voice logging: `POST /log`, `/log/update`, `/log/delete` and `GET /log/recent` on 127.0.0.1:8131, used by the HA scripts in `home-assistant/config/packages/voice_food.yaml`. Every value is checked (kcal 0–3000, protein, fat and carbs 0–300 g, water 0–2000 ml, a time in the last 24 h, at most 40 rows a day). Only rows of the Nutrition log from the last read can be changed or removed, one per call and at most 5 removals an hour (counted in `voice_deletes.json`), so "remove everything" can't happen. After a write the next Notion read starts at once
 - `google_auth.py`: the one-time Google login, run on the laptop with `just nutrition-google-auth`
 - `health_probe.py`: `just nutrition-google-probe [days]` shows which data types the account has (counts and field names, no values)
 - `claude-project-instructions.md`: the text for the Claude project
@@ -34,7 +35,7 @@ Files:
 1. Make two databases on one page (now Personal → Health → Nutrition Log):
    - **Nutrition log**: `Product` (title), `Eaten` (date with time), `Meal` (select: `Завтрак`, `Обед`, `Ужин`, `Перекус`), `Amount` (text), `Kcal`, `Protein`, `Fat`, `Carbs` (numbers), `Comment` (text), `Water` (number, ml drunk; plain water rows have Kcal 0)
    - **Nutrition days**: `Date` (title, `YYYY-MM-DD`), `Full` (checkbox). Every day is drawn on the charts, today too; a row with `Full` unchecked keeps an incomplete day off them
-2. Notion → Settings → Connections → Develop or manage integrations → **New integration**: name `frogswamp-nutrition`, type Internal, capabilities **Read content** only. Copy the token.
+2. Notion → Settings → Connections → Develop or manage integrations → **New integration**: name `frogswamp-nutrition`, type Internal, capabilities **Read content**, **Update content** and **Insert content** (the last two for logging by voice; nutrition-sync writes only to Nutrition log). Copy the token.
 3. On the page with both databases: ••• → Connections → add `frogswamp-nutrition`.
 4. Find each database's data source id: open the database → ••• → Manage data sources → ••• → Copy data source ID, or ask Claude with the Notion connector for the `collection://…` id (the part after `collection://`).
 

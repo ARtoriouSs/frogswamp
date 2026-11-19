@@ -127,3 +127,11 @@ def test_control_after_web_in_same_request_blocked(tmp_path):
 
 def test_home_broken_input_blocked():
     assert web_guard.main(io.StringIO("{nope"), io.StringIO(), mode="home") == 2
+
+
+def test_wellness_and_food_reads_allowed_after_web(tmp_path):
+    entries = user_turn("how much did I eat, and what is a normal amount") + search_turn("u1", ["https://w.example"])
+    for tool in ("script__wellness_data", "script__food_recent"):
+        assert home(tmp_path, entries, tool, {})[0] == 0, tool
+    for tool in ("script__food_log", "script__food_update", "script__food_delete"):
+        assert home(tmp_path, entries, tool, {"id": "x"})[0] == 2, tool
