@@ -173,6 +173,16 @@ ha-check:
 nutrition-google-auth *args:
     python3 -I modules/services/nutrition/google_auth.py {{args}}
 
+# Shows which Google Health data types the account has (counts and field names)
+nutrition-google-probe days="14" *only:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    tmp="$(mktemp -d)"; chmod 700 "$tmp"; trap 'rm -rf "$tmp"' EXIT
+    for key in google_client_id google_client_secret google_refresh_token; do
+      sops -d --extract "[\"nutrition\"][\"$key\"]" secrets/frogswamp.yaml > "$tmp/$key"
+    done
+    python3 -I modules/services/nutrition/health_probe.py --credentials "$tmp" --days {{days}} {{only}}
+
 # Restart Home Assistant on the server
 restart-ha:
     ssh root@{{host}} 'systemctl restart podman-home-assistant.service && systemctl is-active podman-home-assistant.service'

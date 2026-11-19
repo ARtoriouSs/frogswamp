@@ -22,7 +22,13 @@ import webbrowser
 AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 TOKEN_URL = "https://oauth2.googleapis.com/token"
 API_URL = "https://health.googleapis.com/v4/users/me/dataTypes/nutrition-log/dataPoints"
-SCOPE = "https://www.googleapis.com/auth/googlehealth.nutrition.writeonly"
+SCOPES = [
+    "https://www.googleapis.com/auth/googlehealth.nutrition.writeonly",
+    "https://www.googleapis.com/auth/googlehealth.nutrition.readonly",
+    "https://www.googleapis.com/auth/googlehealth.activity_and_fitness.readonly",
+    "https://www.googleapis.com/auth/googlehealth.sleep.readonly",
+    "https://www.googleapis.com/auth/googlehealth.health_metrics_and_measurements.readonly",
+]
 
 
 def wait_for_code(state):
@@ -84,7 +90,7 @@ def login(client_id, client_secret):
             "client_id": client_id,
             "redirect_uri": redirect_uri,
             "response_type": "code",
-            "scope": SCOPE,
+            "scope": " ".join(SCOPES),
             "access_type": "offline",
             # always show the account picker, so the right account can be chosen
             "prompt": "consent select_account",
