@@ -58,3 +58,22 @@ script:
         response_variable: result
       - stop: Done
         response_variable: result
+
+  # For the dashboard: a card can't put a job id into its tap action, so it passes its slot number
+  voice_job_cancel_slot:
+    alias: Cancel voice job in a dashboard slot
+    icon: mdi:clipboard-remove-outline
+    mode: queued
+    fields:
+      slot:
+        required: true
+        example: 0
+    sequence:
+      - variables:
+          jobs: "{{ state_attr('sensor.voice_jobs', 'jobs') or [] }}"
+      - condition: template
+        value_template: "{{ slot | int(-1) >= 0 and slot | int < jobs | count }}"
+      - action: claude_bridge.cancel_job
+        data:
+          job_id: "{{ jobs[slot | int].id }}"
+        response_variable: result

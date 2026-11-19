@@ -1494,6 +1494,194 @@ views:
             primary: Night green dot
             icon: mdi:weather-night
 
+      - type: grid
+        cards:
+          - type: heading
+            heading: Voice jobs
+            icon: mdi:clipboard-clock-outline
+          - type: custom:mushroom-template-card
+            entity: sensor.voice_jobs
+            primary: >-
+              {% set n = states('sensor.voice_jobs') | int(0) %}{{ 'No jobs waiting' if n == 0 else n ~ ' waiting, tap one to cancel' }}
+            secondary: >-
+              {% set leases = state_attr('sensor.voice_jobs', 'leases') or [] %}{% for l in leases %}{{ l.title }} → off {{ l.ends }}{{ ', ' if not loop.last }}{% else %}Nothing turns off by itself{% endfor %}
+            icon: mdi:timer-sand
+            color: "{{ 'blue' if states('sensor.voice_jobs') | int(0) > 0 else 'disabled' }}"
+            grid_options:
+              columns: 12
+              rows: 1
+            tap_action:
+              action: more-info
+          - &voice_job_slot
+            type: custom:mushroom-template-card
+            entity: sensor.voice_jobs
+            primary: >-
+              {% set jobs = state_attr('sensor.voice_jobs', 'jobs') or [] %}{{ jobs[0].title if jobs | count > 0 else '' }}
+            secondary: >-
+              {% set jobs = state_attr('sensor.voice_jobs', 'jobs') or [] %}{{ jobs[0].step ~ ' · до ' ~ jobs[0].expires if jobs | count > 0 else '' }}
+            icon: mdi:clipboard-clock-outline
+            color: blue
+            grid_options:
+              columns: 12
+              rows: 1
+            visibility:
+              - condition: numeric_state
+                entity: sensor.voice_jobs
+                above: 0
+            tap_action:
+              action: perform-action
+              perform_action: script.voice_job_cancel_slot
+              data:
+                slot: 0
+              confirmation:
+                text: "Cancel this job?"
+            hold_action:
+              action: none
+          - <<: *voice_job_slot
+            primary: >-
+              {% set jobs = state_attr('sensor.voice_jobs', 'jobs') or [] %}{{ jobs[1].title if jobs | count > 1 else '' }}
+            secondary: >-
+              {% set jobs = state_attr('sensor.voice_jobs', 'jobs') or [] %}{{ jobs[1].step ~ ' · до ' ~ jobs[1].expires if jobs | count > 1 else '' }}
+            visibility:
+              - condition: numeric_state
+                entity: sensor.voice_jobs
+                above: 1
+            tap_action:
+              action: perform-action
+              perform_action: script.voice_job_cancel_slot
+              data:
+                slot: 1
+              confirmation:
+                text: "Cancel this job?"
+          - <<: *voice_job_slot
+            primary: >-
+              {% set jobs = state_attr('sensor.voice_jobs', 'jobs') or [] %}{{ jobs[2].title if jobs | count > 2 else '' }}
+            secondary: >-
+              {% set jobs = state_attr('sensor.voice_jobs', 'jobs') or [] %}{{ jobs[2].step ~ ' · до ' ~ jobs[2].expires if jobs | count > 2 else '' }}
+            visibility:
+              - condition: numeric_state
+                entity: sensor.voice_jobs
+                above: 2
+            tap_action:
+              action: perform-action
+              perform_action: script.voice_job_cancel_slot
+              data:
+                slot: 2
+              confirmation:
+                text: "Cancel this job?"
+          - <<: *voice_job_slot
+            primary: >-
+              {% set jobs = state_attr('sensor.voice_jobs', 'jobs') or [] %}{{ jobs[3].title if jobs | count > 3 else '' }}
+            secondary: >-
+              {% set jobs = state_attr('sensor.voice_jobs', 'jobs') or [] %}{{ jobs[3].step ~ ' · до ' ~ jobs[3].expires if jobs | count > 3 else '' }}
+            visibility:
+              - condition: numeric_state
+                entity: sensor.voice_jobs
+                above: 3
+            tap_action:
+              action: perform-action
+              perform_action: script.voice_job_cancel_slot
+              data:
+                slot: 3
+              confirmation:
+                text: "Cancel this job?"
+          - <<: *voice_job_slot
+            primary: >-
+              {% set jobs = state_attr('sensor.voice_jobs', 'jobs') or [] %}{{ jobs[4].title if jobs | count > 4 else '' }}
+            secondary: >-
+              {% set jobs = state_attr('sensor.voice_jobs', 'jobs') or [] %}{{ jobs[4].step ~ ' · до ' ~ jobs[4].expires if jobs | count > 4 else '' }}
+            visibility:
+              - condition: numeric_state
+                entity: sensor.voice_jobs
+                above: 4
+            tap_action:
+              action: perform-action
+              perform_action: script.voice_job_cancel_slot
+              data:
+                slot: 4
+              confirmation:
+                text: "Cancel this job?"
+          - <<: *voice_job_slot
+            primary: >-
+              {% set jobs = state_attr('sensor.voice_jobs', 'jobs') or [] %}{{ jobs[5].title if jobs | count > 5 else '' }}
+            secondary: >-
+              {% set jobs = state_attr('sensor.voice_jobs', 'jobs') or [] %}{{ jobs[5].step ~ ' · до ' ~ jobs[5].expires if jobs | count > 5 else '' }}
+            visibility:
+              - condition: numeric_state
+                entity: sensor.voice_jobs
+                above: 5
+            tap_action:
+              action: perform-action
+              perform_action: script.voice_job_cancel_slot
+              data:
+                slot: 5
+              confirmation:
+                text: "Cancel this job?"
+          - <<: *voice_job_slot
+            primary: >-
+              {% set jobs = state_attr('sensor.voice_jobs', 'jobs') or [] %}{{ jobs[6].title if jobs | count > 6 else '' }}
+            secondary: >-
+              {% set jobs = state_attr('sensor.voice_jobs', 'jobs') or [] %}{{ jobs[6].step ~ ' · до ' ~ jobs[6].expires if jobs | count > 6 else '' }}
+            visibility:
+              - condition: numeric_state
+                entity: sensor.voice_jobs
+                above: 6
+            tap_action:
+              action: perform-action
+              perform_action: script.voice_job_cancel_slot
+              data:
+                slot: 6
+              confirmation:
+                text: "Cancel this job?"
+          - <<: *voice_job_slot
+            primary: >-
+              {% set jobs = state_attr('sensor.voice_jobs', 'jobs') or [] %}{{ jobs[7].title if jobs | count > 7 else '' }}
+            secondary: >-
+              {% set jobs = state_attr('sensor.voice_jobs', 'jobs') or [] %}{{ jobs[7].step ~ ' · до ' ~ jobs[7].expires if jobs | count > 7 else '' }}
+            visibility:
+              - condition: numeric_state
+                entity: sensor.voice_jobs
+                above: 7
+            tap_action:
+              action: perform-action
+              perform_action: script.voice_job_cancel_slot
+              data:
+                slot: 7
+              confirmation:
+                text: "Cancel this job?"
+          - <<: *voice_job_slot
+            primary: >-
+              {% set jobs = state_attr('sensor.voice_jobs', 'jobs') or [] %}{{ jobs[8].title if jobs | count > 8 else '' }}
+            secondary: >-
+              {% set jobs = state_attr('sensor.voice_jobs', 'jobs') or [] %}{{ jobs[8].step ~ ' · до ' ~ jobs[8].expires if jobs | count > 8 else '' }}
+            visibility:
+              - condition: numeric_state
+                entity: sensor.voice_jobs
+                above: 8
+            tap_action:
+              action: perform-action
+              perform_action: script.voice_job_cancel_slot
+              data:
+                slot: 8
+              confirmation:
+                text: "Cancel this job?"
+          - <<: *voice_job_slot
+            primary: >-
+              {% set jobs = state_attr('sensor.voice_jobs', 'jobs') or [] %}{{ jobs[9].title if jobs | count > 9 else '' }}
+            secondary: >-
+              {% set jobs = state_attr('sensor.voice_jobs', 'jobs') or [] %}{{ jobs[9].step ~ ' · до ' ~ jobs[9].expires if jobs | count > 9 else '' }}
+            visibility:
+              - condition: numeric_state
+                entity: sensor.voice_jobs
+                above: 9
+            tap_action:
+              action: perform-action
+              perform_action: script.voice_job_cancel_slot
+              data:
+                slot: 9
+              confirmation:
+                text: "Cancel this job?"
+
   - title: Security
     path: security
     visible:

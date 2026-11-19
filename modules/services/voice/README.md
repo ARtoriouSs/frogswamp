@@ -32,6 +32,7 @@ phone / Voice PE ─ wake word ─▶ HA pipeline ─▶ Whisper ─▶ local ph
 |---|---|
 | Only exposed entities | HA MCP uses the non-admin, local-only user `voice-agent`; Assist sees exposed entities only, "expose new entities" is off |
 | No automations, scripts or scenes edited | No such tools in the Assist API; the prompt says it can't |
+| Voice jobs stay one-shot and small | Claude only fills in a job form; fixed code in `claude_bridge/jobs.py` refuses unknown types, entities that aren't exposed, heaters outside the lease scripts, locks, the alarm, blinds, scripts and automations. At most 10 jobs, leases up to 6 h, expiry up to 30 days |
 | No device changes the owner didn't ask for | Prompt: only the newest request, never repeat earlier actions |
 | Read only: Zigbee bridge, car, qBittorrent, phone | Only sensors of these are exposed (Zigbee bridge: connection state and version). Integrations can add tools to the Assist API past exposure (VW Group Connect adds Škoda ones), so the hook `web_guard.py home` allows HA tools of known integrations only (`HA_INTEGRATIONS`); add a new one there on purpose |
 | Never "Tuya mode" / "Home Assistant mode" | Not exposed, and named in the prompt |
@@ -75,6 +76,19 @@ One named blind ("открой левые жалюзи", "open the left blind") 
 - Silero reads only Cyrillic words. The prompt asks Claude to write foreign names in Cyrillic as a Russian says them (Имэджин Драгонс). `silero/ru_text.py` writes numbers, decimals, times, units (°C, %, km, zł, kWh) and Latin words (Polish street names) out in Russian first, drops markdown, links and emoji, and splits the text into sentences, which are spoken one by one.
 - The model file is a torch package with Silero's own Python code, pinned by hash. The service has no network except localhost, no writable paths except its cache, no access to `/var/lib` or secrets, and a 3 GB memory limit.
 - Voices: aidar, eugene (male), baya, kseniya, xenia (female). The pipeline sets the voice; `frogswamp.voice.silero.voice` is the default. Piper was removed to save memory; to bring it back, re-add `services.wyoming.piper.servers.ru` and pick it in the pipeline.
+
+## Jobs, timers and reminders
+
+One-shot "do X when Y" by voice: "когда я вернусь, включи тёплые полы на 2 часа", "включи полотенцесушитель на час", "поставь таймер на 10 минут", "напомни через час…". Design: `docs/superpowers/specs/2026-11-19-voice-jobs-design.md`.
+
+- A job is JSON from Claude: `arm_when` (optional), `run_when`, `do`, `expires_in_min` (24 h by default, at most 30 days). Conditions: person, state, changed, numeric, time, time_window, room_presence. Actions: heat, turn_on (with `minutes` = a lease that turns it off), turn_off, set_temperature, notify, announce. A new type is one parser and one checker in `claude_bridge/jobs.py`, plus a line in the prompt
+- "Когда вернусь" first waits for the person to be away for 10 min, so the current presence and the door opening on the way out don't count
+- The engine (`claude_bridge/scheduler.py`) keeps jobs and leases in HA's `.storage/claude_bridge.jobs`. After a restart, leases that ended meanwhile are turned off at once and old jobs expire. A job is marked done before its actions run, so it never runs twice
+- Heater runs go through `script.heat_lease` with `force` (like the button), so their end, retries and pushes are the timed-heat ones
+- Every run sends a push to the owner's phone with the details; an expired job and a lease that won't turn off do too. Timers and reminders are only that push
+- `announce` and `room_presence` are refused until a voice satellite and a presence sensor exist
+- Claude uses three scripts in `home-assistant/config/packages/voice_jobs.yaml`: *Add voice job*, *Voice jobs* (read only), *Cancel voice job*. They have to be exposed to Assist once, with aliases (Добавить задание, Задания, Отменить задание)
+- `sensor.voice_jobs`: active job count; attributes `jobs`, `recent`, `leases`. The Schedule tab shows them, with a tap to cancel
 
 ## Claude's behaviour
 
