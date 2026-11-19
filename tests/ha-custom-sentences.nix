@@ -36,6 +36,9 @@ let
         "какая температура в спальне": ("FrogRoomTemperature", {"lang": "ru", "room": "bedroom"}),
         "сколько сейчас градусов в коридоре": ("FrogRoomTemperature", {"lang": "ru", "room": "hall"}),
         "какая сейчас температура в прихожей": ("FrogRoomTemperature", {"lang": "ru", "room": "hall"}),
+        "поставь таймер на две минуты": ("FrogTimer", {"lang": "ru", "timer_text": "на две минуты"}),
+        "заведи мне таймер на 10 минут": ("FrogTimer", {"lang": "ru", "timer_text": "на 10 минут"}),
+        "засеки пять минут": ("FrogTimer", {"lang": "ru", "timer_text": "пять минут"}),
     }
     expected_en = {
         "open the blinds": ("FrogBlindsOpen", {}),
@@ -53,6 +56,7 @@ let
         "turn the towel rail off in the guest toilet": ("FrogTowelHeatOff", {"bathroom": "guest"}),
         "what's the temperature in the bedroom": ("FrogRoomTemperature", {"room": "bedroom"}),
         "how warm is it in the hallway": ("FrogRoomTemperature", {"room": "hall"}),
+        "set a timer for 5 minutes": ("FrogTimer", {"timer_text": "for 5 minutes"}),
     }
     cases = [("ru", t, i, sl) for t, (i, sl) in expected.items()]
     cases += [("en", t, i, {"lang": "en", **sl}) for t, (i, sl) in expected_en.items()]
@@ -71,7 +75,8 @@ let
     # every reply has both languages
     import jinja2
     for name, script in scripts.items():
-        if name == "FrogRoomTemperature":
+        # FrogTimer says Claude's answer
+        if name in ("FrogRoomTemperature", "FrogTimer"):
             continue
         tpl = jinja2.Environment().from_string(script["speech"]["text"])
         ru, en = tpl.render(lang="ru"), tpl.render(lang="en")

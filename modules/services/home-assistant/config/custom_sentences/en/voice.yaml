@@ -72,7 +72,15 @@ intents:
           - "how (warm|cold|hot) is [it in] the {room}"
         slots:
           lang: en
+  FrogTimer:
+    data:
+      - sentences:
+          - "(set|start) [a] timer {timer_text}"
+        slots:
+          lang: en
 lists:
+  timer_text:
+    wildcard: true
   bathroom:
     values:
       - in: "(guest bathroom|guest toilet)"

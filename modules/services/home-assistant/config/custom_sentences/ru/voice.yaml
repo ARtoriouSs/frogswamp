@@ -70,7 +70,17 @@ intents:
           - "сколько [сейчас] градусов в {room}"
         slots:
           lang: ru
+  # HA's own timer phrases answer "not supported" without a voice satellite; these go to Claude's voice jobs
+  FrogTimer:
+    data:
+      - sentences:
+          - "(поставь|поставить|заведи|запусти|установи|включи) [мне] таймер {timer_text}"
+          - "засеки {timer_text}"
+        slots:
+          lang: ru
 lists:
+  timer_text:
+    wildcard: true
   bathroom:
     values:
       - in: "(гостевом санузле|гостевой ванной)"

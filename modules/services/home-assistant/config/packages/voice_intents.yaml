@@ -84,3 +84,17 @@ intent_script:
         {%- else %}В {{ where }} {{ n | string | replace('.', ',') }} градуса{% endif %}
         {%- endif %}
         {%- endif %}
+  # Timers go to Claude, which makes a voice job with a phone push (packages/voice_jobs.yaml). Remove this
+  # once a voice satellite rings HA's own timers
+  FrogTimer:
+    action:
+      - action: conversation.process
+        data:
+          agent_id: conversation.claude
+          language: "{{ lang }}"
+          text: "{{ ('set a timer ' if lang == 'en' else 'поставь таймер ') ~ timer_text }}"
+        response_variable: answer
+      - stop: Forwarded to Claude
+        response_variable: answer
+    speech:
+      text: "{{ action_response.response.speech.plain.speech }}"
