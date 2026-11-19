@@ -6,7 +6,7 @@ A new type is one parser here (and one checker for conditions), plus a line in t
 
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import datetime, time, timedelta
 from typing import Callable, Protocol
 
@@ -480,3 +480,132 @@ def entities_of(job: Job) -> set[str]:
             out.add(cond["entity_id"])
         out.update(cond.get("entities", []))
     return out
+
+
+# --- leases and storage
+
+
+@dataclass
+class Lease:
+    entity_id: str
+    ends: datetime
+    title: str
+    job_id: str
+    tries: int = 0
+
+
+def add_lease(leases: list[Lease], new: Lease) -> list[Lease]:
+    """One lease per entity; a new one may extend it, never shorten it"""
+    old = next((lease for lease in leases if lease.entity_id == new.entity_id), None)
+    if old is not None and old.ends >= new.ends:
+        return leases
+    return [lease for lease in leases if lease is not old] + [new]
+
+
+def _times_to_text(data, keys):
+    return {k: (v.isoformat() if k in keys and v is not None else v) for k, v in data.items()}
+
+
+def _times_from_text(data, keys):
+    return {k: (datetime.fromisoformat(v) if k in keys and v is not None else v) for k, v in data.items()}
+
+
+JOB_TIMES = ("created", "expires", "armed_at", "finished_at")
+
+
+def dump(jobs: list[Job], leases: list[Lease]) -> dict:
+    return {
+        "jobs": [_times_to_text(asdict(job), JOB_TIMES) for job in jobs],
+        "leases": [_times_to_text(asdict(lease), ("ends",)) for lease in leases],
+    }
+
+
+def load(data: dict) -> tuple[list[Job], list[Lease]]:
+    jobs = [Job(**_times_from_text(item, JOB_TIMES)) for item in data.get("jobs", [])]
+    leases = [Lease(**_times_from_text(item, ("ends",))) for item in data.get("leases", [])]
+    return jobs, leases
+
+
+def is_active(job: Job) -> bool:
+    return job.status in ("waiting_arm", "armed")
+
+
+def prune(jobs: list[Job], now: datetime) -> list[Job]:
+    """Finished jobs stay a day for the list and the dashboard"""
+    return [job for job in jobs if is_active(job) or job.finished_at > now - KEEP_FINISHED]
+
+
+# --- Russian texts for pushes, the list and the dashboard
+
+DEVICE_NAMES = {
+    "towel_master": "полотенцесушитель в большой ванной",
+    "towel_guest": "полотенцесушитель в гостевой ванной",
+    "floor_master": "тёплые полы в большой ванной",
+    "floor_guest": "тёплые полы в гостевой ванной",
+}
+FINISHED_LABELS = {"done": "выполнено", "expired": "истекло", "cancelled": "отменено"}
+LEAVE_LABELS = {
+    "owner": "ждёт, пока ты уйдёшь",
+    "wife": "ждёт, пока уйдёт жена",
+    "anyone": "ждёт, пока кто-нибудь уйдёт",
+    "everyone": "ждёт, пока все уйдут",
+}
+BACK_LABELS = {
+    "owner": "ждёт, пока вернёшься",
+    "wife": "ждёт, пока вернётся жена",
+    "anyone": "ждёт, пока кто-нибудь вернётся",
+    "everyone": "ждёт, пока все вернутся",
+}
+
+
+def duration_text(minutes) -> str:
+    hours, rest = divmod(int(minutes), 60)
+    if hours and rest:
+        return f"{hours} ч {rest} мин"
+    return f"{hours} ч" if hours else f"{rest} мин"
+
+
+def step_label(job: Job) -> str:
+    if not is_active(job):
+        return FINISHED_LABELS[job.status]
+    conditions = job.arm_when if job.status == "waiting_arm" else job.run_when
+    for cond in conditions:
+        if cond["type"] == "person":
+            labels = LEAVE_LABELS if cond["state"] == "away" else BACK_LABELS
+            return labels[cond["who"]]
+    for cond in conditions:
+        if cond["type"] == "time" and "due" in cond:
+            return f"сработает в {datetime.fromisoformat(cond['due']).strftime('%H:%M')}"
+    return "ждёт условий"
+
+
+def describe_action(action: dict, name: str | None = None) -> str:
+    """What the action did, for the push; name is the entity's friendly name when known"""
+    label = f"«{name or action.get('entity_id')}»"
+    kind = action["type"]
+    if kind == "heat":
+        return f"включил {DEVICE_NAMES[action['device']]} на {duration_text(action['minutes'])}"
+    if kind == "turn_on":
+        return f"включил {label}" + (f" на {duration_text(action['minutes'])}" if "minutes" in action else "")
+    if kind == "turn_off":
+        return f"выключил {label}"
+    if kind == "set_temperature":
+        return f"поставил {label} на {action['temperature']} °C"
+    if kind == "notify":
+        return f"напомнил: {action['message']}"
+    return f"объявил: {action['message']}"
+
+
+def needs_summary(job: Job) -> bool:
+    """A job of only phone pushes (a timer, a reminder) is its own push"""
+    return any(action["type"] != "notify" for action in job.do)
+
+
+def push_text(job: Job, done: list[str], failed: list[str], lease_end: datetime | None) -> tuple[str, str]:
+    message = f"{job.title}: {', '.join(done) or 'ничего'}"
+    if lease_end is not None:
+        message += f"; выключу в {lease_end.strftime('%H:%M')}"
+    if failed:
+        message += ". Не получилось: " + ", ".join(failed)
+        return "Задание выполнено не полностью", message
+    return "Задание выполнено", message

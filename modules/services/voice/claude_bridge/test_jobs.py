@@ -308,3 +308,85 @@ def test_entities_of():
     assert entities_of(parsed) == {OWNER}
     advance(parsed, NOW, lookup({OWNER: st("not_home", 10)}))
     assert entities_of(parsed) == {"binary_sensor.door"}
+
+
+# --- leases, storage, texts
+
+from jobs import Lease, add_lease, dump, load, needs_summary, prune, push_text, step_label  # noqa: E402
+
+
+def test_add_lease_never_shortens():
+    long = Lease("light.hall", at(60), "свет", "j1")
+    leases = add_lease([], long)
+    leases = add_lease(leases, Lease("light.hall", at(30), "свет", "j2"))
+    assert leases == [long]
+    longer = Lease("light.hall", at(90), "свет", "j3")
+    leases = add_lease(leases, longer)
+    assert leases == [longer]
+    leases = add_lease(leases, Lease("light.office", at(10), "офис", "j4"))
+    assert len(leases) == 2
+
+
+def test_round_trip_keeps_status_and_due():
+    parsed = parse(dict(BACK_HOME, run_when=[{"type": "time", "in_min": 30, "from": "armed"}]))
+    advance(parsed, NOW, lookup({OWNER: st("not_home", 10)}))
+    lease = Lease("light.hall", at(60), "свет", "j1", tries=2)
+    jobs, leases = load(json.loads(json.dumps(dump([parsed], [lease]))))
+    assert jobs == [parsed]
+    assert leases == [lease]
+    assert jobs[0].status == "armed"
+    assert datetime.fromisoformat(jobs[0].run_when[0]["due"]) == at(30)
+
+
+def test_prune_keeps_active_and_recent():
+    active = parse(BACK_HOME)
+    recent = parse(job())
+    advance(recent, NOW, lookup({}))
+    old = parse(job())
+    old.status = "done"
+    old.finished_at = NOW - timedelta(hours=25)
+    assert prune([active, recent, old], NOW) == [active, recent]
+
+
+def test_step_labels():
+    parsed = parse(BACK_HOME)
+    assert step_label(parsed) == "ждёт, пока ты уйдёшь"
+    advance(parsed, NOW, lookup({OWNER: st("not_home", 10)}))
+    assert step_label(parsed) == "ждёт, пока вернёшься"
+    wife = parse(dict(BACK_HOME, arm_when=[], run_when=[{"type": "person", "who": "wife", "state": "home"}]))
+    assert step_label(wife) == "ждёт, пока вернётся жена"
+    timer = parse(job(run_when=[{"type": "time", "in_min": 40}]))
+    assert step_label(timer) == "сработает в 08:40"
+    other = parse(job(run_when=[{"type": "numeric", "entity_id": "sensor.t", "below": 20}]))
+    assert step_label(other) == "ждёт условий"
+
+
+def test_push_text_with_lease_end():
+    parsed = parse(BACK_HOME)
+    title, message = push_text(parsed, ["включил тёплые полы в большой ванной на 2 ч"], [], at(120))
+    assert title == "Задание выполнено"
+    assert message == "тёплые полы в большой ванной, когда вернусь: включил тёплые полы в большой ванной на 2 ч; выключу в 10:00"
+    title, message = push_text(parsed, [], ["тёплые полы в большой ванной: нет связи"], None)
+    assert title == "Задание выполнено не полностью"
+    assert message.endswith("Не получилось: тёплые полы в большой ванной: нет связи")
+
+
+def test_notify_only_job_needs_no_summary():
+    assert not needs_summary(parse(job()))
+    assert needs_summary(parse(BACK_HOME))
+
+
+def test_describe_action():
+    from jobs import describe_action
+
+    assert describe_action({"type": "heat", "device": "floor_master", "minutes": 120}) == (
+        "включил тёплые полы в большой ванной на 2 ч"
+    )
+    assert describe_action({"type": "heat", "device": "towel_guest", "minutes": 90}) == (
+        "включил полотенцесушитель в гостевой ванной на 1 ч 30 мин"
+    )
+    assert describe_action({"type": "turn_on", "entity_id": "light.hall", "minutes": 45}, "Свет в прихожей") == (
+        "включил «Свет в прихожей» на 45 мин"
+    )
+    assert describe_action({"type": "turn_off", "entity_id": "light.hall"}) == "выключил «light.hall»"
+    assert describe_action({"type": "notify", "message": "выключи духовку"}) == "напомнил: выключи духовку"
