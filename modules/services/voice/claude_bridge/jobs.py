@@ -8,7 +8,7 @@ import json
 import re
 from dataclasses import dataclass
 from datetime import datetime, time, timedelta
-from typing import Protocol
+from typing import Callable, Protocol
 
 PEOPLE = {"owner": "person.aleksander_cieslowski", "wife": "person.natallia_radziuk"}
 WHO = ("owner", "wife", "anyone", "everyone")
@@ -316,3 +316,167 @@ def parse_job(raw: str | dict, now: datetime, home: Home, job_id: str, active_co
         status="armed" if armed else "waiting_arm",
         armed_at=now if armed else None,
     )
+
+
+# --- evaluation
+
+UNKNOWN = ("unknown", "unavailable")
+
+
+@dataclass(frozen=True)
+class EntityState:
+    state: str
+    attributes: dict
+    last_changed: datetime
+
+
+StateLookup = Callable[[str], EntityState | None]
+
+
+@dataclass
+class Step:
+    run: bool
+    expired: bool
+    next_check: datetime | None
+
+
+def _held(match, since, for_min, now):
+    """(true now, when it turns true) for a state that must hold for for_min"""
+    if not match:
+        return False, None
+    ready = since + timedelta(minutes=for_min)
+    return (True, None) if now >= ready else (False, ready)
+
+
+def _earliest(moments):
+    moments = [m for m in moments if m is not None]
+    return min(moments) if moments else None
+
+
+def _check_person(cond, job, now, states):
+    who = cond["who"]
+    names = list(PEOPLE) if who in ("anyone", "everyone") else [who]
+    results = []
+    for name in names:
+        current = states(PEOPLE[name])
+        if current is None or current.state in UNKNOWN:
+            results.append((False, None))
+            continue
+        at_home = current.state == "home"
+        match = at_home if cond["state"] == "home" else not at_home
+        results.append(_held(match, current.last_changed, cond["for_min"], now))
+    combine = any if who == "anyone" else all
+    return combine(ok for ok, _ in results), _earliest(m for _, m in results)
+
+
+def _check_state(cond, job, now, states):
+    current = states(cond["entity_id"])
+    if current is None or current.state in UNKNOWN:
+        return False, None
+    return _held(current.state in cond["state"], current.last_changed, cond["for_min"], now)
+
+
+def _check_changed(cond, job, now, states):
+    current = states(cond["entity_id"])
+    if current is None or current.state != cond["to"]:
+        return False, None
+    until = current.last_changed + timedelta(minutes=cond["within_min"])
+    # checked again when the window closes, so a job can't run on a stale change
+    return (True, until) if now <= until else (False, None)
+
+
+def _check_numeric(cond, job, now, states):
+    current = states(cond["entity_id"])
+    if current is None:
+        return False, None
+    raw = current.attributes.get(cond["attribute"]) if cond.get("attribute") else current.state
+    try:
+        value = float(raw)
+    except (TypeError, ValueError):
+        return False, None
+    match = (cond.get("below") is None or value < cond["below"]) and (
+        cond.get("above") is None or value > cond["above"]
+    )
+    return _held(match, current.last_changed, cond["for_min"], now)
+
+
+def _check_time(cond, job, now, states):
+    if "due" not in cond:
+        return False, None
+    due = datetime.fromisoformat(cond["due"])
+    return (True, None) if now >= due else (False, due)
+
+
+def _check_time_window(cond, job, now, states):
+    start, end = cond["from"], cond["to"]
+    clock = now.strftime("%H:%M")
+    inside = start <= clock < end if start <= end else (clock >= start or clock < end)
+    return (True, next_at(end, now)) if inside else (False, next_at(start, now))
+
+
+def _check_room_presence(cond, job, now, states):
+    return any((states(e) or EntityState("off", {}, now)).state == "on" for e in cond["entities"]), None
+
+
+CONDITION_CHECKS = {
+    "person": _check_person,
+    "state": _check_state,
+    "changed": _check_changed,
+    "numeric": _check_numeric,
+    "time": _check_time,
+    "time_window": _check_time_window,
+    "room_presence": _check_room_presence,
+}
+
+
+def check(cond: dict, job: Job, now: datetime, states: StateLookup) -> tuple[bool, datetime | None]:
+    return CONDITION_CHECKS[cond["type"]](cond, job, now, states)
+
+
+def _all_true(conditions, job, now, states):
+    results = [check(c, job, now, states) for c in conditions]
+    return all(ok for ok, _ in results), _earliest(m for _, m in results)
+
+
+def _arm(job, now):
+    job.status = "armed"
+    job.armed_at = now
+    for cond in job.run_when:
+        if cond["type"] == "time" and cond.get("from") == "armed":
+            cond["due"] = (now + timedelta(minutes=cond["in_min"])).isoformat()
+
+
+def advance(job: Job, now: datetime, states: StateLookup) -> Step:
+    """Moves the job on as far as the states allow; Step.run means: run its actions now"""
+    if job.status not in ("waiting_arm", "armed"):
+        return Step(False, False, None)
+    if now >= job.expires:
+        job.status = "expired"
+        job.finished_at = now
+        return Step(False, True, None)
+    if job.status == "waiting_arm":
+        ok, next_check = _all_true(job.arm_when, job, now, states)
+        if not ok:
+            return Step(False, False, _earliest([next_check, job.expires]))
+        _arm(job, now)
+    ok, next_check = _all_true(job.run_when, job, now, states)
+    if not ok:
+        return Step(False, False, _earliest([next_check, job.expires]))
+    job.status = "done"
+    job.finished_at = now
+    return Step(True, False, None)
+
+
+def entities_of(job: Job) -> set[str]:
+    """Entities whose changes can move the job on"""
+    if job.status not in ("waiting_arm", "armed"):
+        return set()
+    conditions = job.arm_when if job.status == "waiting_arm" else job.run_when
+    out = set()
+    for cond in conditions:
+        if cond["type"] == "person":
+            out.update(PEOPLE.values() if cond["who"] in ("anyone", "everyone") else [PEOPLE[cond["who"]]])
+        elif "entity_id" in cond:
+            out.add(cond["entity_id"])
+        out.update(cond.get("entities", []))
+    return out

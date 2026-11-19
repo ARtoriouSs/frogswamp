@@ -165,3 +165,146 @@ def test_condition_entity_must_exist():
         parse(job(run_when=[{"type": "state", "entity_id": "binary_sensor.missing_door", "state": "on"}]))
     parsed = parse(job(run_when=[{"type": "state", "entity_id": "binary_sensor.door", "state": "on"}]))
     assert parsed.run_when[0]["state"] == ["on"]
+
+
+# --- conditions and steps
+
+from jobs import EntityState, advance, check, entities_of  # noqa: E402
+
+OWNER = "person.aleksander_cieslowski"
+WIFE = "person.natallia_radziuk"
+
+
+def st(state, minutes_ago=60, attributes=None):
+    return EntityState(state, attributes or {}, NOW - timedelta(minutes=minutes_ago))
+
+
+def lookup(states):
+    return lambda entity_id: states.get(entity_id)
+
+
+def at(minutes):
+    return NOW + timedelta(minutes=minutes)
+
+
+def test_back_home_does_not_fire_on_current_presence():
+    parsed = parse(BACK_HOME)
+    step = advance(parsed, NOW, lookup({OWNER: st("home", 60)}))
+    assert parsed.status == "waiting_arm"
+    assert not step.run
+
+
+def test_short_away_does_not_arm():
+    parsed = parse(BACK_HOME)
+    away_3 = {OWNER: EntityState("not_home", {}, at(-3))}
+    step = advance(parsed, NOW, lookup(away_3))
+    assert parsed.status == "waiting_arm"
+    assert step.next_check == at(7)
+    step = advance(parsed, at(1), lookup({OWNER: st("home", 0)}))
+    assert parsed.status == "waiting_arm"
+    assert not step.run
+
+
+def test_away_ten_minutes_arms_then_home_runs():
+    parsed = parse(BACK_HOME)
+    advance(parsed, NOW, lookup({OWNER: st("not_home", 10)}))
+    assert parsed.status == "armed"
+    assert parsed.armed_at == NOW
+    step = advance(parsed, at(60), lookup({OWNER: EntityState("home", {}, at(59))}))
+    assert step.run
+    assert parsed.status == "done"
+    assert parsed.finished_at == at(60)
+
+
+def test_runs_at_once_when_already_true():
+    parsed = parse(job(run_when=[{"type": "numeric", "entity_id": "sensor.bedroom_temp", "below": 20}]))
+    step = advance(parsed, NOW, lookup({"sensor.bedroom_temp": st("19.4")}))
+    assert step.run
+
+
+def test_unknown_is_never_true():
+    for state in ("unknown", "unavailable"):
+        states = lookup({OWNER: st(state, 600)})
+        for want in ("home", "away"):
+            ok, _ = check({"type": "person", "who": "owner", "state": want, "for_min": 0}, parse(job()), NOW, states)
+            assert not ok
+    ok, _ = check({"type": "numeric", "entity_id": "sensor.t", "below": 20, "for_min": 0}, parse(job()), NOW,
+                  lookup({"sensor.t": st("unknown")}))
+    assert not ok
+    ok, _ = check({"type": "person", "who": "owner", "state": "away", "for_min": 0}, parse(job()), NOW, lookup({}))
+    assert not ok
+
+
+def test_everyone_and_anyone():
+    states = lookup({OWNER: st("home"), WIFE: st("not_home")})
+    parsed = parse(job())
+
+    def person(who, state):
+        return check({"type": "person", "who": who, "state": state, "for_min": 0}, parsed, NOW, states)[0]
+
+    assert person("anyone", "home")
+    assert not person("everyone", "home")
+    assert person("wife", "away")
+    assert not person("everyone", "away")
+
+
+def test_changed_within():
+    cond = {"type": "changed", "entity_id": "binary_sensor.door", "to": "on", "within_min": 10}
+    parsed = parse(job())
+    assert check(cond, parsed, NOW, lookup({"binary_sensor.door": st("on", 5)}))[0]
+    assert not check(cond, parsed, NOW, lookup({"binary_sensor.door": st("on", 11)}))[0]
+    assert not check(cond, parsed, NOW, lookup({"binary_sensor.door": st("off", 1)}))[0]
+
+
+def test_time_from_armed():
+    parsed = parse(dict(BACK_HOME, run_when=[{"type": "time", "in_min": 30, "from": "armed"}]))
+    advance(parsed, NOW, lookup({OWNER: st("not_home", 10)}))
+    assert parsed.status == "armed"
+    assert datetime.fromisoformat(parsed.run_when[0]["due"]) == at(30)
+    step = advance(parsed, at(10), lookup({OWNER: st("not_home", 20)}))
+    assert not step.run
+    assert step.next_check == at(30)
+    assert advance(parsed, at(30), lookup({})).run
+
+
+def test_time_window_across_midnight():
+    cond = {"type": "time_window", "from": "22:00", "to": "06:00"}
+    parsed = parse(job())
+
+    def window(hour, minute=0, day=19):
+        return check(cond, parsed, datetime(2026, 11, day, hour, minute, tzinfo=TZ), lookup({}))
+
+    assert window(23, 30)[0]
+    assert window(5, 0, day=20)[0]
+    ok, next_check = window(12)
+    assert not ok
+    assert next_check == datetime(2026, 11, 19, 22, 0, tzinfo=TZ)
+
+
+def test_expiry():
+    parsed = parse(BACK_HOME)
+    step = advance(parsed, NOW + timedelta(hours=24), lookup({OWNER: st("home")}))
+    assert step.expired
+    assert not step.run
+    assert parsed.status == "expired"
+
+
+def test_next_check_never_after_expiry():
+    parsed = parse(job(run_when=[{"type": "time", "in_min": 600}], expires_in_min=60))
+    assert advance(parsed, NOW, lookup({})).next_check == at(60)
+
+
+def test_finished_job_does_nothing():
+    parsed = parse(job())
+    assert advance(parsed, NOW, lookup({})).run
+    step = advance(parsed, at(1), lookup({}))
+    assert not step.run and not step.expired and step.next_check is None
+
+
+def test_entities_of():
+    parsed = parse(
+        dict(BACK_HOME, run_when=[{"type": "state", "entity_id": "binary_sensor.door", "state": "on"}])
+    )
+    assert entities_of(parsed) == {OWNER}
+    advance(parsed, NOW, lookup({OWNER: st("not_home", 10)}))
+    assert entities_of(parsed) == {"binary_sensor.door"}
