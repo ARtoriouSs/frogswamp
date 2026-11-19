@@ -1,0 +1,129 @@
+# YouTube on the living room TV by voice: Claude searches with "YouTube search" (YouTube Data API v3,
+# key youtube_api_key in secrets.yaml) and plays the picked video with "Play YouTube video" through the
+# TV's Google Cast. The video plays under whichever YouTube profile is active on the TV
+script:
+  youtube_search:
+    alias: YouTube search
+    description: >-
+      Read only. Searches YouTube videos and returns up to 5 with id, title, channel and date. Use it for any
+      request to find or play a video, never the web search. Then play one with "Play YouTube video"
+    icon: mdi:youtube
+    mode: parallel
+    fields:
+      query:
+        description: What to search, in the original spelling (Metallica, not металлика). Only the owner's words, nothing about the home
+        required: true
+        example: lofi hip hop
+        selector:
+          text:
+      order:
+        description: relevance (default), date for the newest videos, viewCount for the most watched
+        selector:
+          select:
+            options:
+              - relevance
+              - date
+              - viewCount
+    sequence:
+      - variables:
+          search_query: "{{ (query | default('') | string | trim)[:100] }}"
+          search_order: "{{ order if order | default('') in ['relevance', 'date', 'viewCount'] else 'relevance' }}"
+      - if: "{{ search_query == '' }}"
+        then:
+          - variables:
+              result: { ok: false, error: query is empty }
+          - stop: Empty query
+            response_variable: result
+      - action: rest_command.youtube_search
+        data:
+          query: "{{ search_query }}"
+          order: "{{ search_order }}"
+        response_variable: answer
+        continue_on_error: true
+      - variables:
+          result: >-
+            {% if answer is not defined or answer.status is not defined %}
+              {{ {'ok': false, 'error': 'YouTube did not answer'} }}
+            {% elif answer.status != 200 %}
+              {% set reason = ((answer.content.error.errors | default([{}]))[0].reason | default('')) if answer.content is mapping and answer.content.error is defined else '' %}
+              {{ {'ok': false, 'error': 'YouTube refused: ' ~ answer.status ~ ' ' ~ reason} }}
+            {% else %}
+              {% set ns = namespace(videos=[]) %}
+              {% for item in answer.content['items'] | default([]) if item.id.videoId is defined %}
+                {% set ns.videos = ns.videos + [{
+                  'id': item.id.videoId,
+                  'title': item.snippet.title | replace('&#39;', "'") | replace('&quot;', '"') | replace('&amp;', '&'),
+                  'channel': item.snippet.channelTitle | replace('&#39;', "'") | replace('&quot;', '"') | replace('&amp;', '&'),
+                  'published': item.snippet.publishedAt[:10],
+                  'live': item.snippet.liveBroadcastContent,
+                }] %}
+              {% endfor %}
+              {{ {'ok': true, 'videos': ns.videos} }}
+            {% endif %}
+      - stop: Done
+        response_variable: result
+
+  youtube_play:
+    alias: Play YouTube video
+    description: >-
+      Plays one YouTube video on the living room TV by its id from "YouTube search". Turns the TV on first if it
+      is off. Returns ok and the title the TV is playing
+    icon: mdi:youtube-tv
+    mode: single
+    fields:
+      video_id:
+        description: The video id from "YouTube search", 11 characters
+        required: true
+        example: jNQXAC9IVRw
+        selector:
+          text:
+    variables:
+      tv_remote: remote.living_room_philips_tv
+      tv_cast: media_player.philips_tv_google_cast
+    sequence:
+      - if: "{{ not (video_id | default('') | string | regex_match('^[A-Za-z0-9_-]{11}$')) }}"
+        then:
+          - variables:
+              result: { ok: false, error: not a YouTube video id }
+          - stop: Bad id
+            response_variable: result
+      # a cast to a TV that is off failed once with an error, so wake it first
+      - if: "{{ is_state(tv_remote, 'off') }}"
+        then:
+          - action: remote.turn_on
+            target:
+              entity_id: "{{ tv_remote }}"
+            continue_on_error: true
+          - wait_template: "{{ is_state(tv_remote, 'on') }}"
+            timeout: 15
+          - delay: 4
+      - repeat:
+          sequence:
+            - action: media_player.play_media
+              target:
+                entity_id: "{{ tv_cast }}"
+              data:
+                media_content_type: cast
+                media_content_id: '{"app_name": "youtube", "media_id": "{{ video_id }}"}'
+              continue_on_error: true
+            - wait_template: "{{ state_attr(tv_cast, 'media_content_id') == video_id }}"
+              timeout: 15
+          until: "{{ wait.completed or repeat.index >= 2 }}"
+      - variables:
+          result: >-
+            {% if state_attr(tv_cast, 'media_content_id') == video_id %}
+              {{ {'ok': true, 'playing': state_attr(tv_cast, 'media_title')} }}
+            {% else %}
+              {{ {'ok': false, 'error': 'the TV did not start the video', 'tv': states(tv_cast)} }}
+            {% endif %}
+      - stop: Done
+        response_variable: result
+
+rest_command:
+  youtube_search:
+    url: >-
+      https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=5&regionCode=PL&order={{ order }}&q={{ query | urlencode }}
+    method: get
+    headers:
+      X-Goog-Api-Key: !secret youtube_api_key
+    timeout: 15

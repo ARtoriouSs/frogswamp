@@ -9,6 +9,7 @@ home: Home Assistant tools
   - no network URLs in any argument; Music Assistant would fetch them from the server
   - no control of the home in a request where Claude has already read the web, so a web page
     can't steer the devices. Reading the home stays allowed
+  - after a YouTube search (its titles are web text too) the only control in that request is playing a video
 """
 
 import json
@@ -27,9 +28,11 @@ HA_READ_TOOLS = {
     "media_player__search_media", "intent_script__FrogRoomTemperature",
     # scripts that only return data (packages/voice_info.yaml, voice_food.yaml, voice_jobs.yaml)
     "script__maintenance_status", "script__energy_history", "script__wellness_data", "script__food_recent",
-    "script__voice_jobs",
+    "script__voice_jobs", "script__youtube_search",
 }
 WEB_TOOLS = {"WebSearch", "WebFetch"}
+YOUTUBE_SEARCH = HA_PREFIX + "script__youtube_search"
+YOUTUBE_PLAY = "script__youtube_play"
 # Music Assistant's own URIs (spotify://, library://) are fine, these go out to the network
 NETWORK_URL_RE = re.compile(r"\b(?:https?|ftps?|rtsps?|rtmps?|mms|wss?|sftp)://", re.IGNORECASE)
 
@@ -112,13 +115,13 @@ def is_owner_message(entry):
         and not any(isinstance(b, dict) and b.get("type") == "tool_result" for b in content)
 
 
-def web_used_in_this_request(transcript_path):
-    used = False
+def tools_used_in_this_request(transcript_path):
+    used = set()
     for entry in transcript(transcript_path):
         if is_owner_message(entry):
-            used = False
-        elif any(isinstance(b, dict) and b.get("type") == "tool_use" and b.get("name") in WEB_TOOLS for b in blocks(entry)):
-            used = True
+            used = set()
+        else:
+            used |= {b.get("name") for b in blocks(entry) if isinstance(b, dict) and b.get("type") == "tool_use"}
     return used
 
 
@@ -142,8 +145,13 @@ def check_home(event):
         return f"tools of {integration or name} are not allowed for the voice assistant"
     if any(NETWORK_URL_RE.search(s) for s in strings(event.get("tool_input"))):
         return "web links can't be passed to the home"
-    if tool not in HA_READ_TOOLS and web_used_in_this_request(event["transcript_path"]):
+    if tool in HA_READ_TOOLS:
+        return None
+    used = tools_used_in_this_request(event["transcript_path"])
+    if used & WEB_TOOLS:
         return "the home can't be controlled in a request after reading the web. Answer, and the owner can ask again"
+    if YOUTUBE_SEARCH in used and tool != YOUTUBE_PLAY:
+        return "after a YouTube search only a video can be played in this request. Answer, and the owner can ask again"
     return None
 
 

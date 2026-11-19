@@ -37,7 +37,7 @@ phone / Voice PE ─ wake word ─▶ HA pipeline ─▶ Whisper ─▶ local ph
 | Read only: Zigbee bridge, car, qBittorrent, phone | Only sensors of these are exposed (Zigbee bridge: connection state and version). Integrations can add tools to the Assist API past exposure (VW Group Connect adds Škoda ones), so the hook `web_guard.py home` allows HA tools of known integrations only (`HA_INTEGRATIONS`); add a new one there on purpose |
 | Never "Tuya mode" / "Home Assistant mode" | Not exposed, and named in the prompt |
 | No home data or credentials on the web | `WebFetch` only for URLs from the session's own `WebSearch` results (hook `web_guard.py fetch`). No http/ftp/rtsp links in any HA tool call, so Music Assistant can't be made to fetch one (`play_music` checks it too). The prompt forbids home or owner data in search text. Both hooks block on any error |
-| Web pages can't steer the home | After Claude read the web in a request, HA control tools are blocked until the owner's next request; reading the home stays allowed |
+| Web pages can't steer the home | After Claude read the web in a request, HA control tools are blocked until the owner's next request; reading the home stays allowed. After *YouTube search* only *Play YouTube video* is allowed |
 | Tokens stay secret | sops → `LoadCredential`, passed to Claude by env only; no token in the Nix store, a command line or the log. HA's state and `/run/secrets` are hidden from the service |
 | Nothing else on the server can ask Claude | The bridge has no TCP port: its socket folder is `0700`, only the service and root (HA's container mounts it) can open it |
 | No local tools | `Bash`, `Edit`, `Write`, `NotebookEdit`, `Read`, `Glob`, `Grep`, `Task`, `Agent` are denied; the unit has the usual systemd hardening (`ProtectProc`, no capabilities, private devices) |
@@ -89,6 +89,21 @@ One-shot "do X when Y" by voice: "когда я вернусь, включи т�
 - `announce` and `room_presence` are refused until a voice satellite and a presence sensor exist
 - Claude uses three scripts in `home-assistant/config/packages/voice_jobs.yaml`: *Add voice job*, *Voice jobs* (read only), *Cancel voice job*. They have to be exposed to Assist once, with aliases (Добавить задание, Задания, Отменить задание)
 - `sensor.voice_jobs`: active job count; attributes `jobs`, `recent`, `leases`. The Schedule tab shows them, with a tap to cancel
+
+## YouTube on the TV
+
+"Включи на ютубе <что-то>": Claude calls *YouTube search* (`script.youtube_search`, read only), picks a video and calls *Play YouTube video* (`script.youtube_play`). Both are in `home-assistant/config/packages/voice_youtube.yaml`.
+
+- Search: YouTube Data API v3 `search.list` through `rest_command.youtube_search`, 5 results, key in the `X-Goog-Api-Key` header. Only the search text leaves the house. One search costs 100 of the 10 000 free units a day, so about 100 searches a day
+- Play: turns the TV on with `remote.living_room_philips_tv` if it's off (a cast to a TV that is off failed once with HTTP 500), then casts with `media_player.play_media` (`cast`, `{"app_name": "youtube", "media_id": …}`) to `media_player.philips_tv_google_cast`, waits up to 15 s for the TV to report the video and tries once more
+- The video plays under whichever YouTube profile is open on the TV. A Cast session has no Google account and nothing can switch the profile, so the history and recommendations go to that profile
+- Web guard: titles in search results are web text, so after *YouTube search* the only control in that request is *Play YouTube video*. After a web search it's blocked like any control
+
+Setup, once:
+1. Google Cloud project `frogswamp` (the one nutrition-sync uses): enable **YouTube Data API v3**, https://console.cloud.google.com/apis/library/youtube.googleapis.com
+2. https://console.cloud.google.com/apis/credentials → **Create credentials → API key**. Name it e.g. `ha-youtube`. Under **API restrictions** pick *Restrict key* → *YouTube Data API v3* only. No OAuth scope or login is needed, the key only searches public videos
+3. `just secrets`, add the line `youtube_api_key: <key>` inside the `home_assistant/secrets_yaml` block. **Do this before the deploy**: HA doesn't start its config with a missing `!secret`
+4. `just deploy`, then expose *YouTube search* and *Play YouTube video* to Assist (*Settings → Voice assistants → Expose*) with aliases (Поиск на ютубе, Включить видео на ютубе)
 
 ## Claude's behaviour
 
