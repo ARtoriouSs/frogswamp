@@ -6,7 +6,9 @@
 # cleanup turn a heater off
 
 # For automations. Starts a lease if the heater is off, extends a running one if this one ends later,
-# never shortens it. A heater that is on without a lease was turned on by hand, so it's left alone
+# never shortens it. A heater that is on without a lease was turned on by hand, so it's left alone.
+# force is for voice jobs (the owner asked, like the button): a lease of exactly this length, also on a
+# heater turned on by hand
 heat_lease:
   alias: "Timed heat: ask for a lease"
   icon: mdi:timer-plus-outline
@@ -18,13 +20,35 @@ heat_lease:
     duration:
       description: Length of the lease, 3 h if not set
       example: "03:00:00"
+    force:
+      description: Exactly this length, even if the heater is on by hand or the running lease is longer
+      example: false
   variables:
     length: "{{ duration | default('03:00:00') }}"
     timer_id: "timer.heat_{{ device }}"
     off_sensor: "binary_sensor.heat_off_{{ device }}"
+    heater: >-
+      {{ {'towel_master': 'switch.master_bathroom_towel_heat_relay',
+          'towel_guest': 'switch.guest_towel_heat',
+          'floor_master': 'switch.master_floor_warming',
+          'floor_guest': 'switch.guest_floor_warming'}[device] }}
   sequence:
     - choose:
-        - conditions: "{{ is_state(timer_id, 'active') }}"
+        # an offline heater wouldn't start, so no countdown for it
+        - conditions: "{{ force | default(false) and states(off_sensor) not in ['unavailable', 'unknown'] }}"
+          sequence:
+            - action: input_boolean.turn_on
+              target:
+                entity_id: "input_boolean.heat_run_{{ device }}"
+            - action: switch.turn_on
+              target:
+                entity_id: "{{ heater }}"
+            - action: timer.start
+              target:
+                entity_id: "{{ timer_id }}"
+              data:
+                duration: "{{ length }}"
+        - conditions: "{{ not force | default(false) and is_state(timer_id, 'active') }}"
           sequence:
             - if: >-
                 {{ (as_datetime(state_attr(timer_id, 'finishes_at')) - now()).total_seconds()
@@ -35,18 +59,14 @@ heat_lease:
                     entity_id: "{{ timer_id }}"
                   data:
                     duration: "{{ length }}"
-        - conditions: "{{ is_state(off_sensor, 'on') }}"
+        - conditions: "{{ not force | default(false) and is_state(off_sensor, 'on') }}"
           sequence:
             - action: input_boolean.turn_on
               target:
                 entity_id: "input_boolean.heat_run_{{ device }}"
             - action: switch.turn_on
               target:
-                entity_id: >-
-                  {{ {'towel_master': 'switch.master_bathroom_towel_heat_relay',
-                      'towel_guest': 'switch.guest_towel_heat',
-                      'floor_master': 'switch.master_floor_warming',
-                      'floor_guest': 'switch.guest_floor_warming'}[device] }}
+                entity_id: "{{ heater }}"
             - action: timer.start
               target:
                 entity_id: "{{ timer_id }}"
