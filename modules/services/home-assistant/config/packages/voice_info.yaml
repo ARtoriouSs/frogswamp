@@ -38,7 +38,6 @@ script:
                 'water_ml': states('sensor.nutrition_today_water'),
                 'steps_phone': states('sensor.pixel_7_daily_steps'),
                 'steps_watch': states('sensor.google_pixel_watch_daily_steps'),
-                'burned_kcal_watch': states('sensor.google_pixel_watch_daily_calories'),
                 'burned_kcal_health_connect': states('sensor.pixel_7_total_calories_burned'),
                 'heart_rate_now': states('sensor.google_pixel_watch_heart_rate'),
                 'weight_kg_latest': states('sensor.health_weight'),
