@@ -229,6 +229,8 @@ def _parse_turn_on(spec, home):
     out = {"type": "turn_on", "entity_id": _allowed_entity(spec, home)}
     minutes = _number(spec, "minutes", 1, MAX_LEASE_MIN, required=False)
     if minutes is not None:
+        if out["entity_id"].startswith("scene."):
+            raise JobError("turn_on: a scene can't be turned off, so no minutes for a scene")
         out["minutes"] = minutes
     return out
 

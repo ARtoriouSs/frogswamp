@@ -390,3 +390,8 @@ def test_describe_action():
     )
     assert describe_action({"type": "turn_off", "entity_id": "light.hall"}) == "выключил «light.hall»"
     assert describe_action({"type": "notify", "message": "выключи духовку"}) == "напомнил: выключи духовку"
+
+
+def test_scene_lease_refused():
+    with pytest.raises(JobError, match="scene"):
+        parse(job(do=[{"type": "turn_on", "entity_id": "scene.evening", "minutes": 30}]))

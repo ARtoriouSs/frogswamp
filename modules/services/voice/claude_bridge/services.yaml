@@ -1,0 +1,14 @@
+add_job:
+  fields:
+    job:
+      required: true
+      selector:
+        text:
+          multiline: true
+list_jobs:
+cancel_job:
+  fields:
+    job_id:
+      required: true
+      selector:
+        text:

@@ -23,3 +23,9 @@ def endpoint(url):
 def error_speech(language):
     base = (language or "").split("-")[0].lower()
     return ERROR_SPEECH.get(base, ERROR_SPEECH["en"])
+
+# voice jobs (jobs.py, scheduler.py)
+NOTIFY_SERVICE = "mobile_app_pixel_7"
+STORE_KEY = "claude_bridge.jobs"
+STORE_VERSION = 1
+SIGNAL_JOBS = "claude_bridge_jobs"
