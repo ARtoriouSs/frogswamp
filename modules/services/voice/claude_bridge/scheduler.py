@@ -115,6 +115,8 @@ class JobScheduler:
 
     @callback
     def async_stop(self) -> None:
+        # tasks already queued for this scheduler do nothing after a reload
+        self.started = False
         if self._stop_start:
             self._stop_start()
         for job_id in list(self._watch):
@@ -189,15 +191,20 @@ class JobScheduler:
         for stop in self._watch.pop(job_id, []):
             stop()
 
-    async def _evaluate(self, job_id: str) -> None:
+    async def _evaluate(self, job_id: str, change=None) -> None:
         async with self.lock:
             job = self._find(job_id)
             if job is None or not self.started:
                 return
             status = job.status
+            noted = False
+            if change is not None:
+                old, new = change.data.get("old_state"), change.data.get("new_state")
+                if new is not None:
+                    noted = J.note_change(job, new.entity_id, old.state if old else None, new.state, new.last_changed)
             step = J.advance(job, dt_util.now(), self._state)
             self._unwatch(job_id)
-            if step.run or step.expired or job.status != status:
+            if noted or step.run or step.expired or job.status != status:
                 # saved before the actions run, so a crash can't run a job twice
                 await self._save()
             if step.expired:
@@ -214,10 +221,14 @@ class JobScheduler:
         def again(*_):
             self.hass.async_create_task(self._evaluate(job.id))
 
+        @callback
+        def changed(event):
+            self.hass.async_create_task(self._evaluate(job.id, event))
+
         stops = []
         entities = sorted(J.entities_of(job))
         if entities:
-            stops.append(async_track_state_change_event(self.hass, entities, again))
+            stops.append(async_track_state_change_event(self.hass, entities, changed))
         if next_check is not None:
             stops.append(async_track_point_in_time(self.hass, again, next_check))
         self._watch[job.id] = stops
@@ -258,13 +269,14 @@ class JobScheduler:
             )
             return dt_util.now() + timedelta(minutes=minutes)
         if kind == "turn_on":
+            ends = None
+            if "minutes" in action:
+                # the lease is saved first: a restart during a slow turn_on must not leave the device on for good
+                ends = dt_util.now() + timedelta(minutes=action["minutes"])
+                self.leases = J.add_lease(self.leases, J.Lease(action["entity_id"], ends, job.title, job.id))
+                await self._save()
+                self._schedule_leases()
             await call("homeassistant", "turn_on", {"entity_id": action["entity_id"]}, blocking=True)
-            if "minutes" not in action:
-                return None
-            ends = dt_util.now() + timedelta(minutes=action["minutes"])
-            self.leases = J.add_lease(self.leases, J.Lease(action["entity_id"], ends, job.title, job.id))
-            await self._save()
-            self._schedule_leases()
             return ends
         if kind == "turn_off":
             await call("homeassistant", "turn_off", {"entity_id": action["entity_id"]}, blocking=True)
@@ -297,8 +309,14 @@ class JobScheduler:
             self._lease_timer = async_track_point_in_time(self.hass, due, min(lease.ends for lease in self.leases))
 
     async def _lease_pass(self) -> None:
+        async with self.lock:
+            await self._lease_pass_locked()
+
+    async def _lease_pass_locked(self) -> None:
         now = dt_util.now()
         for lease in [lease for lease in self.leases if lease.ends <= now]:
+            if lease not in self.leases:
+                continue
             state = self.hass.states.get(lease.entity_id)
             if state is not None and state.state == "off":
                 # turned off by someone, or our last try worked

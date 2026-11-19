@@ -172,6 +172,8 @@ def _parse_time(spec, now, home):
                 raise JobError("time: at must be HH:MM or an ISO date-time") from None
             if due.tzinfo is None:
                 due = due.replace(tzinfo=now.tzinfo)
+            if due < now - timedelta(minutes=1):
+                raise JobError("time: at is in the past")
         return {"type": "time", "due": due.isoformat()}
     minutes = _number(spec, "in_min", 0, MAX_EXPIRY_MIN)
     start = spec.get("from", "created")
@@ -306,8 +308,7 @@ def parse_job(raw: str | dict, now: datetime, home: Home, job_id: str, active_co
     run_when = _items(raw, "run_when", 1, MAX_CONDITIONS, CONDITION_PARSERS, condition)
     do = _items(raw, "do", 1, MAX_ACTIONS, ACTION_PARSERS, action)
     expiry = _number({"type": "job", **raw}, "expires_in_min", 1, MAX_EXPIRY_MIN, required=False)
-    armed = not arm_when
-    return Job(
+    job = Job(
         id=job_id,
         title=title.strip(),
         arm_when=arm_when,
@@ -315,9 +316,11 @@ def parse_job(raw: str | dict, now: datetime, home: Home, job_id: str, active_co
         do=do,
         created=now,
         expires=now + timedelta(minutes=expiry or DEFAULT_EXPIRY_MIN),
-        status="armed" if armed else "waiting_arm",
-        armed_at=now if armed else None,
+        status="waiting_arm",
     )
+    if not arm_when:
+        _arm(job, now)
+    return job
 
 
 # --- evaluation
@@ -380,9 +383,10 @@ def _check_state(cond, job, now, states):
 
 def _check_changed(cond, job, now, states):
     current = states(cond["entity_id"])
-    if current is None or current.state != cond["to"]:
+    # only a change seen by note_change counts; last_changed also moves on a restart or an availability blip
+    if current is None or current.state != cond["to"] or "changed_at" not in cond:
         return False, None
-    until = current.last_changed + timedelta(minutes=cond["within_min"])
+    until = datetime.fromisoformat(cond["changed_at"]) + timedelta(minutes=cond["within_min"])
     # checked again when the window closes, so a job can't run on a stale change
     return (True, until) if now <= until else (False, None)
 
@@ -467,6 +471,18 @@ def advance(job: Job, now: datetime, states: StateLookup) -> Step:
     job.status = "done"
     job.finished_at = now
     return Step(True, False, None)
+
+
+def note_change(job: Job, entity_id: str, old: str | None, new: str, when: datetime) -> bool:
+    """Records a real transition for the job's changed conditions; True if one was recorded"""
+    if job.status != "armed" or old in (None, *UNKNOWN) or old == new:
+        return False
+    hit = False
+    for cond in job.run_when:
+        if cond["type"] == "changed" and cond["entity_id"] == entity_id and cond["to"] == new:
+            cond["changed_at"] = when.isoformat()
+            hit = True
+    return hit
 
 
 def entities_of(job: Job) -> set[str]:

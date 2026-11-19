@@ -251,8 +251,9 @@ def test_everyone_and_anyone():
 def test_changed_within():
     cond = {"type": "changed", "entity_id": "binary_sensor.door", "to": "on", "within_min": 10}
     parsed = parse(job())
-    assert check(cond, parsed, NOW, lookup({"binary_sensor.door": st("on", 5)}))[0]
-    assert not check(cond, parsed, NOW, lookup({"binary_sensor.door": st("on", 11)}))[0]
+    assert check(dict(cond, changed_at=at(-5).isoformat()), parsed, NOW, lookup({"binary_sensor.door": st("on", 5)}))[0]
+    assert not check(dict(cond, changed_at=at(-11).isoformat()), parsed, NOW,
+                     lookup({"binary_sensor.door": st("on", 11)}))[0]
     assert not check(cond, parsed, NOW, lookup({"binary_sensor.door": st("off", 1)}))[0]
 
 
@@ -395,3 +396,36 @@ def test_describe_action():
 def test_scene_lease_refused():
     with pytest.raises(JobError, match="scene"):
         parse(job(do=[{"type": "turn_on", "entity_id": "scene.evening", "minutes": 30}]))
+
+
+# --- review fixes
+
+from jobs import note_change  # noqa: E402
+
+
+def test_changed_needs_a_real_transition():
+    parsed = parse(job(run_when=[{"type": "changed", "entity_id": "binary_sensor.door", "to": "on", "within_min": 10}]))
+    door = lookup({"binary_sensor.door": st("on", 1)})
+    # a fresh last_changed alone (restart, availability blip) is not a change
+    assert not advance(parsed, NOW, door).run
+    assert not note_change(parsed, "binary_sensor.door", "unavailable", "on", at(-1))
+    assert not advance(parsed, NOW, door).run
+    assert note_change(parsed, "binary_sensor.door", "off", "on", at(-1))
+    assert advance(parsed, NOW, door).run
+
+
+def test_changed_window_passes():
+    parsed = parse(job(run_when=[{"type": "changed", "entity_id": "binary_sensor.door", "to": "on", "within_min": 10}]))
+    note_change(parsed, "binary_sensor.door", "off", "on", at(-11))
+    assert not advance(parsed, NOW, lookup({"binary_sensor.door": st("on", 11)})).run
+
+
+def test_from_armed_without_arm_when_runs():
+    parsed = parse(job(run_when=[{"type": "time", "in_min": 30, "from": "armed"}]))
+    assert datetime.fromisoformat(parsed.run_when[0]["due"]) == at(30)
+    assert advance(parsed, at(30), lookup({})).run
+
+
+def test_past_iso_time_refused():
+    with pytest.raises(JobError, match="past"):
+        parse(job(run_when=[{"type": "time", "at": "2026-11-18T07:00:00"}]))
