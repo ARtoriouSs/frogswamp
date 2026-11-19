@@ -1,0 +1,318 @@
+"""One-shot voice jobs: "do X when Y". Pure Python, no Home Assistant imports, so it is unit-tested alone.
+
+Claude writes a job as JSON; parse_job checks it against a fixed set of condition and action types.
+A new type is one parser here (and one checker for conditions), plus a line in the prompt
+"""
+
+import json
+import re
+from dataclasses import dataclass
+from datetime import datetime, time, timedelta
+from typing import Protocol
+
+PEOPLE = {"owner": "person.aleksander_cieslowski", "wife": "person.natallia_radziuk"}
+WHO = ("owner", "wife", "anyone", "everyone")
+HEAT_DEVICES = ("towel_master", "towel_guest", "floor_master", "floor_guest")
+# the lease devices; runs of these go through script.heat_lease only
+HEATER_ENTITIES = frozenset(
+    {
+        "switch.master_bathroom_towel_heat_relay",
+        "switch.guest_towel_heat",
+        "climate.guest_bathroom_towel_heat_guest",
+        "switch.master_floor_warming",
+        "switch.guest_floor_warming",
+        "climate.thermostat_master_local",
+        "climate.thermostat_guest_local",
+    }
+)
+ALLOWED_DOMAINS = {
+    "turn_on": {"light", "switch", "fan", "climate", "scene"},
+    "turn_off": {"light", "switch", "fan", "climate", "media_player"},
+    "set_temperature": {"climate"},
+}
+MAX_ACTIVE = 10
+MAX_CONDITIONS = 5
+MAX_ACTIONS = 5
+MAX_LEASE_MIN = 360
+MAX_EXPIRY_MIN = 43200
+DEFAULT_EXPIRY_MIN = 1440
+KEEP_FINISHED = timedelta(hours=24)
+
+HHMM_RE = re.compile(r"^([01]?\d|2[0-3]):([0-5]\d)$")
+
+
+class JobError(ValueError):
+    """A job Claude can't have; the message goes back to Claude as is"""
+
+
+class Home(Protocol):
+    def exists(self, entity_id: str) -> bool: ...
+
+    def exposed(self, entity_id: str) -> bool: ...
+
+    def presence_sensors(self, area: str) -> list[str]: ...
+
+    def satellites(self, area: str | None) -> list[str]: ...
+
+
+@dataclass
+class Job:
+    id: str
+    title: str
+    arm_when: list[dict]
+    run_when: list[dict]
+    do: list[dict]
+    created: datetime
+    expires: datetime
+    status: str
+    armed_at: datetime | None = None
+    finished_at: datetime | None = None
+
+
+def _number(spec, key, low, high, required=True):
+    value = spec.get(key)
+    if value is None or value == "":
+        if required:
+            raise JobError(f"{spec.get('type')}: {key} is required")
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        raise JobError(f"{spec.get('type')}: {key} must be a number") from None
+    if not low <= number <= high:
+        raise JobError(f"{spec.get('type')}: {key} must be from {low} to {high}")
+    return int(number) if number.is_integer() else number
+
+
+def _text(spec, key, required=True):
+    value = spec.get(key)
+    if not isinstance(value, str) or not value.strip():
+        if required:
+            raise JobError(f"{spec.get('type')}: {key} is required")
+        return None
+    return value.strip()
+
+
+def _choice(spec, key, options):
+    value = spec.get(key)
+    if value not in options:
+        raise JobError(f"{spec.get('type')}: {key} must be one of {', '.join(options)}")
+    return value
+
+
+def _entity(spec, home):
+    entity_id = _text(spec, "entity_id")
+    if not home.exists(entity_id):
+        raise JobError(f"{spec.get('type')}: no entity {entity_id}")
+    return entity_id
+
+
+def _hhmm(spec, key):
+    value = _text(spec, key)
+    if not HHMM_RE.match(value):
+        raise JobError(f"{spec.get('type')}: {key} must be HH:MM")
+    return value
+
+
+def next_at(hhmm: str, now: datetime) -> datetime:
+    """The next moment after now with this local time of day"""
+    hour, minute = map(int, hhmm.split(":"))
+    moment = datetime.combine(now.date(), time(hour, minute), tzinfo=now.tzinfo)
+    return moment if moment > now else datetime.combine(
+        now.date() + timedelta(days=1), time(hour, minute), tzinfo=now.tzinfo
+    )
+
+
+def _parse_person(spec, now, home):
+    out = {"type": "person", "who": _choice(spec, "who", WHO), "state": _choice(spec, "state", ("home", "away"))}
+    out["for_min"] = _number(spec, "for_min", 0, MAX_EXPIRY_MIN, required=False) or 0
+    return out
+
+
+def _parse_state(spec, now, home):
+    wanted = spec.get("state")
+    wanted = [wanted] if isinstance(wanted, str) else wanted
+    if not wanted or not all(isinstance(s, str) and s for s in wanted):
+        raise JobError("state: state is required, a string or a list of strings")
+    out = {"type": "state", "entity_id": _entity(spec, home), "state": wanted}
+    out["for_min"] = _number(spec, "for_min", 0, MAX_EXPIRY_MIN, required=False) or 0
+    return out
+
+
+def _parse_changed(spec, now, home):
+    return {
+        "type": "changed",
+        "entity_id": _entity(spec, home),
+        "to": _text(spec, "to"),
+        "within_min": _number(spec, "within_min", 1, MAX_EXPIRY_MIN),
+    }
+
+
+def _parse_numeric(spec, now, home):
+    out = {"type": "numeric", "entity_id": _entity(spec, home)}
+    if spec.get("attribute"):
+        out["attribute"] = _text(spec, "attribute")
+    out["below"] = _number(spec, "below", -1e9, 1e9, required=False)
+    out["above"] = _number(spec, "above", -1e9, 1e9, required=False)
+    if out["below"] is None and out["above"] is None:
+        raise JobError("numeric: below or above is required")
+    out["for_min"] = _number(spec, "for_min", 0, MAX_EXPIRY_MIN, required=False) or 0
+    return out
+
+
+def _parse_time(spec, now, home):
+    if spec.get("at"):
+        at = _text(spec, "at")
+        if HHMM_RE.match(at):
+            due = next_at(at, now)
+        else:
+            try:
+                due = datetime.fromisoformat(at)
+            except ValueError:
+                raise JobError("time: at must be HH:MM or an ISO date-time") from None
+            if due.tzinfo is None:
+                due = due.replace(tzinfo=now.tzinfo)
+        return {"type": "time", "due": due.isoformat()}
+    minutes = _number(spec, "in_min", 0, MAX_EXPIRY_MIN)
+    start = spec.get("from", "created")
+    if start not in ("created", "armed"):
+        raise JobError("time: from must be created or armed")
+    if start == "armed":
+        return {"type": "time", "in_min": minutes, "from": "armed"}
+    return {"type": "time", "due": (now + timedelta(minutes=minutes)).isoformat()}
+
+
+def _parse_time_window(spec, now, home):
+    return {"type": "time_window", "from": _hhmm(spec, "from"), "to": _hhmm(spec, "to")}
+
+
+def _parse_room_presence(spec, now, home):
+    area = _text(spec, "area")
+    entities = home.presence_sensors(area)
+    if not entities:
+        raise JobError(f"room_presence: no presence sensor in {area} yet")
+    return {"type": "room_presence", "area": area, "entities": entities}
+
+
+CONDITION_PARSERS = {
+    "person": _parse_person,
+    "state": _parse_state,
+    "changed": _parse_changed,
+    "numeric": _parse_numeric,
+    "time": _parse_time,
+    "time_window": _parse_time_window,
+    "room_presence": _parse_room_presence,
+}
+
+
+def _allowed_entity(spec, home):
+    kind = spec["type"]
+    entity_id = _text(spec, "entity_id")
+    if entity_id in HEATER_ENTITIES:
+        raise JobError(f"{kind}: {entity_id} is a heater, use heat for heaters")
+    if entity_id.split(".")[0] not in ALLOWED_DOMAINS[kind]:
+        raise JobError(f"{kind}: {entity_id} can't be used, only {', '.join(sorted(ALLOWED_DOMAINS[kind]))}")
+    if not home.exposed(entity_id):
+        raise JobError(f"{kind}: {entity_id} is not exposed to the assistant")
+    return entity_id
+
+
+def _parse_heat(spec, home):
+    return {
+        "type": "heat",
+        "device": _choice(spec, "device", HEAT_DEVICES),
+        "minutes": _number(spec, "minutes", 1, MAX_LEASE_MIN),
+    }
+
+
+def _parse_turn_on(spec, home):
+    out = {"type": "turn_on", "entity_id": _allowed_entity(spec, home)}
+    minutes = _number(spec, "minutes", 1, MAX_LEASE_MIN, required=False)
+    if minutes is not None:
+        out["minutes"] = minutes
+    return out
+
+
+def _parse_turn_off(spec, home):
+    return {"type": "turn_off", "entity_id": _allowed_entity(spec, home)}
+
+
+def _parse_set_temperature(spec, home):
+    return {
+        "type": "set_temperature",
+        "entity_id": _allowed_entity(spec, home),
+        "temperature": _number(spec, "temperature", 5, 35),
+    }
+
+
+def _parse_notify(spec, home):
+    return {"type": "notify", "message": _text(spec, "message")}
+
+
+def _parse_announce(spec, home):
+    area = _text(spec, "area", required=False)
+    entities = home.satellites(area)
+    if not entities:
+        raise JobError("announce: no voice satellite yet, use notify")
+    return {"type": "announce", "message": _text(spec, "message"), "area": area, "entities": entities}
+
+
+ACTION_PARSERS = {
+    "heat": _parse_heat,
+    "turn_on": _parse_turn_on,
+    "turn_off": _parse_turn_off,
+    "set_temperature": _parse_set_temperature,
+    "notify": _parse_notify,
+    "announce": _parse_announce,
+}
+
+
+def _items(raw, key, low, high, parsers, parse):
+    items = raw.get(key) or []
+    if not isinstance(items, list) or not low <= len(items) <= high:
+        raise JobError(f"{key} must be a list of {low} to {high} items")
+    out = []
+    for item in items:
+        kind = item.get("type") if isinstance(item, dict) else None
+        if kind not in parsers:
+            raise JobError(f"{key}: unknown type {kind}, use one of {', '.join(parsers)}")
+        out.append(parse(parsers[kind], item))
+    return out
+
+
+def parse_job(raw: str | dict, now: datetime, home: Home, job_id: str, active_count: int) -> Job:
+    if isinstance(raw, str):
+        try:
+            raw = json.loads(raw)
+        except ValueError as err:
+            raise JobError(f"job is not valid JSON: {err}") from None
+    if not isinstance(raw, dict):
+        raise JobError("job must be a JSON object")
+    if active_count >= MAX_ACTIVE:
+        raise JobError(f"there are already {MAX_ACTIVE} active jobs, cancel one first")
+    title = raw.get("title")
+    if not isinstance(title, str) or not title.strip():
+        raise JobError("title is required")
+
+    def condition(parser, item):
+        return parser(item, now, home)
+
+    def action(parser, item):
+        return parser(item, home)
+
+    arm_when = _items(raw, "arm_when", 0, MAX_CONDITIONS, CONDITION_PARSERS, condition)
+    run_when = _items(raw, "run_when", 1, MAX_CONDITIONS, CONDITION_PARSERS, condition)
+    do = _items(raw, "do", 1, MAX_ACTIONS, ACTION_PARSERS, action)
+    expiry = _number({"type": "job", **raw}, "expires_in_min", 1, MAX_EXPIRY_MIN, required=False)
+    armed = not arm_when
+    return Job(
+        id=job_id,
+        title=title.strip(),
+        arm_when=arm_when,
+        run_when=run_when,
+        do=do,
+        created=now,
+        expires=now + timedelta(minutes=expiry or DEFAULT_EXPIRY_MIN),
+        status="armed" if armed else "waiting_arm",
+        armed_at=now if armed else None,
+    )
