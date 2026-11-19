@@ -928,6 +928,8 @@ class FrogDailyChart extends WellnessCard {
   }
 }
 
+const escape = (text) => String(text).replace(/[&<>"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[char]);
+
 // The hover rows of a workout
 const workoutText = (workout) => {
   const parts = [`${workout.active_min} min`];
@@ -938,7 +940,7 @@ const workoutText = (workout) => {
     .filter(([, minutes]) => minutes > 0)
     .map(([zone, minutes]) => `${zone} ${Math.round(minutes)}`)
     .join(", ");
-  return `${workout.name || workout.type}: ${parts.join(", ")}${zones ? `<br>Heart rate zones, min: ${zones}` : ""}`;
+  return `${escape(workout.name || workout.type)}: ${parts.join(", ")}${zones ? `<br>Heart rate zones, min: ${zones}` : ""}`;
 };
 
 // Sleep stages and exercise as blocks on one line

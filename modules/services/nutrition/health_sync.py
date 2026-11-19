@@ -14,7 +14,9 @@ LIST_PAGE = 25
 FIRST_DAYS = 365
 DETAIL_DAYS = 31
 RECENT_DAYS = 3
-RETRIES = 3
+RETRIES = 4
+# Google answers 503 now and then, a retry a bit later usually works
+RETRY_WAIT = (5, 15, 30)
 
 
 class HealthError(Exception):
@@ -28,6 +30,14 @@ def _z(moment):
 
 def _date_body(day):
     return {"date": {"year": day.year, "month": day.month, "day": day.day}}
+
+
+def _retry_after(error, default):
+    headers = {key.lower(): value for key, value in (getattr(error, "headers", None) or {}).items()}
+    try:
+        return min(float(headers.get("retry-after", default)), 60)
+    except ValueError:
+        return default
 
 
 class HealthReader:
@@ -44,11 +54,12 @@ class HealthReader:
                 return self.client._call("POST" if body is not None else "GET", url, body)
             except Exception as error:
                 status = getattr(error, "status", None)
-                if status == 429 and attempt < RETRIES - 1:
-                    time.sleep(min(float(getattr(error, "headers", {}).get("Retry-After") or 5), 60))
+                if (status == 429 or (status or 0) >= 500) and attempt < RETRIES - 1:
+                    time.sleep(_retry_after(error, RETRY_WAIT[attempt]))
                     continue
                 if status is not None:
-                    raise HealthError(kind, status) from None
+                    # e.g. "400 invalid_grant" when the login is gone
+                    raise HealthError(kind, f"{status} {getattr(error, 'reason', '')}".strip()) from None
                 raise HealthError(kind, type(error).__name__) from None
 
     def list(self, kind, flt, page_size=1000):
@@ -116,9 +127,14 @@ def sync_health(cfg, state, client, now, write):
     """First run reads a year of summaries and 31 days of detail, later runs the last 3 days again, since data comes late"""
     folder = cfg.state_dir / "www" / "health"
     days_file = folder / "days.json"
-    old = json.loads(days_file.read_text())["days"] if days_file.exists() else None
+    saved = json.loads(days_file.read_text()) if days_file.exists() else None
+    old = saved["days"] if saved else None
     today = now.astimezone(cfg.tz).date()
     start = today - dt.timedelta(days=(FIRST_DAYS if old is None else RECENT_DAYS) - 1)
+    if saved and saved.get("updated"):
+        # After a stop, read from the last good run, so the gap fills in
+        last = dt.datetime.fromisoformat(saved["updated"]).astimezone(cfg.tz).date()
+        start = max(min(start, last), today - dt.timedelta(days=FIRST_DAYS - 1))
     detail_start = max(start, today - dt.timedelta(days=DETAIL_DAYS - 1))
     try:
         sources = HealthReader(client, cfg.tz).read(start, today, detail_start)
@@ -127,7 +143,8 @@ def sync_health(cfg, state, client, now, write):
         state.status["health"] = {**state.status.get("health", {}), "ok": False, "error": str(error)}
         return
     days = {day: values for day, values in (old or {}).items() if day < start.isoformat()}
-    days.update(hc.day_summaries(sources, cfg.tz))
+    # A night that ends on start also gives the day before a part; that day is not fully read, so it keeps its old entry
+    days.update({day: values for day, values in hc.day_summaries(sources, cfg.tz).items() if day >= start.isoformat()})
     write(days_file, json.dumps({"updated": now.isoformat(), "days": days}, ensure_ascii=False))
     day = detail_start
     while day <= today:

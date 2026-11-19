@@ -107,7 +107,7 @@ def test_missing_scope_sets_health_error_and_meals_still_pushed(api, cfg):
     api.meals.append(__import__("test_nutrition_core").page("m2", eaten="2026-11-14T13:00:00+01:00", kcal=50))
     ns.sync_once(cfg, state, now=NOW)
     assert state.status["health"]["ok"] is False
-    assert state.status["health"]["error"] == "sleep: 403"
+    assert state.status["health"]["error"] == "sleep: 403 PERMISSION_DENIED"
     assert state.status["google"]["ok"] is True
     assert "m2" in state.synced
     assert (cfg.state_dir / "www" / "health" / "days.json").read_text() == before
@@ -141,3 +141,39 @@ def test_old_day_files_removed(api, cfg):
     run(cfg)
     assert not (day_dir / "2026-10-01.json").exists()
     assert (day_dir / "2026-10-15.json").exists()
+
+
+def test_day_before_the_window_keeps_its_values(api, cfg):
+    state = run(cfg)
+    days, _ = files(cfg)
+    days["days"]["2026-11-11"] = {"resting_hr": 61.0, "burned_kcal": 2500}
+    (cfg.state_dir / "www" / "health" / "days.json").write_text(json.dumps(days))
+    # A night from 11.11 23:00 to 12.11 07:00 ends inside the 3-day window
+    api.health["sleep"] = [night(dt.datetime(2026, 11, 11, 23, tzinfo=TZ), dt.datetime(2026, 11, 12, 7, tzinfo=TZ))]
+    ns.sync_once(cfg, state, now=NOW)
+    after = files(cfg)[0]["days"]
+    assert after["2026-11-11"] == {"resting_hr": 61.0, "burned_kcal": 2500}
+    assert after["2026-11-12"]["sleep"]["asleep_min"] == 420
+
+
+def test_503_retried(api, cfg, monkeypatch):
+    monkeypatch.setattr(hs, "RETRY_WAIT", (0, 0, 0))
+    api.queue("/total-calories/dataPoints:dailyRollUp", (503, {"error": {"code": 503}}, {}), (200, {"rollupDataPoints": []}, {}))
+    state = run(cfg)
+    assert state.status["health"]["ok"] is True
+
+
+def test_lost_login_names_invalid_grant(api, cfg):
+    state = run(cfg)
+    state.google._token = None
+    api.queue("/token", (400, {"error": "invalid_grant"}, {}))
+    ns.sync_once(cfg, state, now=NOW)
+    assert state.status["health"]["error"].endswith("400 invalid_grant")
+
+
+def test_gap_after_a_stop_is_read_again(api, cfg):
+    state = run(cfg)
+    later = NOW + dt.timedelta(days=6)
+    api.requests.clear()
+    ns.sync_once(cfg, state, now=later)
+    assert len(api.health_calls("/heart-rate/dataPoints:rollUp")) == 7

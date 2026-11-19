@@ -44,6 +44,7 @@ script:
                 'weight_kg_latest': states('sensor.health_weight'),
                 'body_fat_pct_latest': states('sensor.health_body_fat'),
               },
+              'sleep_health_connect': state_attr('sensor.sleep_nights', 'nights') or 'none yet',
               'goals': {
                 'kcal': states('input_number.nutrition_goal_kcal'),
                 'proteins_g': states('input_number.nutrition_goal_proteins'),
@@ -55,7 +56,7 @@ script:
                 'A food day (eaten) runs from 04:00 to 04:00: food after midnight counts for the day before. Everything else is per calendar day',
                 'eaten.full false means the owner marked that day as not fully logged, so its totals are too low',
                 'Goals of 0 mean no goal',
-                'sleep is per calendar day, a night is split at midnight. It comes from Google Health; nights without the watch have no sleep there, then today_live and the Wellness tab use the phone sleep from Health Connect, which is not in days',
+                'sleep in days is per calendar day, a night is split at midnight. It comes from Google Health and only exists for nights with the watch on. Other nights are in sleep_health_connect (the phone sleep detection, one block per night, start and end in local time). For "how long did I sleep" use sleep_health_connect when days has no sleep',
                 'Sleep stages (deep, rem, light), HRV, blood oxygen and breathing rate need the watch worn at night. The owner usually charges it at night, so these are mostly missing',
                 'burned_kcal is Google Health total for the day (resting plus active), active_kcal only the active part. Today is not over yet',
                 'azm is active zone minutes: a minute in fat_burn counts once, in cardio or peak twice. hr_zone_min is all minutes of the day per heart rate zone',

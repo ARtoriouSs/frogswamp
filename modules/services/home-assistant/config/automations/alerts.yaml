@@ -250,7 +250,7 @@
         title: Google Health sync
         message: >-
           {% set error = states('sensor.nutrition_google_error') if is_state('binary_sensor.nutrition_google_ok', 'off') else states('sensor.nutrition_health_error') %}
-          {% if error in ['invalid_grant', 'UNAUTHENTICATED', 'PERMISSION_DENIED'] or error.endswith(': 401') or error.endswith(': 403') %}The Google login is gone ({{ error }}). Run: just nutrition-google-auth, then just secrets and just deploy
+          {% if error is search('invalid_grant|UNAUTHENTICATED|PERMISSION_DENIED|: 40[13]') %}The Google login is gone ({{ error }}). Run: just nutrition-google-auth, then just secrets and just deploy
           {% else %}Google Health failed ({{ error }}). Check: just ssh journalctl -u nutrition-sync{% endif %}
         data:
           tag: nutrition-google

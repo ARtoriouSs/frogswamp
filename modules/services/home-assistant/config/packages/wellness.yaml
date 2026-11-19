@@ -197,6 +197,32 @@ template:
         attributes:
           taken: *body_measured_taken
 
+  # The last 30 Health Connect nights (the phone's sleep detection), for the voice assistant: HA's history is
+  # admin only. Each segment comes once, after waking
+  - triggers:
+      - trigger: state
+        entity_id: sensor.pixel_7_sleep_segment
+    sensor:
+      - name: Sleep nights
+        unique_id: repo_sleep_nights
+        default_entity_id: sensor.sleep_nights
+        icon: mdi:sleep
+        state: "{{ (state_attr('sensor.pixel_7_sleep_segment', 'start') or 0) | int }}"
+        attributes:
+          nights: >-
+            {% set start = state_attr('sensor.pixel_7_sleep_segment', 'start') %}
+            {% set end = state_attr('sensor.pixel_7_sleep_segment', 'end') %}
+            {% set old = (this.attributes.nights if this is defined and this.attributes.nights is defined else []) | list %}
+            {% if start and end and start < end and old | selectattr('start_ms', 'eq', start) | list | count == 0 %}
+              {% set old = old + [{
+                'start_ms': start,
+                'start': (start / 1000) | timestamp_local,
+                'end': (end / 1000) | timestamp_local,
+                'hours': ((end - start) / 3600000) | round(1),
+              }] %}
+            {% endif %}
+            {{ (old | sort(attribute='start_ms'))[-30:] }}
+
   # Eaten today as % of the daily goal, for the bars and the over-goal alert. Unavailable while the goal is 0
   - sensor:
       - name: Nutrition calories of goal
