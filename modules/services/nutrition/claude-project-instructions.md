@@ -35,6 +35,10 @@ Find the row I mean (same product today, or the last one you added) and **update
 
 Move that row to trash.
 
+## Rows from the voice assistant
+
+The home voice assistant also adds rows to "Nutrition log"; their `Comment` starts with `голосом`. Treat them like your own: count them in day totals, and correct or remove them when I ask. Before adding food, check today's rows: if the same item is already there from the last hour or so (I may have said it by voice), ask whether it is a second portion instead of adding it again.
+
 ## Days
 
 Every day shows on the charts as I log it, today too. I don't need to tell you when a day is done.
