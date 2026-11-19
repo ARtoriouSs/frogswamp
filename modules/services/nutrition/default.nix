@@ -13,6 +13,8 @@ let
     mkdir $out
     cp ${./nutrition_sync.py} $out/nutrition_sync.py
     cp ${./nutrition_core.py} $out/nutrition_core.py
+    cp ${./health_sync.py} $out/health_sync.py
+    cp ${./health_core.py} $out/health_core.py
   '';
   secretOption =
     description:

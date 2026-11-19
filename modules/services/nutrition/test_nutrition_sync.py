@@ -146,15 +146,15 @@ def test_notion_429_retried(api, cfg):
 def test_sync_writes_csv_and_status(api, cfg):
     state = run(cfg)
     csv = (cfg.state_dir / "www" / "daily.csv").read_text()
-    assert csv == "date,calories,fats,proteins,carbohydrates,full?\n2026-11-14,300,1.6,1.8,2.4,TRUE\n"
+    assert csv == "date,calories,fats,proteins,carbohydrates,full?,water\n2026-11-14,300,1.6,1.8,2.4,TRUE,0\n"
     status = state.status
     assert status["last_read"] == NOW.isoformat()
     assert status["skipped"] == 0
-    assert status["today"] == {"kcal": 300, "fats": 1.6, "proteins": 1.8, "carbohydrates": 2.4}
+    assert status["today"] == {"kcal": 300, "fats": 1.6, "proteins": 1.8, "carbohydrates": 2.4, "water": 0}
     assert status["google"]["ok"] is True
     assert status["google"]["pending"] == 0
     meals = (cfg.state_dir / "www" / "meals.csv").read_text().splitlines()
-    assert meals == ["time,calories,fats,proteins,carbohydrates,day", "2026-11-14T12:00:00+01:00,300,1.6,1.8,2.4,2026-11-14"]
+    assert meals == ["time,calories,fats,proteins,carbohydrates,day,water", "2026-11-14T12:00:00+01:00,300,1.6,1.8,2.4,2026-11-14,0"]
 
 
 def test_today_before_four_is_still_yesterday(api, cfg):
@@ -169,13 +169,13 @@ def test_days_are_drawn_without_a_notion_row(api, cfg):
     api.meals = [page("m1", eaten="2026-11-13T12:00:00+01:00", kcal=100), page("m2", eaten="2026-11-14T12:00:00+01:00", kcal=200)]
     run(cfg)
     lines = (cfg.state_dir / "www" / "daily.csv").read_text().splitlines()
-    assert lines[1:] == ["2026-11-13,100,1.6,1.8,2.4,TRUE", "2026-11-14,200,1.6,1.8,2.4,TRUE"]
+    assert lines[1:] == ["2026-11-13,100,1.6,1.8,2.4,TRUE,0", "2026-11-14,200,1.6,1.8,2.4,TRUE,0"]
 
 
 def test_today_is_zero_without_meals(api, cfg):
     api.meals = []
     state = run(cfg)
-    assert state.status["today"] == {"kcal": 0, "fats": 0, "proteins": 0, "carbohydrates": 0}
+    assert state.status["today"] == {"kcal": 0, "fats": 0, "proteins": 0, "carbohydrates": 0, "water": 0}
 
 
 def test_google_create_then_edit(api, cfg):

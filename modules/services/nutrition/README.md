@@ -1,6 +1,6 @@
 # Nutrition tracking
 
-You send Claude a photo or a description of what you ate. Claude estimates the calories and macros and writes one Notion row per food item. The `nutrition-sync` service on the NUC reads Notion every 5 minutes and sends the meals on:
+You send Claude a photo or a description of what you ate or drank. Claude estimates the calories and macros and writes one Notion row per food item (water too, as ml in `Water`). The `nutrition-sync` service on the NUC reads Notion every 5 minutes and sends the meals on. In the same run it reads sleep, workouts, heart rate and the burned calories from Google Health for the Wellness tab and the voice assistant:
 
 ```
 phone → Claude project → Notion "Nutrition log" ─┐
@@ -10,7 +10,11 @@ phone → Claude project → Notion "Nutrition log" ─┐
                                      ├─ /local/nutrition/daily.csv → Wellness charts
                                      ├─ /local/nutrition/meals.csv → Wellness Day charts (every meal with its time)
                                      ├─ 127.0.0.1:8131/status      → HA sensors and alerts
-                                     └─ Google Health nutrition log
+                                     ├─ Google Health nutrition log (meals, not water)
+                                     └─ Google Health read:
+                                         ├─ /local/nutrition/health/days.json        → Wellness charts (a summary per day, 1 year)
+                                         ├─ /local/nutrition/health/day/<date>.json  → Day views and the timeline (last 31 days)
+                                         └─ 127.0.0.1:8131/wellness?days=N           → the voice assistant (up to 90 days)
 ```
 
 Nothing on the NUC is open to the internet. Claude writes to Notion through the free Notion connector, so no paid Sheets integration is needed.
@@ -18,7 +22,9 @@ Nothing on the NUC is open to the internet. Claude writes to Notion through the 
 Files:
 - `nutrition_core.py`: pure logic (Notion rows → meals → daily totals, CSV, what to change in Google)
 - `nutrition_sync.py`: the service (Notion and Google calls, `/status`, state in `/var/lib/nutrition-sync/google.json`)
+- `health_core.py`, `health_sync.py`: the Google Health read (sleep with stages, workouts, heart rate per minute, resting heart rate, HRV, active zone minutes, time in heart rate zones, weight, burned calories). The first run reads a year of daily values and 31 days of details; later runs read the last 3 days again, because the watch and sleep data arrive late. A failure only sets `/status.health`, the meals go on
 - `google_auth.py`: the one-time Google login, run on the laptop with `just nutrition-google-auth`
+- `health_probe.py`: `just nutrition-google-probe [days]` shows which data types the account has (counts and field names, no values)
 - `claude-project-instructions.md`: the text for the Claude project
 
 ## Setup from scratch
@@ -26,7 +32,7 @@ Files:
 ### 1. Notion
 
 1. Make two databases on one page (now Personal → Health → Nutrition Log):
-   - **Nutrition log**: `Product` (title), `Eaten` (date with time), `Meal` (select: `Завтрак`, `Обед`, `Ужин`, `Перекус`), `Amount` (text), `Kcal`, `Protein`, `Fat`, `Carbs` (numbers), `Comment` (text)
+   - **Nutrition log**: `Product` (title), `Eaten` (date with time), `Meal` (select: `Завтрак`, `Обед`, `Ужин`, `Перекус`), `Amount` (text), `Kcal`, `Protein`, `Fat`, `Carbs` (numbers), `Comment` (text), `Water` (number, ml drunk; plain water rows have Kcal 0)
    - **Nutrition days**: `Date` (title, `YYYY-MM-DD`), `Full` (checkbox). Every day is drawn on the charts, today too; a row with `Full` unchecked keeps an incomplete day off them
 2. Notion → Settings → Connections → Develop or manage integrations → **New integration**: name `frogswamp-nutrition`, type Internal, capabilities **Read content** only. Copy the token.
 3. On the page with both databases: ••• → Connections → add `frogswamp-nutrition`.
@@ -38,7 +44,7 @@ Files:
 2. Enable the API: https://console.developers.google.com/apis/library/health.googleapis.com (search in the Library often doesn't find it).
 3. Google Auth Platform:
    - **Branding**: app name, support email, homepage `https://artoriouss.github.io/frogswamp/`, privacy policy `https://artoriouss.github.io/frogswamp/privacy.html` (both from `docs/` on master through GitHub Pages), authorized domain `artoriouss.github.io`.
-   - **Data access**: add the scope `https://www.googleapis.com/auth/googlehealth.nutrition.writeonly`. It can only add, change and delete the entries this app made, and can't read anything.
+   - **Data access**: add the scopes `https://www.googleapis.com/auth/googlehealth.nutrition.writeonly` (adds, changes and deletes only the entries this app made) and the read-only `googlehealth.nutrition.readonly`, `googlehealth.activity_and_fitness.readonly`, `googlehealth.sleep.readonly`, `googlehealth.health_metrics_and_measurements.readonly`. At the login, tick every box: an unticked one leaves that data unreadable (`/status.health.error` shows e.g. `sleep: 403`).
    - **Audience**: External, then **Publish app**. "Verification required" can be ignored: an unverified app works for up to 100 users, after a "Google hasn't verified this app" screen (Advanced → Go to …). In Testing mode the login would expire every 7 days.
    - **Clients**: create a client of type **Desktop app**, named e.g. `nutrition-sync`. Leave "Use this client for an AI-powered agent" off.
 4. On the laptop: `just nutrition-google-auth --test-write`. Enter the client id and secret, log in with the Google account whose food log should get the meals, click through the warning, Allow. It creates a 1 kcal "Spike test" entry, waits while you check the Fitbit / Google Health app, deletes it and prints the refresh token as the last line. Without `--test-write` it only prints the token.

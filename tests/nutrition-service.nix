@@ -3,7 +3,8 @@ let
   # Plays Notion and Google: two meals today, one full day, and every request is logged to /srv/requests
   fake = pkgs.writeText "fake-apis.py" ''
     import datetime, http.server, json
-    today = datetime.date.today().isoformat()
+    # The meal day, which starts at 04:00
+    today = (datetime.datetime.now() - datetime.timedelta(hours=4)).date().isoformat()
 
     def text(kind, value):
         return {"type": kind, kind: [{"plain_text": value}]}
@@ -88,8 +89,8 @@ pkgs.testers.runNixOSTest {
     assert status["google"]["ok"], status
 
     csv = server.succeed("cat /var/lib/nutrition-sync/www/daily.csv")
-    assert csv.splitlines()[0] == "date,calories,fats,proteins,carbohydrates,full?", csv
-    assert csv.splitlines()[1].endswith(",450,10,20,40,TRUE"), csv
+    assert csv.splitlines()[0] == "date,calories,fats,proteins,carbohydrates,full?,water", csv
+    assert csv.splitlines()[1].endswith(",450,10,20,40,TRUE,0"), csv
 
     # Two creates, and not again on the next reads
     server.sleep(12)

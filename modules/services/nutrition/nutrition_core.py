@@ -22,6 +22,7 @@ class Meal:
     protein: float
     fat: float
     carbs: float
+    water: float = 0.0
 
 
 @dataclasses.dataclass(frozen=True)
@@ -32,6 +33,7 @@ class DayTotal:
     protein: float
     carbs: float
     full: bool
+    water: float = 0.0
 
 
 @dataclasses.dataclass(frozen=True)
@@ -94,6 +96,7 @@ def parse_meals(pages, tz):
                 protein=_number(props.get("Protein")) or 0.0,
                 fat=_number(props.get("Fat")) or 0.0,
                 carbs=_number(props.get("Carbs")) or 0.0,
+                water=_number(props.get("Water")) or 0.0,
             )
         )
     return meals, skipped
@@ -121,11 +124,11 @@ def daily_totals(meals, day_flags, tz):
     sums = {}
     for meal in meals:
         day = meal_day(meal.eaten, tz)
-        total = sums.setdefault(day, [0.0, 0.0, 0.0, 0.0])
-        for i, value in enumerate((meal.kcal, meal.fat, meal.protein, meal.carbs)):
+        total = sums.setdefault(day, [0.0, 0.0, 0.0, 0.0, 0.0])
+        for i, value in enumerate((meal.kcal, meal.fat, meal.protein, meal.carbs, meal.water)):
             total[i] += value
     return [
-        DayTotal(day, *(round(value, 1) for value in sums[day]), full=day_flags.get(day, True))
+        DayTotal(day, *(round(value, 1) for value in sums[day][:4]), full=day_flags.get(day, True), water=round(sums[day][4]))
         for day in sorted(sums)
     ]
 
@@ -135,20 +138,24 @@ def _number_text(value):
 
 
 def to_csv(days):
-    lines = ["date,calories,fats,proteins,carbohydrates,full?"]
+    lines = ["date,calories,fats,proteins,carbohydrates,full?,water"]
     for d in days:
         numbers = ",".join(_number_text(v) for v in (d.kcal, d.fat, d.protein, d.carbs))
-        lines.append(f"{d.day.isoformat()},{numbers},{'TRUE' if d.full else 'FALSE'}")
+        lines.append(f"{d.day.isoformat()},{numbers},{'TRUE' if d.full else 'FALSE'},{_number_text(d.water)}")
     return "\n".join(lines) + "\n"
 
 
 def meals_csv(meals, tz):
     """Every meal with its time and its day (after the 04:00 rule), for the Day charts. Same numbers as daily.csv"""
-    lines = ["time,calories,fats,proteins,carbohydrates,day"]
+    lines = ["time,calories,fats,proteins,carbohydrates,day,water"]
     for meal in sorted(meals, key=lambda m: m.eaten):
         numbers = ",".join(_number_text(v) for v in (meal.kcal, meal.fat, meal.protein, meal.carbs))
-        lines.append(f"{meal.eaten.astimezone(tz).isoformat()},{numbers},{meal_day(meal.eaten, tz).isoformat()}")
+        lines.append(f"{meal.eaten.astimezone(tz).isoformat()},{numbers},{meal_day(meal.eaten, tz).isoformat()},{_number_text(meal.water)}")
     return "\n".join(lines) + "\n"
+
+
+def water_only(meal):
+    return meal.water > 0 and meal.kcal == 0
 
 
 def meal_hash(meal):
@@ -160,6 +167,8 @@ def plan_google(meals, synced, notion_ok):
     """What to create and delete in Google so it matches Notion. An edited meal is deleted and created again"""
     if not notion_ok:
         return GooglePlan(create=[], delete=[], skipped_mass_delete=False)
+    # Water isn't food, Google would show it as an empty meal
+    meals = [meal for meal in meals if not water_only(meal)]
     by_id = {meal.id: meal for meal in meals}
     create, delete = [], []
     for meal in meals:

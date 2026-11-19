@@ -10,7 +10,7 @@ def text(kind, value):
     return {"type": kind, kind: [{"type": "text", "plain_text": value}]}
 
 
-def page(page_id="p1", product="Кофе", eaten="2026-11-14T12:59:00.000+01:00", meal="Перекус", kcal=35, protein=1.8, fat=1.6, carbs=2.4, time_zone=None):
+def page(page_id="p1", product="Кофе", eaten="2026-11-14T12:59:00.000+01:00", meal="Перекус", kcal=35, protein=1.8, fat=1.6, carbs=2.4, time_zone=None, water=None):
     props = {
         "Product": text("title", product),
         "Eaten": {"type": "date", "date": None if eaten is None else {"start": eaten, "end": None, "time_zone": time_zone}},
@@ -21,6 +21,7 @@ def page(page_id="p1", product="Кофе", eaten="2026-11-14T12:59:00.000+01:00"
         "Fat": {"type": "number", "number": fat},
         "Carbs": {"type": "number", "number": carbs},
         "Comment": text("rich_text", "оценка"),
+        "Water": {"type": "number", "number": water},
     }
     return {"object": "page", "id": page_id, "in_trash": False, "properties": props}
 
@@ -111,9 +112,9 @@ def test_csv_format():
         nc.DayTotal(day=dt.date(2026, 11, 14), kcal=2040.0, fat=104.4, protein=81.6, carbs=185.8, full=False),
     ]
     assert nc.to_csv(days) == (
-        "date,calories,fats,proteins,carbohydrates,full?\n"
-        "2026-11-13,1545,85,44,116,TRUE\n"
-        "2026-11-14,2040,104.4,81.6,185.8,FALSE\n"
+        "date,calories,fats,proteins,carbohydrates,full?,water\n"
+        "2026-11-13,1545,85,44,116,TRUE,0\n"
+        "2026-11-14,2040,104.4,81.6,185.8,FALSE,0\n"
     )
 
 
@@ -126,17 +127,17 @@ def test_meals_csv_in_time_order_with_their_day():
     ]
     meals, _ = nc.parse_meals(pages, TZ)
     assert nc.meals_csv(meals, TZ).splitlines() == [
-        "time,calories,fats,proteins,carbohydrates,day",
-        "2026-11-14T08:00:00+01:00,200,5,10,20,2026-11-14",
-        "2026-11-14T13:00:00+01:00,300,1.6,1.8,2.4,2026-11-14",
-        "2026-11-15T02:00:00+01:00,100,1.6,1.8,2.4,2026-11-14",
-        "2026-11-15T12:00:00+01:00,400,1.6,1.8,2.4,2026-11-15",
+        "time,calories,fats,proteins,carbohydrates,day,water",
+        "2026-11-14T08:00:00+01:00,200,5,10,20,2026-11-14,0",
+        "2026-11-14T13:00:00+01:00,300,1.6,1.8,2.4,2026-11-14,0",
+        "2026-11-15T02:00:00+01:00,100,1.6,1.8,2.4,2026-11-14,0",
+        "2026-11-15T12:00:00+01:00,400,1.6,1.8,2.4,2026-11-15,0",
     ]
 
 
 def test_csv_rounds_float_noise():
     days = [nc.DayTotal(day=dt.date(2026, 11, 13), kcal=0.1 + 0.2, fat=1.25, protein=0, carbs=2.04, full=False)]
-    assert nc.to_csv(days).splitlines()[1] == "2026-11-13,0.3,1.2,0,2,FALSE"
+    assert nc.to_csv(days).splitlines()[1] == "2026-11-13,0.3,1.2,0,2,FALSE,0"
 
 
 def test_plan_new_meal_created():
@@ -195,3 +196,26 @@ def test_plan_waits_for_unfinished_operation():
     plan = nc.plan_google([meal(kcal=99.0)], synced, notion_ok=True)
     assert plan == nc.GooglePlan(create=[], delete=[], skipped_mass_delete=False)
     assert nc.plan_google([], synced, notion_ok=True).delete == []
+
+
+def test_water_is_summed_per_day_and_written_to_csv():
+    pages = [page("a", eaten="2026-11-14T08:00:00+01:00", water=250), page("b", product="Вода", eaten="2026-11-14T10:00:00+01:00", kcal=0, protein=0, fat=0, carbs=0, meal=None, water=500), page("c", eaten="2026-11-14T12:00:00+01:00")]
+    meals, skipped = nc.parse_meals(pages, TZ)
+    assert skipped == 0
+    assert [m.water for m in meals] == [250.0, 500.0, 0.0]
+    days = nc.daily_totals(meals, {}, TZ)
+    assert days[0].water == 750
+    assert nc.to_csv(days).splitlines() == ["date,calories,fats,proteins,carbohydrates,full?,water", "2026-11-14,70,3.2,3.6,4.8,TRUE,750"]
+    assert nc.meals_csv(meals, TZ).splitlines()[0] == "time,calories,fats,proteins,carbohydrates,day,water"
+    assert nc.meals_csv(meals, TZ).splitlines()[2] == "2026-11-14T10:00:00+01:00,0,0,0,0,2026-11-14,500"
+
+
+def test_water_only_rows_are_not_sent_to_google():
+    water = meal("w", kcal=0.0, protein=0.0, fat=0.0, carbs=0.0, product="Вода", water=500.0)
+    coffee = meal("c", water=250.0)
+    plan = nc.plan_google([water, coffee], {}, notion_ok=True)
+    assert plan.create == [coffee]
+
+
+def test_water_does_not_change_the_meal_hash():
+    assert nc.meal_hash(meal(water=300.0)) == nc.meal_hash(meal())

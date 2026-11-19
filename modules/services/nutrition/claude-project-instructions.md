@@ -20,7 +20,12 @@ A day runs from 04:00 to 04:00: anything eaten before 04:00 belongs to the day b
    - `Amount`: grams, with ml in brackets for drinks, e.g. `500 (500 ml)`
    - `Kcal`, `Protein`, `Fat`, `Carbs`: numbers only, at most one decimal
    - `Comment`: how you got the numbers, e.g. `2 шт по ~60 г, ~260 ккал/100 г — оценка по фото`
+   - `Water`: for any drink, the ml drunk (coffee, tea, juice, milk too); empty for food
 3. Answer with a short table of what you added and the day's total so far (kcal, P/F/C).
+
+## When I drink water
+
+Add one row: `Product` `Вода`, `Eaten` as above, `Water` in ml, `Kcal` `0`, `Protein`, `Fat`, `Carbs` `0`, `Meal` empty, `Amount` e.g. `500 (500 ml)`. "Стакан" is 250 ml, "бутылка" is 500 ml unless I say otherwise. Answer with the water total for the day so far.
 
 ## When I correct something
 

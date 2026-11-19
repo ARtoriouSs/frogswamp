@@ -19,6 +19,7 @@ import urllib.parse
 import urllib.request
 import zoneinfo
 
+import health_sync as hs
 import nutrition_core as nc
 
 LOG = logging.getLogger("nutrition-sync")
@@ -216,10 +217,12 @@ class State:
         self.status = {
             "last_read": None,
             "skipped": 0,
-            "today": {"kcal": 0, "fats": 0, "proteins": 0, "carbohydrates": 0},
+            "today": {"kcal": 0, "fats": 0, "proteins": 0, "carbohydrates": 0, "water": 0},
             "google": {"ok": True, "last_push": None, "error": None, "pending": 0, "rejected": 0},
+            "health": {"ok": None, "error": None, "last_read": None},
         }
         self.google = None
+        self.eaten = {}
 
     @classmethod
     def load(cls, state_dir):
@@ -321,20 +324,41 @@ def sync_once(cfg, state, now=None):
             "fats": today.fat if today else 0,
             "proteins": today.protein if today else 0,
             "carbohydrates": today.carbs if today else 0,
+            "water": today.water if today else 0,
         },
     )
+    state.eaten = {
+        d.day.isoformat(): {"kcal": d.kcal, "fats": d.fat, "proteins": d.protein, "carbohydrates": d.carbs, "water_ml": d.water, "full": d.full}
+        for d in days
+    }
     if skipped:
         LOG.info("Skipped %d rows without Kcal or Eaten", skipped)
     _push_google(cfg, state, meals, now)
+    if state.google is not None:
+        try:
+            hs.sync_health(cfg, state, state.google, now, _write_atomic)
+        except Exception as error:
+            # The meals are done already, a health bug must not stop them next time
+            LOG.exception("Google Health read crashed")
+            state.status["health"] = {**state.status["health"], "ok": False, "error": type(error).__name__}
 
 
-def serve(state, port):
+def serve(state, port, cfg=None):
     class Handler(http.server.BaseHTTPRequestHandler):
         def do_GET(self):
-            if self.path != "/status":
+            url = urllib.parse.urlparse(self.path)
+            if url.path == "/status":
+                answer = state.status
+            elif url.path == "/wellness" and cfg is not None:
+                try:
+                    days = int(urllib.parse.parse_qs(url.query).get("days", ["30"])[0])
+                except ValueError:
+                    days = 30
+                answer = hs.wellness(cfg.state_dir, state.eaten, dt.datetime.now(cfg.tz).date(), days)
+            else:
                 self.send_error(404)
                 return
-            data = json.dumps(state.status).encode()
+            data = json.dumps(answer, ensure_ascii=False).encode()
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.send_header("Content-Length", str(len(data)))
@@ -394,7 +418,7 @@ def main():
     args = parse_args()
     cfg = read_config(args)
     state = State.load(cfg.state_dir)
-    serve(state, args.port)
+    serve(state, args.port, cfg)
     LOG.info("Serving /status on 127.0.0.1:%d, reading Notion every %d s", args.port, args.interval)
     while True:
         try:
