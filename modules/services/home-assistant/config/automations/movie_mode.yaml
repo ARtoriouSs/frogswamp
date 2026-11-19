@@ -1,0 +1,22 @@
+# The TV turned on or off in any way (its remote, voice, In bed, leaving home) runs Movie mode or Movie mode off.
+# From deep standby the TV comes back as unavailable → on, so "on" doesn't need "from: off"
+- id: repo_movie_mode_follows_tv
+  alias: "Movie mode: follows the TV"
+  description: TV on runs Movie mode, TV off runs Movie mode off
+  mode: queued
+  triggers:
+    - trigger: state
+      id: "on"
+      entity_id: remote.living_room_philips_tv
+      to: "on"
+    - trigger: state
+      id: "off"
+      entity_id: remote.living_room_philips_tv
+      from: "on"
+      to: "off"
+  actions:
+    - if: "{{ trigger.id == 'on' }}"
+      then:
+        - action: script.tv_mode
+      else:
+        - action: script.tv_mode_off

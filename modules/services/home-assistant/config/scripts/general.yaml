@@ -1,20 +1,22 @@
-# TV on, then YouTube. A link opens the app; the TV rejects launching apps by package name
+# automations/movie_mode.yaml runs these when the TV turns on or off by any means, so a run from
+# here runs twice. Keep both safe to repeat: turning on a TV that is already on does nothing
 tv_mode:
   alias: "Movie mode"
-  icon: mdi:youtube-tv
+  icon: mdi:television-play
   mode: single
   sequence:
     - action: remote.turn_on
       target:
         entity_id: remote.living_room_philips_tv
-    - wait_template: "{{ is_state('remote.living_room_philips_tv', 'on') }}"
-      timeout: "00:00:30"
-    - delay: "00:00:05"
-    - action: remote.turn_on
+
+tv_mode_off:
+  alias: "Movie mode off"
+  icon: mdi:television-off
+  mode: single
+  sequence:
+    - action: remote.turn_off
       target:
         entity_id: remote.living_room_philips_tv
-      data:
-        activity: https://www.youtube.com
 
 # TV and PS5 on. HA skips a turn on for an unavailable switch without an error, so say it here:
 # the voice assistant must not report that the PS5 is on

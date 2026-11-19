@@ -114,7 +114,7 @@ HA reads the calendar through **Remote Calendar**, added in the UI with the cale
 
 **In bed** (`script.in_bed`, a button on the Remote, Schedule and Bedroom tabs, and the voice assistant on "Мы спим", "Спокойной ночи" and similar). Both floors turn off and their leases end. A running towel heat lease (master or guest) is cut to 1 h if more is left, a shorter one stays; a towel heater without a lease is left alone. The TV turns off and the PS5 goes to rest mode. Cube night turns on, so the cube goes to the green dot until the wakeup. The curtains close if they aren't closed.
 
-**Movie mode** (`script.tv_mode`) turns the TV on and opens YouTube by its link. **Game mode** (`script.game_mode`) turns on the TV and the PS5, and fails if the PS5 is fully off or not reachable. When the last person leaves, the TV turns off and the PS5 goes to rest mode.
+**Movie mode** (`script.tv_mode`) turns the TV on, **Movie mode off** (`script.tv_mode_off`) turns it off. `config/automations/movie_mode.yaml` runs them whenever the TV turns on or off in any way (its remote, voice, In bed, leaving home), so things added to them follow the TV. **Game mode** (`script.game_mode`) turns on the TV and the PS5, and fails if the PS5 is fully off or not reachable. When the last person leaves, the TV turns off and the PS5 goes to rest mode.
 
 ## Arm mode
 

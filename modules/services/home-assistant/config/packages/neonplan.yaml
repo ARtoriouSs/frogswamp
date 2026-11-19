@@ -84,17 +84,15 @@ template:
           - action: script.desk_down
         turn_off: []
 
-      # On = the TV is on. A tap runs Movie mode (TV on, then YouTube), the next one turns the TV off
+      # On = the TV is on. A tap runs Movie mode, the next one Movie mode off
       - name: Movie mode
         unique_id: repo_neonplan_tv_mode
-        icon: mdi:youtube-tv
+        icon: mdi:television-play
         state: "{{ is_state('remote.living_room_philips_tv', 'on') }}"
         turn_on:
           - action: script.tv_mode
         turn_off:
-          - action: remote.turn_off
-            target:
-              entity_id: remote.living_room_philips_tv
+          - action: script.tv_mode_off
 
   # Copies of sensors NeonPlan doesn't list (it shows only some sensor types in a room).
   # NeonPlan lists any number sensor with a unit under "No area". They have areas now (set in the UI),
