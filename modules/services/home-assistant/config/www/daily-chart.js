@@ -1212,8 +1212,16 @@ class FrogWellnessNav extends HTMLElement {
     Object.assign(bar.style, { display: "flex", left: `${box.left}px`, width: `${box.width}px`, top: `${this.headerHeight()}px` });
   }
 
+  // Some browsers, on touch above all, jump to the top while the cards below redraw. Back to where it was
+  keepScroll() {
+    const y = window.scrollY;
+    const back = () => window.scrollY < y - 40 && window.scrollTo(0, y);
+    for (const ms of [0, 100, 300, 700, 1200]) setTimeout(back, ms);
+  }
+
   pick(range) {
     if (!this._hass || !this.config.range) return;
+    this.keepScroll();
     setRange(range);
     this._hass.callService("input_select", "select_option", { entity_id: this.config.range, option: range });
   }
@@ -1227,22 +1235,16 @@ class FrogWellnessNav extends HTMLElement {
   }
 
   move(offset) {
+    this.keepScroll();
     view.offset = Math.max(0, offset);
     notify(VIEW_EVENT);
   }
 
-  render() {
+  build() {
     const root = this.shadowRoot;
-    if (!root || !view.range) return;
-    const label = periodLabel(period(view.range, view.offset));
-    const key = `${label}|${view.range}|${view.offset}`;
-    if (key === this.key && root.innerHTML) return;
-    this.key = key;
-    const ranges = (short) =>
-      RANGES.map(([range, name]) => `<button class="range${range === view.range ? " on" : ""}" data-range="${range}">${short ? name : range}</button>`).join("");
-    const moves = `<button data-move="back" title="Back">◀</button><div class="label">${label}</div>
-      <button data-move="forward" title="Forward" ${view.offset === 0 ? "disabled" : ""}>▶</button>
-      <button data-move="today" class="today" ${view.offset === 0 ? "disabled" : ""}>Today</button>`;
+    const ranges = (short) => RANGES.map(([range, name]) => `<button class="range" data-range="${range}">${short ? name : range}</button>`).join("");
+    const moves = `<button data-move="back" title="Back">◀</button><div class="label"></div>
+      <button data-move="forward" title="Forward">▶</button><button data-move="today" class="today">Today</button>`;
     root.innerHTML = `<style>
       ha-card { padding: 6px 8px; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; gap: 4px; }
       .row { display: flex; align-items: center; gap: 4px; }
@@ -1266,13 +1268,26 @@ class FrogWellnessNav extends HTMLElement {
       <div class="row">${moves}</div>
     </ha-card>
     <div class="pinned">${ranges(true)}${moves}</div>`;
-    root.querySelectorAll("[data-range]").forEach((button) => button.addEventListener("click", () => this.pick(button.dataset.range)));
-    root.querySelectorAll("[data-move]").forEach((button) =>
-      button.addEventListener("click", () => {
-        const move = button.dataset.move;
-        this.move(move === "back" ? view.offset + 1 : move === "forward" ? view.offset - 1 : 0);
-      })
-    );
+    // A tap doesn't move the focus, so the browser has no reason to scroll to the button
+    root.addEventListener("mousedown", (event) => event.target.closest("button") && event.preventDefault());
+    root.addEventListener("click", (event) => {
+      const button = event.target.closest("button");
+      if (!button || button.disabled) return;
+      if (button.dataset.range) return this.pick(button.dataset.range);
+      const move = button.dataset.move;
+      this.move(move === "back" ? view.offset + 1 : move === "forward" ? view.offset - 1 : 0);
+    });
+  }
+
+  render() {
+    const root = this.shadowRoot;
+    if (!root || !view.range) return;
+    const label = periodLabel(period(view.range, view.offset));
+    if (!root.innerHTML) this.build();
+    // Only the text and the states change, so the button just tapped stays in place
+    root.querySelectorAll(".label").forEach((node) => (node.textContent = label));
+    root.querySelectorAll("[data-range]").forEach((button) => button.classList.toggle("on", button.dataset.range === view.range));
+    root.querySelectorAll('[data-move="forward"], [data-move="today"]').forEach((button) => (button.disabled = view.offset === 0));
     this.place();
   }
 }
