@@ -1118,7 +1118,8 @@ class FrogNutritionTotal extends WellnessCard {
     if (!root || !this.config || !this.period || !this._hass) return;
     const { label, unit = "", icon, goal: goalId, today, column, keep_column: keepColumn = 5, skip_zero: skipZero, steps } = this.config;
     const p = this.period;
-    const where = p.isDay ? (view.offset === 0 ? "today" : formatDay(p.start)) : periodLabel(p);
+    // Short, the range bar above says which period
+    const where = p.isDay ? (view.offset === 0 ? "today" : formatDay(p.start)) : view.range;
     let total = this.data ? nutritionTotal(this.data, p, { column, keepColumn, skipZero }) : { value: null, days: 0 };
     const liveToday = p.isDay && view.offset === 0 && today && this._hass.states[today];
     if (liveToday && !isNaN(parseFloat(liveToday.state))) total = { ...total, value: parseFloat(liveToday.state), days: 1 };
@@ -1138,6 +1139,7 @@ class FrogNutritionTotal extends WellnessCard {
     const color = cssColor(percent === null ? null : stepColor(steps, percent));
     const title = p.isDay ? "" : `Goal: ${formatAmount(daily)} ${unit} a day × ${total.days} logged days. Today and incomplete days are left out`;
     root.innerHTML = `<style>
+      :host { display: block; height: 100%; }
       ha-card { height: 100%; box-sizing: border-box; padding: 8px 12px; display: flex; align-items: center; gap: 10px; }
       .icon { flex: none; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
               --mdc-icon-size: 20px; color: ${color}; background: color-mix(in srgb, ${color} 20%, transparent); }
@@ -1221,7 +1223,7 @@ class FrogWellnessNav extends HTMLElement {
   }
 
   getGridOptions() {
-    return { columns: "full", rows: 2 };
+    return { columns: "full", rows: "auto" };
   }
 
   move(offset) {
@@ -1254,7 +1256,7 @@ class FrogWellnessNav extends HTMLElement {
       .label { flex: 1; text-align: center; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
       .today { font-size: 14px; color: var(--primary-color); }
       .pinned { position: fixed; z-index: 5; display: none; align-items: center; gap: 2px; box-sizing: border-box; padding: 4px 8px;
-        background: var(--card-background-color); border-bottom: 1px solid var(--divider-color); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+        background: var(--primary-background-color); border-bottom: 1px solid var(--divider-color); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
         border-radius: 0 0 12px 12px; }
       .pinned button { font-size: 14px; padding: 4px 8px; }
       .pinned .range { flex: none; }
