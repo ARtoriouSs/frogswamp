@@ -45,7 +45,7 @@ const load = () => {
   context.window = { ...context, addEventListener() {}, removeEventListener() {}, dispatchEvent() {} };
   vm.createContext(context);
   vm.runInContext(
-    `${source}\nglobalThis.t = { activityIntervals, healthValue, heartLine, burnedLine, exerciseLine, period, startOfDay, addDays, FrogDailyChart, FrogActivityTimeline, isoDate };`,
+    `${source}\nglobalThis.t = { activityIntervals, healthValue, heartLine, burnedLine, exerciseLine, period, startOfDay, addDays, FrogDailyChart, FrogActivityTimeline, isoDate, nutritionTotal, stepColor };`,
     context
   );
   return context.t;
@@ -138,4 +138,39 @@ test("hover box shows workout details", () => {
   card.plot = { x: () => 0 };
   const html = card.hoverAt(start + 60000).html;
   for (const part of ["Walk", "28 min", "179 kcal", "1.37 km", "109 bpm", "light 23", "moderate 2"]) assert.ok(html.includes(part), `${part} in ${html}`);
+});
+
+const rows = [
+  ["date", "calories", "fats", "proteins", "carbohydrates", "full?", "water"],
+  ["2026-11-16", "2000", "80", "100", "200", "TRUE", "0"],
+  ["2026-11-17", "2500", "90", "120", "250", "TRUE", "1500"],
+  ["2026-11-18", "900", "30", "40", "90", "FALSE", "500"],
+  ["2026-11-19", "1800", "70", "90", "180", "TRUE", "2000"],
+  ["2026-11-20", "600", "20", "30", "60", "TRUE", "250"],
+];
+const day = (d) => new Date(2026, 10, d).getTime();
+const week = { start: day(16), end: day(23), isDay: false };
+
+test("week total counts logged complete days before today", () => {
+  const total = t.nutritionTotal(rows, week, { column: 1, keepColumn: 5, today: day(20) });
+  assert.deepEqual(plain(total), { value: 6300, days: 3 });
+});
+
+test("water counts only days with water logged", () => {
+  const total = t.nutritionTotal(rows, week, { column: 6, keepColumn: 5, skipZero: true, today: day(20) });
+  assert.deepEqual(plain(total), { value: 3500, days: 2 });
+});
+
+test("a day shows its own row, incomplete or not", () => {
+  const p = { start: day(18), end: day(19), isDay: true };
+  assert.deepEqual(plain(t.nutritionTotal(rows, p, { column: 1, keepColumn: 5, today: day(20) })), { value: 900, days: 1, incomplete: true });
+  const empty = { start: day(10), end: day(11), isDay: true };
+  assert.deepEqual(plain(t.nutritionTotal(rows, empty, { column: 1, keepColumn: 5, today: day(20) })), { value: null, days: 0 });
+});
+
+test("bar colour is the highest step reached", () => {
+  const steps = { 0: "green", 100: "amber", 115: "red" };
+  assert.equal(t.stepColor(steps, 50), "green");
+  assert.equal(t.stepColor(steps, 100), "amber");
+  assert.equal(t.stepColor(steps, 130), "red");
 });

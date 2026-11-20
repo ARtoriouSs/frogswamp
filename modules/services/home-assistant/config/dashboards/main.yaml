@@ -4329,66 +4329,8 @@ views:
           - type: heading
             heading: Range
             icon: mdi:calendar-range
-          # One row for all the graphs below. Day is a day live, the others one value per day, see www/daily-chart.js
-          - type: horizontal-stack
-            grid_options:
-              columns: full
-            cards:
-              - &wellness_range_button
-                type: custom:mushroom-template-card
-                entity: input_select.wellness_range
-                primary: Day
-                icon: mdi:calendar-today
-                color: "{{ 'primary' if is_state(entity, config.primary) else 'disabled' }}"
-                vertical: true
-                tap_action:
-                  action: perform-action
-                  perform_action: input_select.select_option
-                  target:
-                    entity_id: input_select.wellness_range
-                  data:
-                    option: Day
-              - <<: *wellness_range_button
-                primary: Week
-                icon: mdi:calendar-week
-                tap_action:
-                  action: perform-action
-                  perform_action: input_select.select_option
-                  target:
-                    entity_id: input_select.wellness_range
-                  data:
-                    option: Week
-              - <<: *wellness_range_button
-                primary: Month
-                icon: mdi:calendar-month
-                tap_action:
-                  action: perform-action
-                  perform_action: input_select.select_option
-                  target:
-                    entity_id: input_select.wellness_range
-                  data:
-                    option: Month
-              - <<: *wellness_range_button
-                primary: 3 months
-                icon: mdi:calendar-range
-                tap_action:
-                  action: perform-action
-                  perform_action: input_select.select_option
-                  target:
-                    entity_id: input_select.wellness_range
-                  data:
-                    option: 3 months
-              - <<: *wellness_range_button
-                primary: Year
-                icon: mdi:calendar-blank-multiple
-                tap_action:
-                  action: perform-action
-                  perform_action: input_select.select_option
-                  target:
-                    entity_id: input_select.wellness_range
-                  data:
-                    option: Year
-          # Back and forward by the picked range, kept in this browser
+          # One range for all the cards below, back and forward kept in this browser. Pinned under the top bar while
+          # scrolling. Day is a day live, the others one value per day, see www/daily-chart.js
           - type: custom:frog-wellness-nav
             range: input_select.wellness_range
 
@@ -4483,21 +4425,21 @@ views:
           - type: heading
             heading: Nutrition
             icon: mdi:food-apple
-          # Today against the goals below. The bar is full at 100 %, red over 115 % (the alert's limit)
-          - &nutrition_today
-            <<: *info
-            type: custom:frog-bar-card
-            bar:
-              steps: {0: green, 100: amber, 115: red}
-            entity: sensor.nutrition_kcal_of_goal
-            primary: Calories today
-            secondary: >-
-              {% set key = entity.split('_')[1] %}
-              {% if not has_value('sensor.nutrition_today_' ~ key) %}No data from nutrition-sync
-              {% elif has_value(entity) %}{{ state_attr(entity, 'eaten') }} / {{ state_attr(entity, 'goal') }} {{ state_attr(entity, 'unit') }} · {{ states(entity) }} %
-              {% else %}{{ states('sensor.nutrition_today_' ~ key) | float(0) | round(0) }} {{ {'kcal': 'kcal', 'water': 'ml'}.get(key, 'g') }} · no goal{% endif %}
+          # The picked day against the goals below, or a period's total against goal × logged days (today and days
+          # marked incomplete left out). The bar is full at 100 %, red over 115 % (the alert's limit)
+          - &nutrition_total
+            type: custom:frog-nutrition-total
+            range: input_select.wellness_range
+            sheet:
+              source: sensor.calories_sheet
+              updated: sensor.nutrition_last_read
+            column: 1
+            label: Calories
+            unit: kcal
             icon: mdi:food-apple
-            color: "{{ 'red' if states(entity) | float(0) > 115 else ('amber' if states(entity) | float(0) > 100 else 'green') }}"
+            goal: input_number.nutrition_goal_kcal
+            today: sensor.nutrition_today_kcal
+            steps: {0: green, 100: amber, 115: red}
             grid_options:
               columns: 12
               rows: 1
@@ -4511,29 +4453,39 @@ views:
               action: url
               url_path: https://app.notion.com/p/Nutrition-Log-41b659e3027580e6a131fb17668e86a4
           - &nutrition_macro
-            <<: *nutrition_today
-            entity: sensor.nutrition_proteins_of_goal
-            primary: Proteins
+            <<: *nutrition_total
+            column: 3
+            label: Proteins
+            unit: g
             icon: mdi:food-drumstick
+            goal: input_number.nutrition_goal_proteins
+            today: sensor.nutrition_today_proteins
             grid_options:
               columns: 6
               rows: 1
           - <<: *nutrition_macro
-            entity: sensor.nutrition_carbohydrates_of_goal
-            primary: Carbohydrates
+            column: 4
+            label: Carbohydrates
             icon: mdi:bread-slice
+            goal: input_number.nutrition_goal_carbohydrates
+            today: sensor.nutrition_today_carbohydrates
           - <<: *nutrition_macro
-            entity: sensor.nutrition_fats_of_goal
-            primary: Fats
+            column: 2
+            label: Fats
             icon: mdi:oil
-          # Logged in Notion with the meals. Drinking more than the goal is fine, so no red
+            goal: input_number.nutrition_goal_fats
+            today: sensor.nutrition_today_fats
+          # Logged in Notion with the meals. Drinking more than the goal is fine, so no red. Days before water was
+          # logged don't count
           - <<: *nutrition_macro
-            entity: sensor.nutrition_water_of_goal
-            primary: Water
+            column: 6
+            label: Water
+            unit: ml
             icon: mdi:cup-water
-            bar:
-              steps: {0: blue, 100: green}
-            color: "{{ 'green' if states(entity) | float(0) >= 100 else 'blue' }}"
+            goal: input_number.nutrition_goal_water
+            today: sensor.nutrition_today_water
+            steps: {0: blue, 100: green}
+            skip_zero: true
           # A day runs from 04:00 to 04:00. Over 115 % sends a notification, over 150 % one about a likely wrong entry
           # One line; tap a goal to change it
           - &nutrition_goal

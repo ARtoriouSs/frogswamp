@@ -5,8 +5,20 @@
 // Periods are calendar ones: Day is a day from midnight, Week is Monday to Sunday, Month a calendar month,
 // 3 months three calendar months, Year a calendar year. Back goes one period further.
 //
-//   type: custom:frog-wellness-nav        ◀ period ▶ and Today
-//   range: input_select.wellness_range
+//   type: custom:frog-wellness-nav        the range buttons, ◀ period ▶ and Today. Pinned under the top bar once it
+//   range: input_select.wellness_range    scrolls away
+//
+//   type: custom:frog-nutrition-total     a day's total against the goal, or the period's total against the goal
+//   range: input_select.wellness_range    times the logged days (today and incomplete days left out)
+//   sheet: {source: sensor.calories_sheet, updated: sensor.nutrition_last_read}
+//   column: 1                             (the daily CSV column; keep_column 5 is the Full flag)
+//   label: Calories
+//   unit: kcal
+//   icon: mdi:food-apple
+//   goal: input_number.nutrition_goal_kcal
+//   today: sensor.nutrition_today_kcal    (today's Day is live from this sensor)
+//   steps: {0: green, 100: amber, 115: red}
+//   skip_zero: true                       (optional, a day with 0 is not logged, e.g. water before it was tracked)
 //
 //   type: custom:frog-daily-chart         one value per day, or a live line for Day
 //   title: Calories
@@ -1034,25 +1046,42 @@ class FrogActivityTimeline extends WellnessCard {
   }
 }
 
-// ◀ period ▶ and Today, for all the cards
-class FrogWellnessNav extends HTMLElement {
+// The total of one CSV column for a day, or for the period's logged days: {value, days}. A period leaves out today,
+// which isn't over, and the days marked incomplete. A day shows its own row and says if it is incomplete
+const nutritionTotal = (rows, p, { column, keepColumn = 5, skipZero = false, today = startOfDay(Date.now()) }) => {
+  let value = null;
+  let days = 0;
+  let incomplete = false;
+  for (const row of rows) {
+    const date = parseDate(row[0]);
+    if (!date) continue;
+    const time = date.getTime();
+    if (time < p.start || time >= p.end) continue;
+    const number = parseNumber(row[column]);
+    if (number === null || (skipZero && number === 0)) continue;
+    const full = (row[keepColumn] || "").trim().toUpperCase() === "TRUE";
+    if (p.isDay) {
+      incomplete = !full;
+    } else if (!full || time >= today) continue;
+    value = (value ?? 0) + number;
+    days += 1;
+  }
+  return incomplete ? { value, days, incomplete } : { value, days };
+};
+
+const stepColor = (steps, percent) => {
+  let color = null;
+  for (const [step, name] of Object.entries(steps || {}).sort((a, b) => a[0] - b[0])) if (percent >= Number(step)) color = name;
+  return color;
+};
+
+const cssColor = (name) => (!name ? "var(--disabled-color)" : name.startsWith("#") ? name : `var(--${name}-color)`);
+const formatAmount = (value) => Math.round(value).toLocaleString("ru-RU");
+
+class FrogNutritionTotal extends WellnessCard {
   setConfig(config) {
-    this.config = config;
-    if (!this.shadowRoot) this.attachShadow({ mode: "open" });
-  }
-
-  set hass(hass) {
-    if (this.config.range) setRange(hass.states[this.config.range]?.state);
-    this.render();
-  }
-
-  connectedCallback() {
-    this.onView = () => this.render();
-    window.addEventListener(VIEW_EVENT, this.onView);
-  }
-
-  disconnectedCallback() {
-    window.removeEventListener(VIEW_EVENT, this.onView);
+    if (config.column === undefined || !config.sheet?.source) throw new Error("column and sheet.source are required");
+    super.setConfig(config);
   }
 
   getCardSize() {
@@ -1060,7 +1089,139 @@ class FrogWellnessNav extends HTMLElement {
   }
 
   getGridOptions() {
-    return { columns: "full", rows: 1 };
+    return { columns: 6, rows: 1 };
+  }
+
+  ready() {
+    return Boolean(this._hass.states[this.config.sheet.source]?.attributes.url);
+  }
+
+  watched(p) {
+    const live = p.isDay && view.offset === 0;
+    return [this.config.sheet.updated, this.config.goal, live && this.config.today].filter(Boolean);
+  }
+
+  fetch() {
+    // All the cards share one read; today's totals change, so they are read again after a short while
+    return fetchCsv(this._hass.states[this.config.sheet.source].attributes.url, view.offset === 0 ? LIVE_RELOAD_MS : CACHE_MS);
+  }
+
+  set hass(hass) {
+    super.hass = hass;
+    // The live sensor and the goal can change without a new read
+    const key = [this.config.today, this.config.goal].map((id) => hass.states[id]?.state).join();
+    if (key !== this.liveKey) (this.liveKey = key), this.render();
+  }
+
+  render() {
+    const root = this.shadowRoot;
+    if (!root || !this.config || !this.period || !this._hass) return;
+    const { label, unit = "", icon, goal: goalId, today, column, keep_column: keepColumn = 5, skip_zero: skipZero, steps } = this.config;
+    const p = this.period;
+    const where = p.isDay ? (view.offset === 0 ? "today" : formatDay(p.start)) : periodLabel(p);
+    let total = this.data ? nutritionTotal(this.data, p, { column, keepColumn, skipZero }) : { value: null, days: 0 };
+    const liveToday = p.isDay && view.offset === 0 && today && this._hass.states[today];
+    if (liveToday && !isNaN(parseFloat(liveToday.state))) total = { ...total, value: parseFloat(liveToday.state), days: 1 };
+    const daily = parseFloat(this._hass.states[goalId]?.state) || 0;
+    const goal = daily * total.days;
+    let text;
+    let percent = null;
+    if (this.error) text = this.error;
+    else if (!this.data && !liveToday) text = "Loading…";
+    else if (total.value === null) text = p.isDay ? "Nothing logged" : "No finished days logged";
+    else {
+      percent = goal > 0 ? Math.round((total.value / goal) * 100) : null;
+      text = goal > 0 ? `${formatAmount(total.value)} / ${formatAmount(goal)} ${unit} · ${percent} %` : `${formatAmount(total.value)} ${unit} · no goal`;
+      if (!p.isDay) text += ` · ⌀ ${formatAmount(total.value / total.days)} · ${total.days} d`;
+      if (total.incomplete) text += " · incomplete";
+    }
+    const color = cssColor(percent === null ? null : stepColor(steps, percent));
+    const title = p.isDay ? "" : `Goal: ${formatAmount(daily)} ${unit} a day × ${total.days} logged days. Today and incomplete days are left out`;
+    root.innerHTML = `<style>
+      ha-card { height: 100%; box-sizing: border-box; padding: 8px 12px; display: flex; align-items: center; gap: 10px; }
+      .icon { flex: none; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+              --mdc-icon-size: 20px; color: ${color}; background: color-mix(in srgb, ${color} 20%, transparent); }
+      .info { flex: 1; min-width: 0; }
+      .primary { font-size: 14px; font-weight: 500; line-height: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .secondary { font-size: 12px; line-height: 16px; color: var(--secondary-text-color); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .bar { height: 6px; margin-top: 4px; border-radius: 3px; background: var(--divider-color); overflow: hidden; }
+      .fill { height: 100%; border-radius: 3px; background: ${color}; transition: width 0.4s; }
+    </style><ha-card title="${title}">
+      <div class="icon"><ha-icon icon="${icon || "mdi:food-apple"}"></ha-icon></div>
+      <div class="info"><div class="primary">${label} · ${where}</div><div class="secondary">${text}</div>
+        <div class="bar"><div class="fill" style="width:${Math.min(percent ?? 0, 100)}%"></div></div></div>
+    </ha-card>`;
+  }
+}
+
+const RANGES = [
+  ["Day", "Day"],
+  ["Week", "Week"],
+  ["Month", "Month"],
+  ["3 months", "3M"],
+  ["Year", "Year"],
+];
+
+// The range buttons, ◀ period ▶ and Today, for all the cards. A copy is pinned under the top bar once the card
+// scrolls away
+class FrogWellnessNav extends HTMLElement {
+  setConfig(config) {
+    this.config = config;
+    if (!this.shadowRoot) this.attachShadow({ mode: "open" });
+  }
+
+  set hass(hass) {
+    this._hass = hass;
+    if (this.config.range) setRange(hass.states[this.config.range]?.state);
+    this.render();
+  }
+
+  connectedCallback() {
+    this.onView = () => this.render();
+    window.addEventListener(VIEW_EVENT, this.onView);
+    this.onPlace = () => this.place();
+    window.addEventListener("resize", this.onPlace);
+    // Pinned once the card has gone up under HA's top bar
+    this.observer = new IntersectionObserver(
+      ([entry]) => {
+        this.pinned = !entry.isIntersecting && entry.boundingClientRect.top < 0;
+        this.place();
+      },
+      { rootMargin: `-${this.headerHeight()}px 0px 0px 0px` }
+    );
+    this.observer.observe(this);
+  }
+
+  disconnectedCallback() {
+    window.removeEventListener(VIEW_EVENT, this.onView);
+    window.removeEventListener("resize", this.onPlace);
+    this.observer?.disconnect();
+  }
+
+  headerHeight() {
+    return parseFloat(getComputedStyle(this).getPropertyValue("--header-height")) || 56;
+  }
+
+  place() {
+    const bar = this.shadowRoot?.querySelector(".pinned");
+    if (!bar) return;
+    if (!this.pinned) return void (bar.style.display = "none");
+    const box = this.getBoundingClientRect();
+    Object.assign(bar.style, { display: "flex", left: `${box.left}px`, width: `${box.width}px`, top: `${this.headerHeight()}px` });
+  }
+
+  pick(range) {
+    if (!this._hass || !this.config.range) return;
+    setRange(range);
+    this._hass.callService("input_select", "select_option", { entity_id: this.config.range, option: range });
+  }
+
+  getCardSize() {
+    return 1;
+  }
+
+  getGridOptions() {
+    return { columns: "full", rows: 2 };
   }
 
   move(offset) {
@@ -1072,25 +1233,45 @@ class FrogWellnessNav extends HTMLElement {
     const root = this.shadowRoot;
     if (!root || !view.range) return;
     const label = periodLabel(period(view.range, view.offset));
-    if (label === this.label && root.innerHTML) return;
-    this.label = label;
+    const key = `${label}|${view.range}|${view.offset}`;
+    if (key === this.key && root.innerHTML) return;
+    this.key = key;
+    const ranges = (short) =>
+      RANGES.map(([range, name]) => `<button class="range${range === view.range ? " on" : ""}" data-range="${range}">${short ? name : range}</button>`).join("");
+    const moves = `<button data-move="back" title="Back">◀</button><div class="label">${label}</div>
+      <button data-move="forward" title="Forward" ${view.offset === 0 ? "disabled" : ""}>▶</button>
+      <button data-move="today" class="today" ${view.offset === 0 ? "disabled" : ""}>Today</button>`;
     root.innerHTML = `<style>
-      ha-card { display: flex; align-items: center; gap: 8px; padding: 6px 8px; height: 100%; box-sizing: border-box; }
+      ha-card { padding: 6px 8px; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; gap: 4px; }
+      .row { display: flex; align-items: center; gap: 4px; }
+      .ranges { justify-content: space-between; }
       button { background: none; border: none; color: var(--primary-text-color); font-size: 18px; cursor: pointer;
-        padding: 4px 12px; border-radius: 8px; }
+        padding: 4px 12px; border-radius: 8px; font-family: inherit; }
       button:hover:not(:disabled) { background: var(--secondary-background-color); }
       button:disabled { opacity: 0.3; cursor: default; }
-      .label { flex: 1; text-align: center; font-weight: 500; }
+      button.range { flex: 1; font-size: 14px; color: var(--secondary-text-color); padding: 6px 4px; }
+      button.range.on { color: var(--primary-color); background: color-mix(in srgb, var(--primary-color) 15%, transparent); font-weight: 500; }
+      .label { flex: 1; text-align: center; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
       .today { font-size: 14px; color: var(--primary-color); }
+      .pinned { position: fixed; z-index: 5; display: none; align-items: center; gap: 2px; box-sizing: border-box; padding: 4px 8px;
+        background: var(--card-background-color); border-bottom: 1px solid var(--divider-color); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+        border-radius: 0 0 12px 12px; }
+      .pinned button { font-size: 14px; padding: 4px 8px; }
+      .pinned .range { flex: none; }
+      .pinned .label { font-size: 14px; }
     </style><ha-card>
-      <button class="back" title="Back">◀</button>
-      <div class="label">${label}</div>
-      <button class="forward" title="Forward" ${view.offset === 0 ? "disabled" : ""}>▶</button>
-      <button class="today" ${view.offset === 0 ? "disabled" : ""}>Today</button>
-    </ha-card>`;
-    root.querySelector(".back").addEventListener("click", () => this.move(view.offset + 1));
-    root.querySelector(".forward").addEventListener("click", () => this.move(view.offset - 1));
-    root.querySelector(".today").addEventListener("click", () => this.move(0));
+      <div class="row ranges">${ranges(false)}</div>
+      <div class="row">${moves}</div>
+    </ha-card>
+    <div class="pinned">${ranges(true)}${moves}</div>`;
+    root.querySelectorAll("[data-range]").forEach((button) => button.addEventListener("click", () => this.pick(button.dataset.range)));
+    root.querySelectorAll("[data-move]").forEach((button) =>
+      button.addEventListener("click", () => {
+        const move = button.dataset.move;
+        this.move(move === "back" ? view.offset + 1 : move === "forward" ? view.offset - 1 : 0);
+      })
+    );
+    this.place();
   }
 }
 
@@ -1105,3 +1286,4 @@ const defineWhenReady = (name, element) =>
 defineWhenReady("frog-daily-chart", FrogDailyChart);
 defineWhenReady("frog-activity-timeline", FrogActivityTimeline);
 defineWhenReady("frog-wellness-nav", FrogWellnessNav);
+defineWhenReady("frog-nutrition-total", FrogNutritionTotal);
